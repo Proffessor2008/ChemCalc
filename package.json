@@ -1,0 +1,13 @@
+{
+  "name": "chemcalc",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Офлайн-химический калькулятор на чистых HTML, CSS и JavaScript",
+  "scripts": {
+    "test": "node scripts/validate-data.mjs && node --test tests/*.test.js",
+    "validate:data": "node scripts/validate-data.mjs",
+    "start": "node server.mjs",
+    "start:static": "python -m http.server 8080"
+  }
+}

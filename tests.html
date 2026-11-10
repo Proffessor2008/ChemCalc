@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="ru">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>ChemCalc — браузерные тесты карточек</title><link rel="stylesheet" href="./styles.css"></head>
+<body><main class="main-content"><h1>Тест карточек элементов</h1><p id="test-status" role="status">Выполняется…</p><p id="pwa-test-status" role="status">PWA: ожидание service worker…</p><p id="engine-test-status" role="status">Smoke-тесты вычислений…</p><div id="test-host" hidden></div></main>
+<script type="module">
+  import { PERIODIC_ELEMENTS } from './js/periodic-table.js';
+  import { renderElementCard } from './js/periodic-card.js';
+  const host = document.querySelector('#test-host');
+  let passed = 0;
+  const errors = [];
+  for (const element of PERIODIC_ELEMENTS) {
+    try {
+      const card = renderElementCard(element, { onInsert() {}, onReaction() {} });
+      if (card.querySelectorAll('.element-section').length !== 10) throw new Error('Не хватает разделов');
+      if (!card.querySelector('svg')) throw new Error('Нет SVG оболочек');
+      if (!card.querySelectorAll('.element-section a').length) throw new Error('Нет источников');
+      host.append(card);
+      passed += 1;
+    } catch (error) {
+      errors.push(`${element.symbol}: ${error.message}`);
+    }
+  }
+  const status = document.querySelector('#test-status');
+  status.textContent = errors.length ? `Ошибки: ${errors.join('; ')}` : `PASS: построено ${passed} из ${PERIODIC_ELEMENTS.length} карточек без ошибок.`;
+  status.dataset.result = errors.length ? 'failed' : 'passed';
+</script>
+<script type="module">
+  const output = document.querySelector('#pwa-test-status');
+  try {
+    if (!('serviceWorker' in navigator)) throw new Error('Service Worker не поддерживается');
+    const registration = await navigator.serviceWorker.getRegistration();
+    if (!registration) {
+      output.textContent = 'SKIP: сначала откройте главную страницу для установки service worker.';
+    } else {
+      await registration.update();
+      await navigator.serviceWorker.ready;
+      const cache = await caches.open('chemcalc-v29');
+      const paths = ['./js/predictor.js', './js/reaction-conditions.js', './js/redox-predictor.js', './js/redox-view.js', './js/internal-redox.js', './js/electrolytes.js', './data/redox-sites.json', './data/functional-groups.json', './js/dissociation.js', './js/clipboard.js', './js/export.js', './js/reference-ui.js', './data/thermo.json', './data/thermo-extra.json', './data/reaction-rules.json', './data/reaction-rules-final.json', './js/community-ui.js', './data/reaction-rules-community.json'];
+      let responses = [];
+      for (let attempt = 0; attempt < 40; attempt += 1) {
+        responses = await Promise.all(paths.map((path) => cache.match(new URL(path, location.href).toString())));
+        if (responses.every(Boolean)) break;
+        await new Promise((resolve) => setTimeout(resolve, 250));
+      }
+      output.textContent = responses.every(Boolean) ? 'PASS PWA: расчётные модули и данные присутствуют в офлайн-кеше.' : 'FAIL PWA: кеш неполный после ожидания установки.';
+    }
+  } catch (error) { output.textContent = `FAIL PWA: ${error.message}`; }
+</script>
+<script type="module">
+  import { predictReaction } from './js/predictor.js';
+  import { acidDissociationSteps } from './js/dissociation.js';
+  import { equationToLatex } from './js/export.js';
+  import { calculateStoichiometry } from './js/stoichiometry.js';
+  import { buildIonicEquations } from './js/ionic.js';
+  import { calculateIonicReactionThermo } from './js/thermo.js';
+  import { analyzeRedox } from './js/redox.js';
+
+  const checks = [
+    ['взаимный гидролиз', () => predictReaction('FeCl3 + Na2CO3').formatted.includes('2FeCl3 + 3Na2CO3 + 3H2O')],
+    ['ОВР по полуреакциям', () => {
+      const result = predictReaction('MnO4^- + Fe^2+ + H^+', { medium: 'acidic', solvent: 'aqueous' });
+      return result.status === 'predicted' && result.E0_V > 0 && result.halfReactions.length === 2;
+    }],
+    ['общее правило оксида', () => predictReaction('MgO + HCl').formatted === 'MgO + 2HCl → MgCl2 + H2O'],
+    ['ступени диссоциации', () => acidDissociationSteps('H3PO4').length === 3],
+    ['LaTeX', () => equationToLatex('2H2 + O2 = 2H2O').includes('\\mathrm{H_{2}O}')],
+    ['выход выбранного продукта', () => {
+      const result = calculateStoichiometry('CO2 + 2NaOH = Na2CO3 + H2O', { known: { index: 0, kind: 'amount', value: 1 }, yieldPercent: 80, yieldProductIndex: 3 });
+      return result.rows[2].actualMassG === null && result.rows[3].actualMoles === 0.8;
+    }],
+    ['Cl2 + KOH и диссоциация KClO3', () => {
+      const prediction = predictReaction('3Cl2 + 6KOH', { medium: 'alkaline', solvent: 'aqueous', heating: true });
+      if (prediction.status !== 'predicted') return false;
+      const equation = {
+        ...prediction.equation,
+        left: prediction.equation.left.map((item, index) => ({ ...item, coefficient: prediction.coefficients[index] })),
+        right: prediction.equation.right.map((item, index) => ({ ...item, coefficient: prediction.coefficients[prediction.equation.left.length + index] }))
+      };
+      return buildIonicEquations(equation).netUnicode === '3Cl₂ + 6OH⁻ → 5Cl⁻ + ClO₃⁻ + 3H₂O';
+    }],
+    ['неметалл и электронный баланс NO2', () => {
+      const prediction = predictReaction('P + HNO3', { medium: 'acidic', acidConcentration: 'concentrated', heating: true });
+      if (prediction.status !== 'predicted') return false;
+      const redox = analyzeRedox(prediction.equation, prediction.coefficients);
+      return redox.electronBalance && redox.electronsLost.toNumber() === 5 && redox.transitions.includes('N: +5 → +4');
+    }],
+    ['трёхкомпонентная ОВР и хромат калия', () => {
+      const prediction = predictReaction('CrCl3 + H2O2 + KOH', { medium: 'alkaline', solvent: 'aqueous', heating: true });
+      if (prediction.status !== 'predicted') return false;
+      const equation = {
+        ...prediction.equation,
+        left: prediction.equation.left.map((item, index) => ({ ...item, coefficient: prediction.coefficients[index] })),
+        right: prediction.equation.right.map((item, index) => ({ ...item, coefficient: prediction.coefficients[prediction.equation.left.length + index] }))
+      };
+      return buildIonicEquations(equation).netUnicode === '2Cr³⁺ + 3H₂O₂ + 10OH⁻ → 2CrO₄²⁻ + 8H₂O';
+    }],
+    ['органическая среда блокирует водный обмен и диссоциацию', () => {
+      const prediction = predictReaction('NaCl + AgNO3', { solvent: 'organic' });
+      const ionic = buildIonicEquations('NaCl + AgNO3 = AgCl + NaNO3', { solvent: 'organic' });
+      return prediction.status === 'no-reaction' && ionic.status === 'unavailable';
+    }],
+    ['уже ионный ввод', () => buildIonicEquations('MnO4^- + 5Fe^2+ + 8H^+ = Mn^2+ + 5Fe^3+ + 4H2O').status === 'ok'],
+    ['ионная термодинамика', () => calculateIonicReactionThermo('MnO4^- + 5Fe^2+ + 8H^+ = Mn^2+ + 5Fe^3+ + 4H2O').status === 'ok']
+  ];
+  const failures = checks.filter(([, check]) => {
+    try { return !check(); } catch { return true; }
+  });
+  const engineStatus = document.querySelector('#engine-test-status');
+  engineStatus.textContent = failures.length ? `FAIL smoke: ${failures.map(([name]) => name).join(', ')}` : `PASS smoke: ${checks.length} браузерных вычислительных сценариев.`;
+  engineStatus.dataset.result = failures.length ? 'failed' : 'passed';
+</script></body>
+</html>
