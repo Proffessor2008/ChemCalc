@@ -75,6 +75,11 @@ function formatDate(value) {
   return new Intl.DateTimeFormat(getLocale(), { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
 }
 
+function signedNumber(value) {
+  const number = Number(value) || 0;
+  return `${number > 0 ? '+' : ''}${new Intl.NumberFormat(getLocale(), { maximumFractionDigits: 2 }).format(number)}`;
+}
+
 function selectOptions(values, selected, translate = (value) => t(value)) {
   return values.map((value) => `<option value="${value}"${value === selected ? ' selected' : ''}>${translate(value)}</option>`).join('');
 }
@@ -153,6 +158,7 @@ export function initCommunityUI({ showToast, onNavigate, getAutoContext = () => 
       element('p', `role-badge role-${user.privileges.toLowerCase()}`, `${t('role')}: ${user.privileges}`),
       element('p', 'help-text', `${t('registered')}: ${formatDate(user.created_at)}`),
       element('p', 'help-text', `${t('lastSession')}: ${formatDate(user.last_login_at)}`),
+      element('p', 'help-text community-reputation', `${t('reputation')}: ${signedNumber(user.reputation)}`),
       element('p', 'help-text', `${t('pendingMine')}: ${ownProposals.filter((item) => item.status === 'pending').length}`)
     );
     account.append(button(t('signOut'), 'logout', undefined, 'button secondary'));
@@ -164,9 +170,9 @@ export function initCommunityUI({ showToast, onNavigate, getAutoContext = () => 
     card.id = `proposal-${proposal.id}`;
     const heading = element('div', 'proposal-heading');
     const author = element('div');
-    author.append(element('strong', '', proposal.author_login), element('small', 'help-text', `${t(`kind_${proposal.kind}`)} · ${formatDate(proposal.created_at)}`));
-    const score = element('span', 'proposal-score', `${proposal.score > 0 ? '+' : ''}${proposal.score}`);
-    score.setAttribute('aria-label', `${t('rating')}: ${proposal.score}`);
+    author.append(element('strong', '', proposal.author_login), element('small', 'help-text', `${t(`kind_${proposal.kind}`)} · ${formatDate(proposal.created_at)} · ${t('reputation')}: ${signedNumber(proposal.author_reputation)}`));
+    const score = element('span', 'proposal-score', signedNumber(proposal.score));
+    score.setAttribute('aria-label', `${t('rating')}: ${signedNumber(proposal.score)}`);
     heading.append(author, score);
     card.append(heading, element('p', 'proposal-equation', ruleEquation(rule)), element('p', 'proposal-conditions', conditionText(rule.when)));
     if (!compact) {
@@ -220,9 +226,19 @@ export function initCommunityUI({ showToast, onNavigate, getAutoContext = () => 
       card.append(moderation);
     }
     if (compact) {
-      const state = element('p', 'proposal-status', `${t(`status_${proposal.status}`)}${proposal.score ? ` · ${proposal.score}` : ''}`);
+      const state = element('p', 'proposal-status', `${t(`status_${proposal.status}`)}${proposal.score ? ` · ${signedNumber(proposal.score)}` : ''}`);
       card.append(state);
       if (proposal.status === 'pending') card.append(button(t('edit'), 'edit', proposal.id));
+    }
+    if (proposal.review_history?.length) {
+      const history = element('details', 'review-history');
+      history.append(element('summary', '', t('reviewHistory')));
+      const events = element('ol', 'review-history-list');
+      for (const event of proposal.review_history) {
+        events.append(element('li', '', `${formatDate(event.created_at)} · ${event.actor_login} · ${t(event.action === 'edited' ? 'review_edited' : `status_${event.action}`)} · v${event.proposal_version}${event.note ? ` — ${event.note}` : ''}`));
+      }
+      history.append(events);
+      card.append(history);
     }
     return card;
   }
@@ -247,7 +263,7 @@ export function initCommunityUI({ showToast, onNavigate, getAutoContext = () => 
     if (user?.privileges !== 'GOD') return;
     const data = await api('/api/users');
     const table = element('table', 'community-users-table');
-    table.innerHTML = `<thead><tr><th>${t('login')}</th><th>${t('role')}</th><th>${t('registered')}</th><th>${t('lastSession')}</th><th>${t('pendingMine')}</th></tr></thead>`;
+    table.innerHTML = `<thead><tr><th>${t('login')}</th><th>${t('role')}</th><th>${t('reputation')}</th><th>${t('registered')}</th><th>${t('lastSession')}</th><th>${t('pendingMine')}</th></tr></thead>`;
     const body = element('tbody');
     for (const record of data.users) {
       const row = element('tr');
@@ -261,7 +277,7 @@ export function initCommunityUI({ showToast, onNavigate, getAutoContext = () => 
         select.innerHTML = selectOptions(['basic', 'admin', 'admin+'], record.privileges, (value) => value);
         roleCell.append(select);
       }
-      row.append(roleCell, element('td', '', formatDate(record.created_at)), element('td', '', formatDate(record.last_login_at)), element('td', '', String(record.pending_count)));
+      row.append(roleCell, element('td', '', signedNumber(record.reputation)), element('td', '', formatDate(record.created_at)), element('td', '', formatDate(record.last_login_at)), element('td', '', String(record.pending_count)));
       body.append(row);
     }
     table.append(body);
@@ -281,7 +297,13 @@ export function initCommunityUI({ showToast, onNavigate, getAutoContext = () => 
       const sort = $('#community-sort').value;
       const feedRequest = api(`/api/proposals?status=pending&sort=${encodeURIComponent(sort)}`);
       const ownRequest = user ? api('/api/proposals?author=me') : Promise.resolve({ proposals: [] });
-      const [feed, own] = await Promise.all([feedRequest, ownRequest]);
+      const accountRequest = user ? api('/api/auth/me').then((session) => {
+        if (generation === requestGeneration) {
+          user = session.user;
+          csrfToken = session.csrfToken;
+        }
+      }) : Promise.resolve();
+      const [feed, own] = await Promise.all([feedRequest, ownRequest, accountRequest]);
       if (generation !== requestGeneration) return;
       proposals = feed.proposals;
       ownProposals = own.proposals;

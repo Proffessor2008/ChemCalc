@@ -142,6 +142,7 @@ const dictionaries = {
     statusSyntax: 'Formula syntax error'
   }
 };
+
 Object.assign(dictionaries.ru, {
   autoDescription: 'Введите реагенты и условия — приложение применит локальное правило и уравняет продукты.',
   autoHelp: 'Введите только реагенты. Условия ниже реально изменяют выбор правила.',
@@ -171,6 +172,7 @@ Object.assign(dictionaries.en, {
 });
 Object.assign(dictionaries.ru, { documentation: 'Документация' });
 Object.assign(dictionaries.en, { documentation: 'Documentation' });
+
 Object.assign(dictionaries.ru, {
   latex: 'Копировать LaTeX', copiedLatex: 'LaTeX скопирован', copying: 'Копирование…', predicted: 'Типовое предсказание', ruleSource: 'Источник правила: {source}', reactionType: 'Тип: {type}',
   thermoReaction: 'Термодинамика реакции', thermoIonic: 'Термодинамика по краткому ионному уравнению', tryIonicThermo: 'Попробовать по краткому ионному уравнению', ionicThermoNote: 'Расчёт выполнен по краткому ионному уравнению; ионы-наблюдатели исключены.',
@@ -195,6 +197,7 @@ Object.assign(dictionaries.en, {
   potentialNoReaction: 'For the known half-reaction pair, {label} = {value} V ≤ 0: no reaction under these conditions.', standardPotential: 'Standard EMF: E° = {value} V > 0.', standardPotentialValue: 'Standard EMF: E° = {value} V.', nernstResult: 'Using the Nernst equation at Q = {quotient}: E = {value} V > 0.',
   ionicRedoxWhy: 'Products are selected from the local electrode-pair library; half-reactions are balanced for atoms, charge and electrons.'
 });
+
 Object.assign(dictionaries.ru, {
   hessSteps: 'Показать слагаемые по закону Гесса', reductionHalf: 'Восстановление', oxidationHalf: 'Окисление', predictionNotice: 'Типовое предсказание, проверьте условия реакции.',
   missingThermo: 'Нет термодинамических данных с подходящим стандартным состоянием: {formulas}. Расчёт не выполнен.', ionicThermoUnavailable: 'Расчёт по краткому ионному уравнению невозможен: {message}'
@@ -203,8 +206,10 @@ Object.assign(dictionaries.en, {
   hessSteps: 'Show terms in Hess’s law', reductionHalf: 'Reduction', oxidationHalf: 'Oxidation', predictionNotice: 'Typical prediction; verify the reaction conditions.',
   missingThermo: 'No thermodynamic data for the required standard state: {formulas}. Calculation cancelled.', ionicThermoUnavailable: 'Cannot calculate using the net ionic equation: {message}'
 });
+
 Object.assign(dictionaries.ru, { docsSubtitle: 'Руководство, логика вычислений и возможности программы.', openReadme: 'Открыть README' });
 Object.assign(dictionaries.en, { docsSubtitle: 'Guide, calculation logic and application features.', openReadme: 'Open README' });
+
 Object.assign(dictionaries.ru, { nonAqueousIonic: 'Ионные уравнения не составляются для безводных сред.' });
 Object.assign(dictionaries.en, { nonAqueousIonic: 'Ionic equations are not available for non-aqueous media.' });
 Object.assign(dictionaries.ru, {
@@ -215,6 +220,7 @@ Object.assign(dictionaries.en, {
   nonAqueousPrediction: 'No reaction: the aqueous ionic mechanism is not applicable in the selected non-aqueous medium. A phase-specific rule is required.',
   nonAqueousThermo: 'This is a formal standard-state calculation, not evidence that the reaction proceeds in the selected non-aqueous medium.'
 });
+
 const siteDataSource = 'Глинка Н. Л., Общая химия: степени окисления в многоатомных ионах; внутримолекулярное окисление-восстановление';
 Object.assign(dictionaries.ru, {
   аммоний: 'аммоний', нитрат: 'нитрат', нитрит: 'нитрит', дихромат: 'дихромат', хлорат: 'хлорат', оксид: 'оксид',
@@ -236,6 +242,7 @@ Object.assign(dictionaries.en, {
   redoxSiteOxidation: '{label} ({symbol}) is oxidized: {from} → {to}',
   internalRedoxSource: 'Glinka, General Chemistry: oxidation states in polyatomic ions; intramolecular redox'
 });
+
 Object.assign(dictionaries.ru, {
   community: 'Сообщество', communitySubtitle: 'Проверенные пользователями дополнения к базе реакций.', communityOffline: 'Сервер сообщества недоступен. Калькулятор продолжает работать с локальной базой.', serverUnavailable: 'Сервис сообщества временно недоступен. Попробуйте повторить действие позже.', pollingFallback: 'Онлайн-обновление прервано; список обновляется периодически.',
   account: 'Аккаунт', login: 'Логин', password: 'Пароль', confirmPassword: 'Подтверждение пароля', signIn: 'Войти', signOut: 'Выйти', createAccount: 'Создать аккаунт', register: 'Зарегистрироваться', signedIn: 'Вход выполнен', role: 'Привилегии', registered: 'Дата регистрации', lastSession: 'Последний вход', pendingMine: 'Ожидающие заявки', userManagement: 'Пользователи и роли', userManagementHelp: 'Только GOD назначает администраторов. Пароли в списке не отображаются.', roleUpdated: 'Роль пользователя обновлена',
@@ -258,8 +265,10 @@ Object.assign(dictionaries.en, {
   newSubstances: 'New substance data', newSubstancesHelp: 'Fill in cards for substances outside the local database. List ions as Li^+:1, OH^-:1.', substanceName: 'Substance name', substanceClass: 'Substance class', solubility: 'Solubility', strongElectrolyte: 'Strong electrolyte', ionComposition: 'Ion composition: ion:coefficient', ionsFormat: 'Check the ions for {formula}: use Li^+:1, OH^-:1', ionicPreview: 'Ionic equation preview',
   atomsBalanced: '✓ Atoms and total charge are balanced.', atomsUnbalanced: 'Atoms or charge are unbalanced. Check the coefficients before submitting.', notMinimal: 'The coefficients are not minimal.', noReactionProposal: 'This proposes “No reaction” for the specified reactants and conditions.', invalidEquation: 'Enter a valid equation with both sides, or select “No reaction”.', fixBalanceBeforeSubmit: 'Correct the equation error first.', loginToPropose: 'Sign in or register to submit a proposal.', suggestSolution: 'Suggest the correct solution', reportInaccuracy: 'Found an inaccuracy? Suggest a correction', pendingAlternatives: 'Community alternatives', unverifiedAnswer: 'User-submitted answer, not yet verified', openInCommunity: 'Review in Community', reportCheckIssue: 'Suggest a correction to the conditions or chemical result'
 });
+
 Object.assign(dictionaries.ru, { gas: 'Газовая фаза', organic: 'Органический растворитель', submitProposal: 'Отправить заявку', saveChanges: 'Сохранить изменения' });
 Object.assign(dictionaries.en, { gas: 'Gas phase', organic: 'Organic solvent', submitProposal: 'Submit proposal', saveChanges: 'Save changes' });
+
 Object.assign(dictionaries.ru, {
   specialCase: 'Частный случай / программная неточность', specialCaseHelp: 'Отметьте, если нужно отправить расчёт на разбор несмотря на предупреждение баланса или ионного модуля. Это не разрешает публикацию несбалансированного правила. Admin+ и GOD могут отправлять такие предупреждения без флажка.', specialCaseBadge: 'Частный случай / возможная программная неточность — требуется особая проверка', issue_balance_engine: 'Возможная ошибка уравнивания программы',
   manualIonicTitle: 'Ручное редактирование ионных уравнений (необязательно)', manualIonicHelp: 'Можно оставить оба поля пустыми. Заполненные формы проверяются по атомам и заряду; при отмеченном частном случае допускается отправка на разбор, но не публикация с ошибкой.', manualFull: 'Полное ионное уравнение', manualNet: 'Краткое ионное уравнение', manualIonicUnbalanced: 'Ручная ионная форма не сбалансирована по атомам или заряду', manualIonicApproved: 'Показана ручная ионная форма, проверенная модератором.', reviewWarning: 'Предупреждение: заявка будет отправлена на разбор, но не может быть опубликована без исправления баланса.',
@@ -270,16 +279,27 @@ Object.assign(dictionaries.en, {
   manualIonicTitle: 'Manual ionic equations (optional)', manualIonicHelp: 'Both fields may remain empty. Filled equations are checked for atoms and charge. A special-case proposal can be reviewed but not published with an invalid balance.', manualFull: 'Complete ionic equation', manualNet: 'Net ionic equation', manualIonicUnbalanced: 'The manual ionic form is not balanced for atoms or charge', manualIonicApproved: 'Showing the manual ionic form reviewed by a moderator.', reviewWarning: 'Warning: the proposal can be reviewed, but cannot be published until its balance is corrected.',
   ionsRequired: 'For a soluble strong electrolyte, specify its ions and coefficients.', ionsOptional: 'Leave empty for a metal, gas, water, precipitate or weak electrolyte.'
 });
-Object.assign(dictionaries.ru, { selfReviewBlocked: 'Admin и admin+ не могут утверждать собственные заявки. Нужен другой модератор.' });
-Object.assign(dictionaries.en, { selfReviewBlocked: 'Admin and admin+ cannot approve their own proposals. Another moderator is required.' });
+
+Object.assign(dictionaries.ru, {
+  selfReviewBlocked: 'Admin и admin+ не могут утверждать собственные заявки. Нужен другой модератор.',
+  reputation: 'Репутация (сумма голосов за правки)', byAuthorReputation: 'По репутации автора', reviewHistory: 'История решений модераторов', review_edited: 'Отредактировано перед решением'
+});
+Object.assign(dictionaries.en, {
+  selfReviewBlocked: 'Admin and admin+ cannot approve their own proposals. Another moderator is required.',
+  reputation: 'Reputation (sum of proposal votes)', byAuthorReputation: 'By author reputation', reviewHistory: 'Moderator decision history', review_edited: 'Edited before the review decision'
+});
+
 let locale = 'ru';
+
 export function t(key, parameters = {}) {
   const template = dictionaries[locale][key] ?? dictionaries.ru[key] ?? key;
   return Object.entries(parameters).reduce((text, [name, value]) => text.replaceAll(`{${name}}`, String(value)), template);
 }
+
 export function getLocale() {
   return locale;
 }
+
 export function setLocale(nextLocale) {
   locale = dictionaries[nextLocale] ? nextLocale : 'ru';
   document.documentElement.lang = locale;
