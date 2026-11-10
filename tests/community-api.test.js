@@ -56,7 +56,7 @@ test('community API: регистрация, заявки, голосовани�
   });
 
   const health = await request(port, '/api/health');
-  assert.deepEqual(health.data, { ok: true, database: 'sqlite', schemaVersion: 2 });
+  assert.deepEqual(health.data, { ok: true, database: 'sqlite', schemaVersion: 3 });
   const mismatch = await request(port, '/api/auth/register', { method: 'POST', body: { login: 'baduser', password: 'password123', confirmPassword: 'otherPassword' } });
   assert.equal(mismatch.status, 422);
   const alice = await register(port, 'alice');
@@ -88,6 +88,7 @@ test('community API: регистрация, заявки, голосовани�
   assert.equal(firstVote.status, 200);
   assert.equal(firstVote.data.proposal.score, 1);
   assert.equal(firstVote.data.proposal.viewer_vote, 1);
+  assert.equal(firstVote.data.proposal.author_reputation, 1);
   const secondVote = await request(port, `/api/proposals/${id}/vote`, { method: 'POST', body: { value: 1 }, cookie: bob.cookie, csrfToken: bob.csrfToken });
   assert.equal(secondVote.data.proposal.score, 1);
 
@@ -99,6 +100,7 @@ test('community API: регистрация, заявки, голосовани�
   assert.equal(users.data.users.length, 3);
   assert.ok(users.data.users.every((user) => !user.password_hash && !user.password));
   assert.equal(users.data.users.find((user) => user.login === 'alice').pending_count, 1);
+  assert.equal(users.data.users.find((user) => user.login === 'alice').reputation, 1);
 
   const promote = await request(port, '/api/users/3/role', { method: 'PATCH', body: { privileges: 'admin' }, cookie: godLogin.cookie, csrfToken: godLogin.csrfToken });
   assert.equal(promote.status, 200, JSON.stringify(promote.data));
@@ -117,6 +119,12 @@ test('community API: регистрация, заявки, голосовани�
   assert.equal(approved.data.proposal.status, 'approved');
   assert.equal(approved.data.rule.publishedBy, 'bob');
   assert.equal(approved.data.rule.priority, 600);
+  const history = await request(port, `/api/proposals/${id}/history`);
+  assert.equal(history.status, 200);
+  assert.deepEqual(history.data.events.map((event) => event.action), ['edited', 'approved']);
+  assert.ok(history.data.events.every((event) => event.actor_login === 'bob'));
+  assert.equal(history.data.events[1].proposal_version, 2);
+  assert.deepEqual(approved.data.proposal.review_history.map((event) => event.action), ['edited', 'approved']);
 
   const published = JSON.parse(readFileSync(PACKAGE, 'utf8'));
   assert.equal(published.version, 1);
@@ -166,8 +174,10 @@ test('community API: регистрация, заявки, голосовани�
   assert.equal(me.data.user.login, 'alice');
   assert.equal(me.data.csrfToken, alice.csrfToken);
   assert.ok(me.data.user.last_login_at);
+  assert.equal(me.data.user.reputation, 1);
   const own = await request(port, '/api/proposals?author=me', { cookie: alice.cookie });
   assert.equal(own.status, 200);
+  assert.ok(own.data.proposals.every((proposal) => Array.isArray(proposal.review_history)));
   assert.equal(own.data.proposals.length, 3);
   assert.ok(own.data.proposals.every((proposal) => proposal.author_login === 'alice'));
   const alternatives = await request(port, `/api/proposals?status=pending&reactionKey=${encodeURIComponent(corrected.data.proposal.reaction_key)}`);
@@ -197,11 +207,30 @@ test('community API: регистрация, заявки, голосовани�
   assert.equal(promotedPlus.data.user.privileges, 'admin+');
   const privileged = await request(port, '/api/proposals', { method: 'POST', body: { ...proposalPayload(), equation: '2H2 + O2 = H2O', substances: [] }, cookie: adminLogin.cookie, csrfToken: bobMe.data.csrfToken });
   assert.equal(privileged.status, 201, JSON.stringify(privileged.data));
+  const ranked = await request(port, '/api/proposals?status=pending&sort=reputation');
+  assert.equal(ranked.status, 200);
+  assert.equal(ranked.data.proposals[0].author_login, 'alice', JSON.stringify({ feed: ranked.data.proposals.map((proposal) => ({ author: proposal.author_login, reputation: proposal.author_reputation })), votes: app.db.prepare('SELECT proposal_id,user_id,value,weight FROM votes').all(), proposals: app.db.prepare('SELECT id,author_id,status FROM proposals').all() }));
+  assert.equal(ranked.data.proposals.find((proposal) => proposal.id === privileged.data.proposal.id).author_reputation, 0);
   const privilegedReview = await request(port, `/api/proposals/${privileged.data.proposal.id}/review`, { method: 'POST', body: { action: 'needs_evidence', note: 'Исправьте коэффициенты' }, cookie: adminLogin.cookie, csrfToken: bobMe.data.csrfToken });
   assert.equal(privilegedReview.status, 403);
   assert.equal(privilegedReview.data.error.code, 'self_review');
   const reviewedByGod = await request(port, `/api/proposals/${privileged.data.proposal.id}/review`, { method: 'POST', body: { action: 'needs_evidence', note: 'Исправьте коэффициенты' }, cookie: godLogin.cookie, csrfToken: godLogin.csrfToken });
   assert.equal(reviewedByGod.status, 200, JSON.stringify(reviewedByGod.data));
+  const reviewedHistory = await request(port, `/api/proposals/${privileged.data.proposal.id}/history`);
+  assert.equal(reviewedHistory.data.events.at(-1).action, 'needs_evidence');
+  assert.equal(reviewedHistory.data.events.at(-1).actor_login, 'creator');
+
+  const voteTime = new Date().toISOString();
+  for (let index = 0; index < 20; index++) {
+    const proposalId = `rate-limit-${index}`;
+    app.db.prepare('INSERT INTO proposals(id,author_id,reaction_key,proposed_rule_json,source_type,source_details,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?)')
+      .run(proposalId, 2, proposalId, '{}', 'glinka', 'test', voteTime, voteTime);
+    app.db.prepare('INSERT INTO votes(proposal_id,user_id,value,weight,created_at,updated_at) VALUES(?,?,?,?,?,?)')
+      .run(proposalId, 3, 1, 1, voteTime, voteTime);
+  }
+  const voteLimit = await request(port, `/api/proposals/${personal.data.proposal.id}/vote`, { method: 'POST', body: { value: 1 }, cookie: adminLogin.cookie, csrfToken: bobMe.data.csrfToken });
+  assert.equal(voteLimit.status, 429);
+  assert.equal(voteLimit.data.error.code, 'vote_rate_limit');
 
   const passwordRecord = app.db.prepare('SELECT password_hash FROM users WHERE login_canonical = ?').get('alice');
   assert.notEqual(passwordRecord.password_hash, 'password123');
