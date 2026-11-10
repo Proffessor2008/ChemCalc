@@ -42,7 +42,7 @@ const SCHEMA = `
     source_details TEXT NOT NULL,
     comment TEXT NOT NULL DEFAULT '',
     status TEXT NOT NULL DEFAULT 'pending',
-    score INTEGER NOT NULL DEFAULT 0,
+    score DOUBLE PRECISION NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL,
     version INTEGER NOT NULL DEFAULT 1,
@@ -52,16 +52,19 @@ const SCHEMA = `
   );
   CREATE INDEX IF NOT EXISTS proposals_status_score ON proposals(status, score DESC, created_at DESC);
   CREATE INDEX IF NOT EXISTS proposals_reaction_key ON proposals(reaction_key);
+  CREATE INDEX IF NOT EXISTS proposals_author_id ON proposals(author_id);
   CREATE TABLE IF NOT EXISTS votes (
     id BIGSERIAL PRIMARY KEY,
     proposal_id TEXT NOT NULL REFERENCES proposals(id) ON DELETE CASCADE,
     user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     value INTEGER NOT NULL CHECK(value IN (-1, 1)),
+    weight DOUBLE PRECISION NOT NULL DEFAULT 1,
     comment TEXT NOT NULL DEFAULT '',
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL,
     UNIQUE(proposal_id, user_id)
   );
+  CREATE INDEX IF NOT EXISTS votes_user_updated ON votes(user_id, updated_at);
   CREATE TABLE IF NOT EXISTS production_rules (
     id TEXT PRIMARY KEY,
     reaction_key TEXT NOT NULL UNIQUE,
@@ -72,8 +75,30 @@ const SCHEMA = `
     version INTEGER NOT NULL,
     active INTEGER NOT NULL DEFAULT 1
   );
+  CREATE TABLE IF NOT EXISTS review_events (
+    id TEXT PRIMARY KEY,
+    proposal_id TEXT NOT NULL REFERENCES proposals(id) ON DELETE CASCADE,
+    actor_id BIGINT NOT NULL REFERENCES users(id),
+    action TEXT NOT NULL CHECK(action IN ('approved','rejected','needs_evidence','changes_requested','edited')),
+    note TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL,
+    proposal_version INTEGER NOT NULL,
+    score DOUBLE PRECISION NOT NULL DEFAULT 0
+  );
+  CREATE INDEX IF NOT EXISTS review_events_proposal ON review_events(proposal_id, created_at);
   ALTER TABLE users DROP CONSTRAINT IF EXISTS users_privileges_check;
   ALTER TABLE users ADD CONSTRAINT users_privileges_check CHECK(privileges IN ('basic', 'admin', 'admin+', 'GOD'));
+  ALTER TABLE proposals ALTER COLUMN score TYPE DOUBLE PRECISION;
+  ALTER TABLE votes ADD COLUMN IF NOT EXISTS weight DOUBLE PRECISION NOT NULL DEFAULT 1;
+  ALTER TABLE public.review_events ENABLE ROW LEVEL SECURITY;
+  INSERT INTO review_events(id,proposal_id,actor_id,action,note,created_at,proposal_version,score)
+    SELECT md5(proposals.id || ':' || proposals.reviewed_by || ':' || proposals.status || ':' || proposals.reviewed_at),
+      proposals.id, proposals.reviewed_by, proposals.status, proposals.review_note, proposals.reviewed_at,
+      proposals.version, proposals.score FROM proposals
+    WHERE proposals.reviewed_by IS NOT NULL
+      AND proposals.status IN ('approved','rejected','needs_evidence','changes_requested')
+      AND NOT EXISTS(SELECT 1 FROM review_events WHERE proposal_id = proposals.id AND action = proposals.status AND created_at = proposals.reviewed_at)
+    ON CONFLICT(id) DO NOTHING;
 `;
 
 class PostgresCommunityDatabase {

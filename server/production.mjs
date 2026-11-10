@@ -2,6 +2,7 @@ import { renameSync, unlinkSync, writeFileSync } from 'node:fs';
 import reactionData from '../data/reaction-rules.json' with { type: 'json' };
 import finalReactionData from '../data/reaction-rules-final.json' with { type: 'json' };
 import { transaction } from './db.mjs';
+import { recordReview } from './review.mjs';
 import { validateData } from '../scripts/validate-data.mjs';
 
 const PRIORITIES = new Map([...finalReactionData.rules, ...reactionData.rules].map((rule) => [rule.id, rule.priority]));
@@ -62,6 +63,7 @@ export async function publishProposal(db, proposal, reviewer) {
       .run(id, proposal.reaction_key, JSON.stringify(rule), proposal.id, reviewer.id, rule.publishedAt, version);
     await db.prepare("UPDATE proposals SET status = 'approved', reviewed_by = ?, reviewed_at = ?, review_note = ? WHERE id = ?")
       .run(reviewer.id, rule.publishedAt, 'Опубликовано модератором', proposal.id);
+    await recordReview(db, proposal, reviewer, 'approved', 'Опубликовано модератором');
     const packageData = await communityPackage(db);
     writeFileSync(TEMP_PATH, `${JSON.stringify(packageData, null, 2)}\n`);
     const validation = validateData({ communityPath: TEMP_PATH });
