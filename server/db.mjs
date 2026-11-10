@@ -106,7 +106,7 @@ export function publicUser(row) {
     privileges: row.privileges,
     created_at: row.created_at,
     last_login_at: row.last_login_at,
-    pending_count: row.pending_count ?? 0
+    pending_count: Number(row.pending_count ?? 0)
   };
 }
 
@@ -120,13 +120,20 @@ export function jsonRecord(row, fields) {
 }
 
 export function transaction(db, callback) {
+  if (typeof db.transaction === 'function') return db.transaction(callback);
   db.exec('BEGIN IMMEDIATE');
-  try {
-    const value = callback();
-    db.exec('COMMIT');
-    return value;
-  } catch (error) {
+  let value;
+  try { value = callback(); } catch (error) {
     db.exec('ROLLBACK');
     throw error;
   }
+  if (value && typeof value.then === 'function') return value.then((result) => {
+    db.exec('COMMIT');
+    return result;
+  }, (error) => {
+    db.exec('ROLLBACK');
+    throw error;
+  });
+  db.exec('COMMIT');
+  return value;
 }

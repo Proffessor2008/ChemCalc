@@ -47,7 +47,7 @@ async function register(port, login, password = 'password123') {
 }
 
 test('community API: регистрация, заявки, голосование, модерация и публикация', async (context) => {
-  const app = createCommunityServer({ dbPath: ':memory:', god: credentials });
+  const app = await createCommunityServer({ dbPath: ':memory:', god: credentials });
   await new Promise((resolve) => app.server.listen(0, '127.0.0.1', resolve));
   const port = app.server.address().port;
   context.after(async () => {
@@ -176,6 +176,9 @@ test('community API: регистрация, заявки, голосовани�
   const bobMe = await request(port, '/api/auth/me', { cookie: adminLogin.cookie });
   const restoredProposal = await request(port, '/api/proposals', { method: 'POST', body: { ...proposalPayload(), equation: 'HCl + NaOH = NaCl + H2O', substances: [] }, cookie: adminLogin.cookie, csrfToken: bobMe.data.csrfToken });
   assert.equal(restoredProposal.status, 201, JSON.stringify(restoredProposal.data));
+  const selfReview = await request(port, `/api/proposals/${restoredProposal.data.proposal.id}/review`, { method: 'POST', body: { action: 'approve' }, cookie: adminLogin.cookie, csrfToken: bobMe.data.csrfToken });
+  assert.equal(selfReview.status, 403);
+  assert.equal(selfReview.data.error.code, 'self_review');
   const withdrawn = await request(port, `/api/proposals/${restoredProposal.data.proposal.id}/withdraw`, { method: 'POST', body: {}, cookie: adminLogin.cookie, csrfToken: bobMe.data.csrfToken });
   assert.equal(withdrawn.status, 200);
   assert.equal(withdrawn.data.proposal.status, 'withdrawn');
@@ -195,7 +198,10 @@ test('community API: регистрация, заявки, голосовани�
   const privileged = await request(port, '/api/proposals', { method: 'POST', body: { ...proposalPayload(), equation: '2H2 + O2 = H2O', substances: [] }, cookie: adminLogin.cookie, csrfToken: bobMe.data.csrfToken });
   assert.equal(privileged.status, 201, JSON.stringify(privileged.data));
   const privilegedReview = await request(port, `/api/proposals/${privileged.data.proposal.id}/review`, { method: 'POST', body: { action: 'needs_evidence', note: 'Исправьте коэффициенты' }, cookie: adminLogin.cookie, csrfToken: bobMe.data.csrfToken });
-  assert.equal(privilegedReview.status, 200, JSON.stringify(privilegedReview.data));
+  assert.equal(privilegedReview.status, 403);
+  assert.equal(privilegedReview.data.error.code, 'self_review');
+  const reviewedByGod = await request(port, `/api/proposals/${privileged.data.proposal.id}/review`, { method: 'POST', body: { action: 'needs_evidence', note: 'Исправьте коэффициенты' }, cookie: godLogin.cookie, csrfToken: godLogin.csrfToken });
+  assert.equal(reviewedByGod.status, 200, JSON.stringify(reviewedByGod.data));
 
   const passwordRecord = app.db.prepare('SELECT password_hash FROM users WHERE login_canonical = ?').get('alice');
   assert.notEqual(passwordRecord.password_hash, 'password123');

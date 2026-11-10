@@ -19,6 +19,8 @@ test('сообщество содержит регистрацию, роли, л
   assert.ok(ui.includes("user?.privileges !== 'GOD'"));
   assert.ok(ui.includes("const MODERATORS = ['admin', 'admin+', 'GOD']"));
   assert.ok(ui.includes("selectOptions(['basic', 'admin', 'admin+']"));
+  assert.ok(ui.includes('approve.disabled = ownReview'));
+  assert.ok(ui.includes("t('selfReviewBlocked')"));
 });
 
 test('форма проверяет баланс, среду, источник и состав новых веществ', () => {

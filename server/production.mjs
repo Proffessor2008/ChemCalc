@@ -8,12 +8,12 @@ const PRIORITIES = new Map([...finalReactionData.rules, ...reactionData.rules].m
 const PACKAGE_PATH = new URL('../data/reaction-rules-community.json', import.meta.url);
 const TEMP_PATH = new URL('../data/reaction-rules-community.tmp', import.meta.url);
 
-export function communityPackage(db) {
-  const rules = db.prepare('SELECT * FROM production_rules WHERE active = 1 ORDER BY published_at, id').all()
+export async function communityPackage(db) {
+  const rules = (await db.prepare('SELECT * FROM production_rules WHERE active = 1 ORDER BY published_at, id').all())
     .map((row) => JSON.parse(row.rule_json));
   const substances = [];
   const solubility = { substances: {} };
-  const activeSubstances = db.prepare(`SELECT proposals.proposed_rule_json FROM production_rules
+  const activeSubstances = await db.prepare(`SELECT proposals.proposed_rule_json FROM production_rules
     JOIN proposals ON proposals.id = production_rules.source_proposal_id WHERE production_rules.active = 1`).all();
   for (const row of activeSubstances) {
     const rule = JSON.parse(row.proposed_rule_json);
@@ -29,13 +29,13 @@ export function communityPackage(db) {
       }
     }
   }
-  const version = db.prepare('SELECT COALESCE(MAX(version), 0) AS version FROM production_rules').get().version;
+  const version = Number((await db.prepare('SELECT COALESCE(MAX(version), 0) AS version FROM production_rules').get()).version);
   return { version, source: 'Проверенные правила сообщества', rules, substances, solubility };
 }
 
-export function publishProposal(db, proposal, reviewer) {
+export async function publishProposal(db, proposal, reviewer) {
   if (proposal.source_type === 'personal') throw Object.assign(new Error('Личное мнение нельзя опубликовать без независимого источника'), { status: 422, code: 'source_required' });
-  const previousRow = db.prepare('SELECT * FROM production_rules WHERE reaction_key = ?').get(proposal.reaction_key);
+  const previousRow = await db.prepare('SELECT * FROM production_rules WHERE reaction_key = ?').get(proposal.reaction_key);
   if (previousRow && proposal.kind !== 'correction') {
     throw Object.assign(new Error('Такое правило уже опубликовано. Откройте его для предложения исправления.'), { status: 409, code: 'duplicate_rule' });
   }
@@ -53,16 +53,16 @@ export function publishProposal(db, proposal, reviewer) {
     publishedAt: new Date().toISOString()
   };
   delete rule.substances;
-  transaction(db, () => {
-    const version = db.prepare('SELECT COALESCE(MAX(version), 0) + 1 AS version FROM production_rules').get().version;
-    db.prepare(`INSERT INTO production_rules(id,reaction_key,rule_json,source_proposal_id,published_by,published_at,version,active) VALUES(?,?,?,?,?,?,?,1)
+  await transaction(db, async () => {
+    const version = Number((await db.prepare('SELECT COALESCE(MAX(version), 0) + 1 AS version FROM production_rules').get()).version);
+    await db.prepare(`INSERT INTO production_rules(id,reaction_key,rule_json,source_proposal_id,published_by,published_at,version,active) VALUES(?,?,?,?,?,?,?,1)
       ON CONFLICT(reaction_key) DO UPDATE SET id = excluded.id, rule_json = excluded.rule_json,
         source_proposal_id = excluded.source_proposal_id, published_by = excluded.published_by,
         published_at = excluded.published_at, version = excluded.version, active = 1`)
       .run(id, proposal.reaction_key, JSON.stringify(rule), proposal.id, reviewer.id, rule.publishedAt, version);
-    db.prepare("UPDATE proposals SET status = 'approved', reviewed_by = ?, reviewed_at = ?, review_note = ? WHERE id = ?")
+    await db.prepare("UPDATE proposals SET status = 'approved', reviewed_by = ?, reviewed_at = ?, review_note = ? WHERE id = ?")
       .run(reviewer.id, rule.publishedAt, 'Опубликовано модератором', proposal.id);
-    const packageData = communityPackage(db);
+    const packageData = await communityPackage(db);
     writeFileSync(TEMP_PATH, `${JSON.stringify(packageData, null, 2)}\n`);
     const validation = validateData({ communityPath: TEMP_PATH });
     if (validation.errors.length) {
