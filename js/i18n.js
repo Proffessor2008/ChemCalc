@@ -142,7 +142,6 @@ const dictionaries = {
     statusSyntax: 'Formula syntax error'
   }
 };
-
 Object.assign(dictionaries.ru, {
   autoDescription: 'Введите реагенты и условия — приложение применит локальное правило и уравняет продукты.',
   autoHelp: 'Введите только реагенты. Условия ниже реально изменяют выбор правила.',
@@ -172,7 +171,6 @@ Object.assign(dictionaries.en, {
 });
 Object.assign(dictionaries.ru, { documentation: 'Документация' });
 Object.assign(dictionaries.en, { documentation: 'Documentation' });
-
 Object.assign(dictionaries.ru, {
   latex: 'Копировать LaTeX', copiedLatex: 'LaTeX скопирован', copying: 'Копирование…', predicted: 'Типовое предсказание', ruleSource: 'Источник правила: {source}', reactionType: 'Тип: {type}',
   thermoReaction: 'Термодинамика реакции', thermoIonic: 'Термодинамика по краткому ионному уравнению', tryIonicThermo: 'Попробовать по краткому ионному уравнению', ionicThermoNote: 'Расчёт выполнен по краткому ионному уравнению; ионы-наблюдатели исключены.',
@@ -197,7 +195,6 @@ Object.assign(dictionaries.en, {
   potentialNoReaction: 'For the known half-reaction pair, {label} = {value} V ≤ 0: no reaction under these conditions.', standardPotential: 'Standard EMF: E° = {value} V > 0.', standardPotentialValue: 'Standard EMF: E° = {value} V.', nernstResult: 'Using the Nernst equation at Q = {quotient}: E = {value} V > 0.',
   ionicRedoxWhy: 'Products are selected from the local electrode-pair library; half-reactions are balanced for atoms, charge and electrons.'
 });
-
 Object.assign(dictionaries.ru, {
   hessSteps: 'Показать слагаемые по закону Гесса', reductionHalf: 'Восстановление', oxidationHalf: 'Окисление', predictionNotice: 'Типовое предсказание, проверьте условия реакции.',
   missingThermo: 'Нет термодинамических данных с подходящим стандартным состоянием: {formulas}. Расчёт не выполнен.', ionicThermoUnavailable: 'Расчёт по краткому ионному уравнению невозможен: {message}'
@@ -206,10 +203,8 @@ Object.assign(dictionaries.en, {
   hessSteps: 'Show terms in Hess’s law', reductionHalf: 'Reduction', oxidationHalf: 'Oxidation', predictionNotice: 'Typical prediction; verify the reaction conditions.',
   missingThermo: 'No thermodynamic data for the required standard state: {formulas}. Calculation cancelled.', ionicThermoUnavailable: 'Cannot calculate using the net ionic equation: {message}'
 });
-
 Object.assign(dictionaries.ru, { docsSubtitle: 'Руководство, логика вычислений и возможности программы.', openReadme: 'Открыть README' });
 Object.assign(dictionaries.en, { docsSubtitle: 'Guide, calculation logic and application features.', openReadme: 'Open README' });
-
 Object.assign(dictionaries.ru, { nonAqueousIonic: 'Ионные уравнения не составляются для безводных сред.' });
 Object.assign(dictionaries.en, { nonAqueousIonic: 'Ionic equations are not available for non-aqueous media.' });
 Object.assign(dictionaries.ru, {
@@ -220,7 +215,6 @@ Object.assign(dictionaries.en, {
   nonAqueousPrediction: 'No reaction: the aqueous ionic mechanism is not applicable in the selected non-aqueous medium. A phase-specific rule is required.',
   nonAqueousThermo: 'This is a formal standard-state calculation, not evidence that the reaction proceeds in the selected non-aqueous medium.'
 });
-
 const siteDataSource = 'Глинка Н. Л., Общая химия: степени окисления в многоатомных ионах; внутримолекулярное окисление-восстановление';
 Object.assign(dictionaries.ru, {
   аммоний: 'аммоний', нитрат: 'нитрат', нитрит: 'нитрит', дихромат: 'дихромат', хлорат: 'хлорат', оксид: 'оксид',
@@ -242,9 +236,8 @@ Object.assign(dictionaries.en, {
   redoxSiteOxidation: '{label} ({symbol}) is oxidized: {from} → {to}',
   internalRedoxSource: 'Glinka, General Chemistry: oxidation states in polyatomic ions; intramolecular redox'
 });
-
 Object.assign(dictionaries.ru, {
-  community: 'Сообщество', communitySubtitle: 'Проверенные пользователями дополнения к базе реакций.', communityOffline: 'Сервер сообщества недоступен. Калькулятор продолжает работать с локальной базой.', serverUnavailable: 'Сервер сообщества недоступен. Запустите проект через npm start.', pollingFallback: 'Онлайн-обновление прервано; список обновляется периодически.',
+  community: 'Сообщество', communitySubtitle: 'Проверенные пользователями дополнения к базе реакций.', communityOffline: 'Сервер сообщества недоступен. Калькулятор продолжает работать с локальной базой.', serverUnavailable: 'Сервис сообщества временно недоступен. Попробуйте повторить действие позже.', pollingFallback: 'Онлайн-обновление прервано; список обновляется периодически.',
   account: 'Аккаунт', login: 'Логин', password: 'Пароль', confirmPassword: 'Подтверждение пароля', signIn: 'Войти', signOut: 'Выйти', createAccount: 'Создать аккаунт', register: 'Зарегистрироваться', signedIn: 'Вход выполнен', role: 'Привилегии', registered: 'Дата регистрации', lastSession: 'Последний вход', pendingMine: 'Ожидающие заявки', userManagement: 'Пользователи и роли', userManagementHelp: 'Только GOD назначает администраторов. Пароли в списке не отображаются.', roleUpdated: 'Роль пользователя обновлена',
   newProposal: 'Новая заявка', editProposal: 'Редактирование заявки', correctionProposal: 'Исправление ответа', proposalFeed: 'Лента предложений', sort: 'Сортировка', byRating: 'По рейтингу', byDate: 'Сначала новые', feedHelp: 'Голоса помогают модераторам заметить заявку. Публикацию подтверждает только admin, admin+ или GOD.', moderation: 'Модерация', moderationHelp: 'Сравните уравнение с источником, проверьте условия и ионный состав. После утверждения правило станет активным для пользователей.', myProposals: 'Мои заявки', noProposals: 'Ожидающих заявок пока нет.', noOwnProposals: 'У вас пока нет заявок.',
   kind_new: 'Новое правило', kind_correction: 'Исправление', rating: 'Рейтинг', source: 'Источник', source_glinka: 'Учебник Глинки', source_lidine: 'Справочник Лидина', source_textbook: 'Другой учебник или статья', source_lab: 'Лабораторная работа', source_personal: 'Личное мнение', sourceDetails: 'Точное описание источника: страница, раздел, ссылка или условия опыта', comment: 'Пояснение и условия применимости', issues: 'Что нужно исправить', issue_products: 'Продукты реакции', issue_conditions: 'Условия реакции', issue_coefficients: 'Коэффициенты', issue_ionic: 'Ионное уравнение', issue_substance: 'Название или свойства вещества', issue_thermo: 'Термодинамика', issue_code: 'Ошибка обработки формулы',
@@ -255,7 +248,7 @@ Object.assign(dictionaries.ru, {
   atomsBalanced: '✓ Атомы и суммарный заряд сбалансированы.', atomsUnbalanced: 'Атомы или заряд не уравнены. Проверьте коэффициенты перед отправкой.', notMinimal: 'Коэффициенты не минимальные.', noReactionProposal: 'Будет предложен ответ «Реакция не идёт» для указанных реагентов и условий.', invalidEquation: 'Введите корректное уравнение с обеими сторонами или выберите «Реакция не идёт».', fixBalanceBeforeSubmit: 'Сначала исправьте ошибку в уравнении.', loginToPropose: 'Войдите или зарегистрируйтесь, чтобы отправить заявку.', suggestSolution: 'Предложить верное решение', reportInaccuracy: 'Нашли неточность? Предложите правки для этого случая', pendingAlternatives: 'Предложенные пользователями варианты', unverifiedAnswer: 'Ответ предложен пользователем и ещё не подтверждён', openInCommunity: 'Проверить в сообществе', reportCheckIssue: 'Предложить исправление условий или химического результата'
 });
 Object.assign(dictionaries.en, {
-  community: 'Community', communitySubtitle: 'Community contributions, verified before publication.', communityOffline: 'The community server is unavailable. The calculator still uses its local database.', serverUnavailable: 'The community server is unavailable. Start the project with npm start.', pollingFallback: 'Live updates disconnected; the feed will use periodic polling.',
+  community: 'Community', communitySubtitle: 'Community contributions, verified before publication.', communityOffline: 'The community server is unavailable. The calculator still uses its local database.', serverUnavailable: 'The community service is temporarily unavailable. Please try again later.', pollingFallback: 'Live updates disconnected; the feed will use periodic polling.',
   account: 'Account', login: 'Login', password: 'Password', confirmPassword: 'Confirm password', signIn: 'Sign in', signOut: 'Sign out', createAccount: 'Create account', register: 'Register', signedIn: 'Signed in', role: 'Privileges', registered: 'Registered', lastSession: 'Last sign-in', pendingMine: 'Pending proposals', userManagement: 'Users and roles', userManagementHelp: 'Only GOD assigns administrators. Passwords are never shown.', roleUpdated: 'User role updated',
   newProposal: 'New proposal', editProposal: 'Edit proposal', correctionProposal: 'Correct the answer', proposalFeed: 'Proposal feed', sort: 'Sort', byRating: 'By rating', byDate: 'Newest first', feedHelp: 'Votes help moderators find proposals. Only admin, admin+ or GOD can publish a rule.', moderation: 'Moderation', moderationHelp: 'Check the source, conditions and ion composition. Approval makes the rule active for users.', myProposals: 'My proposals', noProposals: 'No pending proposals.', noOwnProposals: 'You have no proposals yet.',
   kind_new: 'New rule', kind_correction: 'Correction', rating: 'Rating', source: 'Source', source_glinka: 'Glinka textbook', source_lidine: 'Lidin reference', source_textbook: 'Other textbook or article', source_lab: 'Laboratory work', source_personal: 'Personal opinion', sourceDetails: 'Exact source: page, section, link or experiment conditions', comment: 'Explanation and applicability', issues: 'What needs correction', issue_products: 'Reaction products', issue_conditions: 'Reaction conditions', issue_coefficients: 'Coefficients', issue_ionic: 'Ionic equation', issue_substance: 'Substance name or properties', issue_thermo: 'Thermodynamics', issue_code: 'Formula-processing error',
@@ -265,10 +258,8 @@ Object.assign(dictionaries.en, {
   newSubstances: 'New substance data', newSubstancesHelp: 'Fill in cards for substances outside the local database. List ions as Li^+:1, OH^-:1.', substanceName: 'Substance name', substanceClass: 'Substance class', solubility: 'Solubility', strongElectrolyte: 'Strong electrolyte', ionComposition: 'Ion composition: ion:coefficient', ionsFormat: 'Check the ions for {formula}: use Li^+:1, OH^-:1', ionicPreview: 'Ionic equation preview',
   atomsBalanced: '✓ Atoms and total charge are balanced.', atomsUnbalanced: 'Atoms or charge are unbalanced. Check the coefficients before submitting.', notMinimal: 'The coefficients are not minimal.', noReactionProposal: 'This proposes “No reaction” for the specified reactants and conditions.', invalidEquation: 'Enter a valid equation with both sides, or select “No reaction”.', fixBalanceBeforeSubmit: 'Correct the equation error first.', loginToPropose: 'Sign in or register to submit a proposal.', suggestSolution: 'Suggest the correct solution', reportInaccuracy: 'Found an inaccuracy? Suggest a correction', pendingAlternatives: 'Community alternatives', unverifiedAnswer: 'User-submitted answer, not yet verified', openInCommunity: 'Review in Community', reportCheckIssue: 'Suggest a correction to the conditions or chemical result'
 });
-
 Object.assign(dictionaries.ru, { gas: 'Газовая фаза', organic: 'Органический растворитель', submitProposal: 'Отправить заявку', saveChanges: 'Сохранить изменения' });
 Object.assign(dictionaries.en, { gas: 'Gas phase', organic: 'Organic solvent', submitProposal: 'Submit proposal', saveChanges: 'Save changes' });
-
 Object.assign(dictionaries.ru, {
   specialCase: 'Частный случай / программная неточность', specialCaseHelp: 'Отметьте, если нужно отправить расчёт на разбор несмотря на предупреждение баланса или ионного модуля. Это не разрешает публикацию несбалансированного правила. Admin+ и GOD могут отправлять такие предупреждения без флажка.', specialCaseBadge: 'Частный случай / возможная программная неточность — требуется особая проверка', issue_balance_engine: 'Возможная ошибка уравнивания программы',
   manualIonicTitle: 'Ручное редактирование ионных уравнений (необязательно)', manualIonicHelp: 'Можно оставить оба поля пустыми. Заполненные формы проверяются по атомам и заряду; при отмеченном частном случае допускается отправка на разбор, но не публикация с ошибкой.', manualFull: 'Полное ионное уравнение', manualNet: 'Краткое ионное уравнение', manualIonicUnbalanced: 'Ручная ионная форма не сбалансирована по атомам или заряду', manualIonicApproved: 'Показана ручная ионная форма, проверенная модератором.', reviewWarning: 'Предупреждение: заявка будет отправлена на разбор, но не может быть опубликована без исправления баланса.',
@@ -279,21 +270,16 @@ Object.assign(dictionaries.en, {
   manualIonicTitle: 'Manual ionic equations (optional)', manualIonicHelp: 'Both fields may remain empty. Filled equations are checked for atoms and charge. A special-case proposal can be reviewed but not published with an invalid balance.', manualFull: 'Complete ionic equation', manualNet: 'Net ionic equation', manualIonicUnbalanced: 'The manual ionic form is not balanced for atoms or charge', manualIonicApproved: 'Showing the manual ionic form reviewed by a moderator.', reviewWarning: 'Warning: the proposal can be reviewed, but cannot be published until its balance is corrected.',
   ionsRequired: 'For a soluble strong electrolyte, specify its ions and coefficients.', ionsOptional: 'Leave empty for a metal, gas, water, precipitate or weak electrolyte.'
 });
-
 Object.assign(dictionaries.ru, { selfReviewBlocked: 'Admin и admin+ не могут утверждать собственные заявки. Нужен другой модератор.' });
 Object.assign(dictionaries.en, { selfReviewBlocked: 'Admin and admin+ cannot approve their own proposals. Another moderator is required.' });
-
 let locale = 'ru';
-
 export function t(key, parameters = {}) {
   const template = dictionaries[locale][key] ?? dictionaries.ru[key] ?? key;
   return Object.entries(parameters).reduce((text, [name, value]) => text.replaceAll(`{${name}}`, String(value)), template);
 }
-
 export function getLocale() {
   return locale;
 }
-
 export function setLocale(nextLocale) {
   locale = dictionaries[nextLocale] ? nextLocale : 'ru';
   document.documentElement.lang = locale;
