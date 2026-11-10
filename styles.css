@@ -563,3 +563,8 @@ select.reference-select-mobile { width: 100%; min-height: 46px; padding: 8px 10p
 .review-warning { color: var(--warning); }
 .ion-field-hint { margin-top: -6px; }
 .manual-ionic-card { margin-block: 10px; }
+
+.review-history { margin-top: 12px; border-top: 1px solid var(--line); }
+.review-history summary { min-height: 44px; padding: 10px 0; color: var(--accent); cursor: pointer; }
+.review-history-list { display: grid; gap: 7px; margin: 0; padding-left: 22px; color: var(--muted); font-size: .74rem; }
+.community-reputation { color: var(--accent-strong); font-weight: 750; }
