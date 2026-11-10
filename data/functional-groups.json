@@ -1,0 +1,23 @@
+{
+  "source": "Глинка Н. Л., Общая химия: формальные степени окисления по связям C–H, C–C, C–O и C=O для указанных структурных формул",
+  "records": {
+    "CH3CHO": {
+      "sites": [
+        {"symbol":"C","state":-3,"count":1,"label":"methyl"},
+        {"symbol":"C","state":1,"count":1,"label":"functional-carbon"}
+      ]
+    },
+    "CH3COOH": {
+      "sites": [
+        {"symbol":"C","state":-3,"count":1,"label":"methyl"},
+        {"symbol":"C","state":3,"count":1,"label":"functional-carbon"}
+      ]
+    },
+    "CH3CH2OH": {
+      "sites": [
+        {"symbol":"C","state":-3,"count":1,"label":"methyl"},
+        {"symbol":"C","state":-1,"count":1,"label":"functional-carbon"}
+      ]
+    }
+  }
+}

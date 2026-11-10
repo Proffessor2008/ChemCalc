@@ -1,0 +1,6 @@
+Periodic-Table-JSON by Bowserinator
+Source: https://github.com/Bowserinator/Periodic-Table-JSON
+
+The project README states: “Feel free to use it in your projects.”
+GitHub repository metadata reports license: Other / NOASSERTION.
+No standard SPDX license is asserted here. Per-element Wikipedia source links are retained in data/elements.json. English Wikipedia summaries and external images are not redistributed by this application.

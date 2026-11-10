@@ -1,0 +1,29 @@
+{
+  "source": "Глинка Н. Л., Общая химия: степени окисления в многоатомных ионах; внутримолекулярное окисление-восстановление",
+  "records": {
+    "NH4NO3": {
+      "sites": [
+        {"symbol": "N", "state": -3, "label": "аммоний"},
+        {"symbol": "N", "state": 5, "label": "нитрат"}
+      ]
+    },
+    "NH4NO2": {
+      "sites": [
+        {"symbol": "N", "state": -3, "label": "аммоний"},
+        {"symbol": "N", "state": 3, "label": "нитрит"}
+      ]
+    },
+    "(NH4)2Cr2O7": {
+      "sites": [
+        {"symbol": "N", "state": -3, "label": "аммоний", "count": 2},
+        {"symbol": "Cr", "state": 6, "label": "дихромат", "count": 2}
+      ]
+    },
+    "KClO3": {
+      "sites": [
+        {"symbol": "Cl", "state": 5, "label": "хлорат"},
+        {"symbol": "O", "state": -2, "label": "оксид", "count": 3}
+      ]
+    }
+  }
+}

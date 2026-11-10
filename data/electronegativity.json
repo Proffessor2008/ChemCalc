@@ -1,0 +1,1068 @@
+{
+  "scale": "Полинг, безразмерная величина",
+  "source": "Periodic-Table-JSON, значения по шкале Полинга",
+  "records": [
+    {
+      "symbol": "H",
+      "number": 1,
+      "name_ru": "Водород",
+      "pauling": 2.2,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "He",
+      "number": 2,
+      "name_ru": "Гелий",
+      "pauling": null,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Li",
+      "number": 3,
+      "name_ru": "Литий",
+      "pauling": 0.98,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Be",
+      "number": 4,
+      "name_ru": "Бериллий",
+      "pauling": 1.57,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "B",
+      "number": 5,
+      "name_ru": "Бор",
+      "pauling": 2.04,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "C",
+      "number": 6,
+      "name_ru": "Углерод",
+      "pauling": 2.55,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "N",
+      "number": 7,
+      "name_ru": "Азот",
+      "pauling": 3.04,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "O",
+      "number": 8,
+      "name_ru": "Кислород",
+      "pauling": 3.44,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "F",
+      "number": 9,
+      "name_ru": "Фтор",
+      "pauling": 3.98,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Ne",
+      "number": 10,
+      "name_ru": "Неон",
+      "pauling": null,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Na",
+      "number": 11,
+      "name_ru": "Натрий",
+      "pauling": 0.93,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Mg",
+      "number": 12,
+      "name_ru": "Магний",
+      "pauling": 1.31,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Al",
+      "number": 13,
+      "name_ru": "Алюминий",
+      "pauling": 1.61,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Si",
+      "number": 14,
+      "name_ru": "Кремний",
+      "pauling": 1.9,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "P",
+      "number": 15,
+      "name_ru": "Фосфор",
+      "pauling": 2.19,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "S",
+      "number": 16,
+      "name_ru": "Сера",
+      "pauling": 2.58,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Cl",
+      "number": 17,
+      "name_ru": "Хлор",
+      "pauling": 3.16,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Ar",
+      "number": 18,
+      "name_ru": "Аргон",
+      "pauling": null,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "K",
+      "number": 19,
+      "name_ru": "Калий",
+      "pauling": 0.82,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Ca",
+      "number": 20,
+      "name_ru": "Кальций",
+      "pauling": 1,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Sc",
+      "number": 21,
+      "name_ru": "Скандий",
+      "pauling": 1.36,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Ti",
+      "number": 22,
+      "name_ru": "Титан",
+      "pauling": 1.54,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "V",
+      "number": 23,
+      "name_ru": "Ванадий",
+      "pauling": 1.63,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Cr",
+      "number": 24,
+      "name_ru": "Хром",
+      "pauling": 1.66,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Mn",
+      "number": 25,
+      "name_ru": "Марганец",
+      "pauling": 1.55,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Fe",
+      "number": 26,
+      "name_ru": "Железо",
+      "pauling": 1.83,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Co",
+      "number": 27,
+      "name_ru": "Кобальт",
+      "pauling": 1.88,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Ni",
+      "number": 28,
+      "name_ru": "Никель",
+      "pauling": 1.91,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Cu",
+      "number": 29,
+      "name_ru": "Медь",
+      "pauling": 1.9,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Zn",
+      "number": 30,
+      "name_ru": "Цинк",
+      "pauling": 1.65,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Ga",
+      "number": 31,
+      "name_ru": "Галлий",
+      "pauling": 1.81,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Ge",
+      "number": 32,
+      "name_ru": "Германий",
+      "pauling": 2.01,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "As",
+      "number": 33,
+      "name_ru": "Мышьяк",
+      "pauling": 2.18,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Se",
+      "number": 34,
+      "name_ru": "Селен",
+      "pauling": 2.55,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Br",
+      "number": 35,
+      "name_ru": "Бром",
+      "pauling": 2.96,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Kr",
+      "number": 36,
+      "name_ru": "Криптон",
+      "pauling": 3,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Rb",
+      "number": 37,
+      "name_ru": "Рубидий",
+      "pauling": 0.82,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Sr",
+      "number": 38,
+      "name_ru": "Стронций",
+      "pauling": 0.95,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Y",
+      "number": 39,
+      "name_ru": "Иттрий",
+      "pauling": 1.22,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Zr",
+      "number": 40,
+      "name_ru": "Цирконий",
+      "pauling": 1.33,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Nb",
+      "number": 41,
+      "name_ru": "Ниобий",
+      "pauling": 1.6,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Mo",
+      "number": 42,
+      "name_ru": "Молибден",
+      "pauling": 2.16,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Tc",
+      "number": 43,
+      "name_ru": "Технеций",
+      "pauling": 1.9,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Ru",
+      "number": 44,
+      "name_ru": "Рутений",
+      "pauling": 2.2,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Rh",
+      "number": 45,
+      "name_ru": "Родий",
+      "pauling": 2.28,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Pd",
+      "number": 46,
+      "name_ru": "Палладий",
+      "pauling": 2.2,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Ag",
+      "number": 47,
+      "name_ru": "Серебро",
+      "pauling": 1.93,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Cd",
+      "number": 48,
+      "name_ru": "Кадмий",
+      "pauling": 1.69,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "In",
+      "number": 49,
+      "name_ru": "Индий",
+      "pauling": 1.78,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Sn",
+      "number": 50,
+      "name_ru": "Олово",
+      "pauling": 1.96,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Sb",
+      "number": 51,
+      "name_ru": "Сурьма",
+      "pauling": 2.05,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Te",
+      "number": 52,
+      "name_ru": "Теллур",
+      "pauling": 2.1,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "I",
+      "number": 53,
+      "name_ru": "Иод",
+      "pauling": 2.66,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Xe",
+      "number": 54,
+      "name_ru": "Ксенон",
+      "pauling": 2.6,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Cs",
+      "number": 55,
+      "name_ru": "Цезий",
+      "pauling": 0.79,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Ba",
+      "number": 56,
+      "name_ru": "Барий",
+      "pauling": 0.89,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "La",
+      "number": 57,
+      "name_ru": "Лантан",
+      "pauling": 1.1,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Ce",
+      "number": 58,
+      "name_ru": "Церий",
+      "pauling": 1.12,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Pr",
+      "number": 59,
+      "name_ru": "Празеодим",
+      "pauling": 1.13,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Nd",
+      "number": 60,
+      "name_ru": "Неодим",
+      "pauling": 1.14,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Pm",
+      "number": 61,
+      "name_ru": "Прометий",
+      "pauling": 1.13,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Sm",
+      "number": 62,
+      "name_ru": "Самарий",
+      "pauling": 1.17,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Eu",
+      "number": 63,
+      "name_ru": "Европий",
+      "pauling": 1.2,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Gd",
+      "number": 64,
+      "name_ru": "Гадолиний",
+      "pauling": 1.2,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Tb",
+      "number": 65,
+      "name_ru": "Тербий",
+      "pauling": 1.1,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Dy",
+      "number": 66,
+      "name_ru": "Диспрозий",
+      "pauling": 1.22,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Ho",
+      "number": 67,
+      "name_ru": "Гольмий",
+      "pauling": 1.23,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Er",
+      "number": 68,
+      "name_ru": "Эрбий",
+      "pauling": 1.24,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Tm",
+      "number": 69,
+      "name_ru": "Тулий",
+      "pauling": 1.25,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Yb",
+      "number": 70,
+      "name_ru": "Иттербий",
+      "pauling": 1.1,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Lu",
+      "number": 71,
+      "name_ru": "Лютеций",
+      "pauling": 1.27,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Hf",
+      "number": 72,
+      "name_ru": "Гафний",
+      "pauling": 1.3,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Ta",
+      "number": 73,
+      "name_ru": "Тантал",
+      "pauling": 1.5,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "W",
+      "number": 74,
+      "name_ru": "Вольфрам",
+      "pauling": 2.36,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Re",
+      "number": 75,
+      "name_ru": "Рений",
+      "pauling": 1.9,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Os",
+      "number": 76,
+      "name_ru": "Осмий",
+      "pauling": 2.2,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Ir",
+      "number": 77,
+      "name_ru": "Иридий",
+      "pauling": 2.2,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Pt",
+      "number": 78,
+      "name_ru": "Платина",
+      "pauling": 2.28,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Au",
+      "number": 79,
+      "name_ru": "Золото",
+      "pauling": 2.54,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Hg",
+      "number": 80,
+      "name_ru": "Ртуть",
+      "pauling": 2,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Tl",
+      "number": 81,
+      "name_ru": "Таллий",
+      "pauling": 1.62,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Pb",
+      "number": 82,
+      "name_ru": "Свинец",
+      "pauling": 1.87,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Bi",
+      "number": 83,
+      "name_ru": "Висмут",
+      "pauling": 2.02,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Po",
+      "number": 84,
+      "name_ru": "Полоний",
+      "pauling": 2,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "At",
+      "number": 85,
+      "name_ru": "Астат",
+      "pauling": 2.2,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Rn",
+      "number": 86,
+      "name_ru": "Радон",
+      "pauling": 2.2,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Fr",
+      "number": 87,
+      "name_ru": "Франций",
+      "pauling": 0.79,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Ra",
+      "number": 88,
+      "name_ru": "Радий",
+      "pauling": 0.9,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Ac",
+      "number": 89,
+      "name_ru": "Актиний",
+      "pauling": 1.1,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Th",
+      "number": 90,
+      "name_ru": "Торий",
+      "pauling": 1.3,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Pa",
+      "number": 91,
+      "name_ru": "Протактиний",
+      "pauling": 1.5,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "U",
+      "number": 92,
+      "name_ru": "Уран",
+      "pauling": 1.38,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Np",
+      "number": 93,
+      "name_ru": "Нептуний",
+      "pauling": 1.36,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Pu",
+      "number": 94,
+      "name_ru": "Плутоний",
+      "pauling": 1.28,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Am",
+      "number": 95,
+      "name_ru": "Америций",
+      "pauling": 1.13,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Cm",
+      "number": 96,
+      "name_ru": "Кюрий",
+      "pauling": 1.28,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Bk",
+      "number": 97,
+      "name_ru": "Берклий",
+      "pauling": 1.3,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Cf",
+      "number": 98,
+      "name_ru": "Калифорний",
+      "pauling": 1.3,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Es",
+      "number": 99,
+      "name_ru": "Эйнштейний",
+      "pauling": 1.3,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Fm",
+      "number": 100,
+      "name_ru": "Фермий",
+      "pauling": 1.3,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Md",
+      "number": 101,
+      "name_ru": "Менделевий",
+      "pauling": 1.3,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "No",
+      "number": 102,
+      "name_ru": "Нобелий",
+      "pauling": 1.3,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Lr",
+      "number": 103,
+      "name_ru": "Лоуренсий",
+      "pauling": 1.3,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Rf",
+      "number": 104,
+      "name_ru": "Резерфордий",
+      "pauling": null,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Db",
+      "number": 105,
+      "name_ru": "Дубний",
+      "pauling": null,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Sg",
+      "number": 106,
+      "name_ru": "Сиборгий",
+      "pauling": null,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Bh",
+      "number": 107,
+      "name_ru": "Борий",
+      "pauling": null,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Hs",
+      "number": 108,
+      "name_ru": "Хассий",
+      "pauling": null,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Mt",
+      "number": 109,
+      "name_ru": "Мейтнерий",
+      "pauling": null,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Ds",
+      "number": 110,
+      "name_ru": "Дармштадтий",
+      "pauling": null,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Rg",
+      "number": 111,
+      "name_ru": "Рентгений",
+      "pauling": null,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Cn",
+      "number": 112,
+      "name_ru": "Коперниций",
+      "pauling": null,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Nh",
+      "number": 113,
+      "name_ru": "Нихоний",
+      "pauling": null,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Fl",
+      "number": 114,
+      "name_ru": "Флеровий",
+      "pauling": null,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Mc",
+      "number": 115,
+      "name_ru": "Московий",
+      "pauling": null,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Lv",
+      "number": 116,
+      "name_ru": "Ливерморий",
+      "pauling": null,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Ts",
+      "number": 117,
+      "name_ru": "Теннессин",
+      "pauling": null,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    },
+    {
+      "symbol": "Og",
+      "number": 118,
+      "name_ru": "Оганессон",
+      "pauling": null,
+      "allred_rochow": null,
+      "mulliken": null,
+      "source": "Pauling scale; Periodic-Table-JSON / Wikipedia, ссылка в карточке элемента"
+    }
+  ]
+}

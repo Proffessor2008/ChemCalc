@@ -1,0 +1,30 @@
+{
+  "conditions": "25 °C, водный раствор; Ka = 10^(−pKa), Kb = 10^(−pKb)",
+  "source": "CRC Handbook of Chemistry and Physics, 97th ed.; NIST Chemistry WebBook. Округлённые справочные значения.",
+  "records": [
+    {"id":"hcl","formula":"HCl","name":"Хлороводородная кислота","type":"acid","strength":"strong","conjugate":"Cl^-","pKa":null,"note":"Сильная кислота; для разбавленного раствора используется прямой расчёт без слабого равновесия.","source":"CRC, 2016; уровневание сильных кислот в воде"},
+    {"id":"nitric","formula":"HNO3","name":"Азотная кислота","type":"acid","strength":"strong","conjugate":"NO3^-","pKa":null,"source":"CRC, 2016"},
+    {"id":"acetic","formula":"CH3COOH","name":"Уксусная кислота","type":"acid","strength":"weak","conjugate":"CH3COO^-","pKa":4.76,"source":"CRC, 2016"},
+    {"id":"formic","formula":"HCOOH","name":"Муравьиная кислота","type":"acid","strength":"weak","conjugate":"HCOO^-","pKa":3.75,"source":"CRC, 2016"},
+    {"id":"hf","formula":"HF","name":"Фтороводородная кислота","type":"acid","strength":"weak","conjugate":"F^-","pKa":3.17,"source":"CRC, 2016"},
+    {"id":"hcn","formula":"HCN","name":"Циановодородная кислота","type":"acid","strength":"weak","conjugate":"CN^-","pKa":9.21,"source":"CRC, 2016"},
+    {"id":"hclo","formula":"HClO","name":"Хлорноватистая кислота","type":"acid","strength":"weak","conjugate":"ClO^-","pKa":7.53,"source":"CRC, 2016"},
+    {"id":"phosphoric-1","formula":"H3PO4","name":"Фосфорная кислота, ступень 1","type":"acid","strength":"weak","conjugate":"H2PO4^-","pKa":2.15,"step":1,"source":"CRC, 2016"},
+    {"id":"phosphoric-2","formula":"H2PO4^-","name":"Дигидрофосфат, ступень 2","type":"acid","strength":"weak","conjugate":"HPO4^2-","pKa":7.20,"step":2,"source":"CRC, 2016"},
+    {"id":"phosphoric-3","formula":"HPO4^2-","name":"Гидрофосфат, ступень 3","type":"acid","strength":"weak","conjugate":"PO4^3-","pKa":12.35,"step":3,"source":"CRC, 2016"},
+    {"id":"carbonic-1","formula":"H2CO3","name":"Угольная кислота, ступень 1 (условная форма CO2 + H2O)","type":"acid","strength":"weak","conjugate":"HCO3^-","pKa":6.35,"step":1,"source":"CRC, 2016; кажущаяся константа для растворённого CO2"},
+    {"id":"carbonic-2","formula":"HCO3^-","name":"Гидрокарбонат, ступень 2","type":"acid","strength":"weak","conjugate":"CO3^2-","pKa":10.33,"step":2,"source":"CRC, 2016"},
+    {"id":"sulfurous-1","formula":"H2SO3","name":"Сернистая кислота, ступень 1","type":"acid","strength":"weak","conjugate":"HSO3^-","pKa":1.81,"step":1,"source":"CRC, 2016"},
+    {"id":"sulfurous-2","formula":"HSO3^-","name":"Гидросульфит, ступень 2","type":"acid","strength":"weak","conjugate":"SO3^2-","pKa":6.97,"step":2,"source":"CRC, 2016"},
+    {"id":"h2s-1","formula":"H2S","name":"Сероводород, ступень 1","type":"acid","strength":"weak","conjugate":"HS^-","pKa":7.00,"step":1,"source":"CRC, 2016"},
+    {"id":"h2s-2","formula":"HS^-","name":"Гидросульфид, ступень 2","type":"acid","strength":"weak","conjugate":"S^2-","pKa":13.90,"step":2,"source":"CRC, 2016"},
+    {"id":"sulfuric-2","formula":"HSO4^-","name":"Гидросульфат, ступень 2","type":"acid","strength":"weak","conjugate":"SO4^2-","pKa":1.92,"step":2,"source":"CRC, 2016"},
+    {"id":"citric-1","formula":"C6H8O7","name":"Лимонная кислота, ступень 1","type":"acid","strength":"weak","conjugate":"C6H7O7^-","pKa":3.13,"step":1,"source":"CRC, 2016"},
+    {"id":"citric-2","formula":"C6H7O7^-","name":"Лимонная кислота, ступень 2","type":"acid","strength":"weak","conjugate":"C6H6O7^2-","pKa":4.76,"step":2,"source":"CRC, 2016"},
+    {"id":"citric-3","formula":"C6H6O7^2-","name":"Лимонная кислота, ступень 3","type":"acid","strength":"weak","conjugate":"C6H5O7^3-","pKa":6.40,"step":3,"source":"CRC, 2016"},
+    {"id":"ammonia","formula":"NH3","name":"Аммиак","type":"base","strength":"weak","conjugate":"NH4^+","pKb":4.75,"source":"CRC, 2016"},
+    {"id":"methylamine","formula":"CH3NH2","name":"Метиламин","type":"base","strength":"weak","conjugate":"CH3NH3^+","pKb":3.38,"source":"CRC, 2016"},
+    {"id":"naoh","formula":"NaOH","name":"Гидроксид натрия","type":"base","strength":"strong","conjugate":"Na^+","pKb":null,"source":"CRC, 2016; полная диссоциация в разбавленном растворе"},
+    {"id":"koh","formula":"KOH","name":"Гидроксид калия","type":"base","strength":"strong","conjugate":"K^+","pKb":null,"source":"CRC, 2016; полная диссоциация в разбавленном растворе"}
+  ]
+}
