@@ -57,3 +57,15 @@ test('документация содержит полные английски�
   }
   assert.ok(html.includes('data-doc-lang="en" aria-label="Documentation sections"'));
 });
+
+test('пользовательский интерфейс не содержит инструкций локального запуска', () => {
+  const readme = readFileSync('README.md', 'utf8');
+  for (const path of ['index.html', 'js/i18n.js']) {
+    const content = readFileSync(path, 'utf8');
+    for (const text of ['npm start', 'npm run start:static', '127.0.0.1:8080', 'file://', 'Запуск локально', 'Run locally']) {
+      assert.ok(!content.includes(text), `${path}: ${text}`);
+    }
+  }
+  assert.ok(readme.includes('## Дорожная карта'));
+  assert.ok(readme.includes('npm start'));
+});
