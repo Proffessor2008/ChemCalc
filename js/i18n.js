@@ -280,6 +280,9 @@ Object.assign(dictionaries.en, {
   ionsRequired: 'For a soluble strong electrolyte, specify its ions and coefficients.', ionsOptional: 'Leave empty for a metal, gas, water, precipitate or weak electrolyte.'
 });
 
+Object.assign(dictionaries.ru, { selfReviewBlocked: 'Admin и admin+ не могут утверждать собственные заявки. Нужен другой модератор.' });
+Object.assign(dictionaries.en, { selfReviewBlocked: 'Admin and admin+ cannot approve their own proposals. Another moderator is required.' });
+
 let locale = 'ru';
 
 export function t(key, parameters = {}) {

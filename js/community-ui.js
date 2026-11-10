@@ -211,7 +211,11 @@ export function initCommunityUI({ showToast, onNavigate, getAutoContext = () => 
       note.maxLength = 2000;
       note.setAttribute('aria-label', t('reviewNote'));
       const buttons = element('div', 'proposal-actions');
-      buttons.append(button(t('approve'), 'approve', proposal.id, 'button primary'), button(t('needsEvidence'), 'needs_evidence', proposal.id), button(t('reject'), 'rejected', proposal.id));
+      const approve = button(t('approve'), 'approve', proposal.id, 'button primary');
+      const ownReview = proposal.author_id === user?.id && ['admin', 'admin+'].includes(user?.privileges);
+      approve.disabled = ownReview;
+      if (ownReview) moderation.append(element('p', 'help-text', t('selfReviewBlocked')));
+      buttons.append(approve, button(t('needsEvidence'), 'needs_evidence', proposal.id), button(t('reject'), 'rejected', proposal.id));
       moderation.append(note, buttons);
       card.append(moderation);
     }
