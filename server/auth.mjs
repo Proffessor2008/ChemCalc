@@ -34,12 +34,12 @@ function cookies(request) {
   }));
 }
 
-export function createSession(db, userId, secure = process.env.NODE_ENV === 'production') {
+export async function createSession(db, userId, secure = process.env.NODE_ENV === 'production') {
   const token = randomBytes(32).toString('base64url');
   const csrf = randomBytes(24).toString('base64url');
   const now = new Date();
   const expires = new Date(now.getTime() + 12 * 60 * 60 * 1000);
-  db.prepare('INSERT INTO sessions(token_hash,user_id,csrf_token,created_at,expires_at,last_seen_at) VALUES(?,?,?,?,?,?)')
+  await db.prepare('INSERT INTO sessions(token_hash,user_id,csrf_token,created_at,expires_at,last_seen_at) VALUES(?,?,?,?,?,?)')
     .run(digest(token), userId, csrf, now.toISOString(), expires.toISOString(), now.toISOString());
   return {
     cookie: `${cookieName}=${encodeURIComponent(token)}; HttpOnly; SameSite=Lax; Path=/; Max-Age=43200${secure ? '; Secure' : ''}`,
@@ -48,29 +48,29 @@ export function createSession(db, userId, secure = process.env.NODE_ENV === 'pro
   };
 }
 
-export function getSession(db, request) {
+export async function getSession(db, request) {
   const token = cookies(request)[cookieName];
   if (!token) return null;
-  const session = db.prepare('SELECT * FROM sessions WHERE token_hash = ?').get(digest(token));
+  const session = await db.prepare('SELECT * FROM sessions WHERE token_hash = ?').get(digest(token));
   if (!session) return null;
   if (Date.parse(session.expires_at) <= Date.now()) {
-    db.prepare('DELETE FROM sessions WHERE token_hash = ?').run(session.token_hash);
+    await db.prepare('DELETE FROM sessions WHERE token_hash = ?').run(session.token_hash);
     return null;
   }
-  if (Date.now() - Date.parse(session.last_seen_at) > 60000) db.prepare('UPDATE sessions SET last_seen_at = ? WHERE token_hash = ?').run(new Date().toISOString(), session.token_hash);
+  if (Date.now() - Date.parse(session.last_seen_at) > 60000) await db.prepare('UPDATE sessions SET last_seen_at = ? WHERE token_hash = ?').run(new Date().toISOString(), session.token_hash);
   return { ...session, token };
 }
 
-export function destroySession(db, request) {
-  const session = getSession(db, request);
-  if (session) db.prepare('DELETE FROM sessions WHERE token_hash = ?').run(session.token_hash);
+export async function destroySession(db, request) {
+  const session = await getSession(db, request);
+  if (session) await db.prepare('DELETE FROM sessions WHERE token_hash = ?').run(session.token_hash);
   return `${cookieName}=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0`;
 }
 
-export function requireUser(db, request, roles = ['basic', 'admin', 'admin+', 'GOD'], csrf = false) {
-  const session = getSession(db, request);
+export async function requireUser(db, request, roles = ['basic', 'admin', 'admin+', 'GOD'], csrf = false) {
+  const session = await getSession(db, request);
   if (!session) throw Object.assign(new Error('Требуется вход в аккаунт'), { status: 401, code: 'authentication_required' });
-  const user = db.prepare('SELECT * FROM users WHERE id = ?').get(session.user_id);
+  const user = await db.prepare('SELECT * FROM users WHERE id = ?').get(session.user_id);
   if (!user || !roles.includes(user.privileges)) throw Object.assign(new Error('Недостаточно привилегий'), { status: 403, code: 'forbidden' });
   if (csrf) {
     const origin = request.headers.origin;
