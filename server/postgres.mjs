@@ -75,22 +75,47 @@ const SCHEMA = `
     version INTEGER NOT NULL,
     active INTEGER NOT NULL DEFAULT 1
   );
+  CREATE TABLE IF NOT EXISTS rule_versions (
+    id TEXT PRIMARY KEY,
+    reaction_key TEXT NOT NULL,
+    rule_json TEXT NOT NULL,
+    proposal_id TEXT NOT NULL REFERENCES proposals(id),
+    published_by BIGINT NOT NULL REFERENCES users(id),
+    published_at TEXT NOT NULL,
+    package_version INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS rule_versions_reaction ON rule_versions(reaction_key, package_version DESC);
   CREATE TABLE IF NOT EXISTS review_events (
     id TEXT PRIMARY KEY,
     proposal_id TEXT NOT NULL REFERENCES proposals(id) ON DELETE CASCADE,
     actor_id BIGINT NOT NULL REFERENCES users(id),
-    action TEXT NOT NULL CHECK(action IN ('approved','rejected','needs_evidence','changes_requested','edited')),
+    action TEXT NOT NULL CHECK(action IN ('approved','rejected','needs_evidence','changes_requested','edited','rollback')),
     note TEXT NOT NULL DEFAULT '',
     created_at TEXT NOT NULL,
     proposal_version INTEGER NOT NULL,
     score DOUBLE PRECISION NOT NULL DEFAULT 0
   );
   CREATE INDEX IF NOT EXISTS review_events_proposal ON review_events(proposal_id, created_at);
+  CREATE TABLE IF NOT EXISTS notifications (
+    id TEXT PRIMARY KEY,
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    proposal_id TEXT REFERENCES proposals(id) ON DELETE CASCADE,
+    kind TEXT NOT NULL,
+    message TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL,
+    read_at TEXT
+  );
+  CREATE INDEX IF NOT EXISTS notifications_user_created ON notifications(user_id, created_at DESC);
+  CREATE INDEX IF NOT EXISTS notifications_user_unread ON notifications(user_id, read_at);
   ALTER TABLE users DROP CONSTRAINT IF EXISTS users_privileges_check;
   ALTER TABLE users ADD CONSTRAINT users_privileges_check CHECK(privileges IN ('basic', 'admin', 'admin+', 'GOD'));
   ALTER TABLE proposals ALTER COLUMN score TYPE DOUBLE PRECISION;
   ALTER TABLE votes ADD COLUMN IF NOT EXISTS weight DOUBLE PRECISION NOT NULL DEFAULT 1;
   ALTER TABLE public.review_events ENABLE ROW LEVEL SECURITY;
+  ALTER TABLE public.rule_versions ENABLE ROW LEVEL SECURITY;
+  ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
+  ALTER TABLE review_events DROP CONSTRAINT IF EXISTS review_events_action_check;
+  ALTER TABLE review_events ADD CONSTRAINT review_events_action_check CHECK(action IN ('approved','rejected','needs_evidence','changes_requested','edited','rollback'));
   INSERT INTO review_events(id,proposal_id,actor_id,action,note,created_at,proposal_version,score)
     SELECT md5(proposals.id || ':' || proposals.reviewed_by || ':' || proposals.status || ':' || proposals.reviewed_at),
       proposals.id, proposals.reviewed_by, proposals.status, proposals.review_note, proposals.reviewed_at,
@@ -99,6 +124,9 @@ const SCHEMA = `
       AND proposals.status IN ('approved','rejected','needs_evidence','changes_requested')
       AND NOT EXISTS(SELECT 1 FROM review_events WHERE proposal_id = proposals.id AND action = proposals.status AND created_at = proposals.reviewed_at)
     ON CONFLICT(id) DO NOTHING;
+  INSERT INTO rule_versions(id,reaction_key,rule_json,proposal_id,published_by,published_at,package_version)
+    SELECT id,reaction_key,rule_json,source_proposal_id,published_by,published_at,version FROM production_rules
+    WHERE NOT EXISTS(SELECT 1 FROM rule_versions WHERE rule_versions.id = production_rules.id);
 `;
 
 class PostgresCommunityDatabase {

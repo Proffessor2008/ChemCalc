@@ -41,6 +41,30 @@ function migrateCommunityFeatures(db) {
       AND proposals.status IN ('approved','rejected','needs_evidence','changes_requested')
       AND NOT EXISTS(SELECT 1 FROM review_events WHERE proposal_id = proposals.id AND action = proposals.status AND created_at = proposals.reviewed_at);
   `);
+  const reviewDefinition = db.prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'review_events'").get()?.sql || '';
+  if (!reviewDefinition.includes("'rollback'")) {
+    transaction(db, () => {
+      db.exec(`
+        CREATE TABLE review_events_with_rollback (
+          id TEXT PRIMARY KEY,
+          proposal_id TEXT NOT NULL REFERENCES proposals(id) ON DELETE CASCADE,
+          actor_id INTEGER NOT NULL REFERENCES users(id),
+          action TEXT NOT NULL CHECK(action IN ('approved','rejected','needs_evidence','changes_requested','edited','rollback')),
+          note TEXT NOT NULL DEFAULT '',
+          created_at TEXT NOT NULL,
+          proposal_version INTEGER NOT NULL,
+          score REAL NOT NULL DEFAULT 0
+        );
+        INSERT INTO review_events_with_rollback SELECT * FROM review_events;
+        DROP TABLE review_events;
+        ALTER TABLE review_events_with_rollback RENAME TO review_events;
+        CREATE INDEX review_events_proposal ON review_events(proposal_id, created_at);
+      `);
+    });
+  }
+  db.exec(`INSERT INTO rule_versions(id,reaction_key,rule_json,proposal_id,published_by,published_at,package_version)
+    SELECT id,reaction_key,rule_json,source_proposal_id,published_by,published_at,version FROM production_rules
+    WHERE NOT EXISTS(SELECT 1 FROM rule_versions WHERE rule_versions.id = production_rules.id)`);
 }
 
 export function openCommunityDatabase(path) {
@@ -111,17 +135,38 @@ export function openCommunityDatabase(path) {
       version INTEGER NOT NULL,
       active INTEGER NOT NULL DEFAULT 1
     );
+    CREATE TABLE IF NOT EXISTS rule_versions (
+      id TEXT PRIMARY KEY,
+      reaction_key TEXT NOT NULL,
+      rule_json TEXT NOT NULL,
+      proposal_id TEXT NOT NULL REFERENCES proposals(id),
+      published_by INTEGER NOT NULL REFERENCES users(id),
+      published_at TEXT NOT NULL,
+      package_version INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS rule_versions_reaction ON rule_versions(reaction_key, package_version DESC);
     CREATE TABLE IF NOT EXISTS review_events (
       id TEXT PRIMARY KEY,
       proposal_id TEXT NOT NULL REFERENCES proposals(id) ON DELETE CASCADE,
       actor_id INTEGER NOT NULL REFERENCES users(id),
-      action TEXT NOT NULL CHECK(action IN ('approved','rejected','needs_evidence','changes_requested','edited')),
+      action TEXT NOT NULL CHECK(action IN ('approved','rejected','needs_evidence','changes_requested','edited','rollback')),
       note TEXT NOT NULL DEFAULT '',
       created_at TEXT NOT NULL,
       proposal_version INTEGER NOT NULL,
       score REAL NOT NULL DEFAULT 0
     );
     CREATE INDEX IF NOT EXISTS review_events_proposal ON review_events(proposal_id, created_at);
+    CREATE TABLE IF NOT EXISTS notifications (
+      id TEXT PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      proposal_id TEXT REFERENCES proposals(id) ON DELETE CASCADE,
+      kind TEXT NOT NULL,
+      message TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL,
+      read_at TEXT
+    );
+    CREATE INDEX IF NOT EXISTS notifications_user_created ON notifications(user_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS notifications_user_unread ON notifications(user_id, read_at);
   `);
   migratePrivileges(db);
   migrateCommunityFeatures(db);
