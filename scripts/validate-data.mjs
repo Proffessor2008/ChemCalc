@@ -9,6 +9,7 @@ import thermoData from '../data/thermo.json' with { type: 'json' };
 import thermoExtraData from '../data/thermo-extra.json' with { type: 'json' };
 import { balanceEquation, inspectBalance } from '../js/balancer.js';
 import { parseEquation, parseSpecies } from '../js/parser.js';
+import { validateRegressionTests } from '../server/rule-tests.mjs';
 
 function duplicateValues(values) {
   const seen = new Set();
@@ -102,6 +103,7 @@ export function validateData({ communityPath = new URL('../data/reaction-rules-c
     if (!record.source || !['s', 'l', 'g', 'aq'].includes(record.phase)) errors.push(`Термодинамическая запись без источника или фазы: ${record.id}`);
     for (const key of ['Hf_kJ_mol', 'Gf_kJ_mol', 'S_J_mol_K']) if (!Number.isFinite(record[key])) errors.push(`Термодинамическая запись ${record.id}: ${key}`);
   }
+  errors.push(...validateRegressionTests(communityData));
   return {
     errors,
     warnings,
@@ -110,6 +112,7 @@ export function validateData({ communityPath = new URL('../data/reaction-rules-c
       substances: substancesData.items.length + communityData.substances.length,
       solubleRecords: Object.keys(solubilityRecords).length,
       rules: allRules.length,
+      regressionTests: (communityData.tests || []).length,
       potentials: potentialsData.records.length,
       thermoRecords: thermoRecords.length
     }
