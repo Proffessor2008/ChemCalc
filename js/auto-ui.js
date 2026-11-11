@@ -5,6 +5,7 @@ import { copyText } from './clipboard.js';
 import { equationToLatex } from './export.js';
 import { equationToUnicode, formatEquation, formulaToUnicode, parseEquation, parseSide } from './parser.js';
 import { DEFAULT_CONDITIONS, predictReaction } from './predictor.js';
+import { printSolution } from './print-solution.js';
 import { renderThermoPanel } from './thermo-panel.js';
 
 const CONDITION_KEY = 'chemcalc-auto-conditions-v2';
@@ -222,6 +223,7 @@ export function initAutoUI({ storage, saveState, showToast, onHistory, onOpenChe
     $('#auto-copy').hidden = true;
     $('#auto-latex').hidden = true;
     $('#auto-share').hidden = true;
+    $('#auto-print').hidden = true;
     $('#auto-to-check').hidden = true;
     $('#auto-to-stoich').hidden = true;
     $('#auto-community-feedback').hidden = ['syntax-error', 'balance-error', 'check-required'].includes(result.status);
@@ -254,6 +256,7 @@ export function initAutoUI({ storage, saveState, showToast, onHistory, onOpenChe
     $('#auto-copy').hidden = false;
     $('#auto-latex').hidden = false;
     $('#auto-share').hidden = false;
+    $('#auto-print').hidden = false;
     $('#auto-to-check').hidden = false;
     $('#auto-to-stoich').hidden = false;
     renderCoefficients();
@@ -374,6 +377,18 @@ export function initAutoUI({ storage, saveState, showToast, onHistory, onOpenChe
   });
   $('#auto-to-stoich').addEventListener('click', () => {
     if (currentEquation) onStoich(formatEquation(currentEquation));
+  });
+  $('#auto-print').addEventListener('click', () => {
+    if (!currentEquation) return;
+    const ionicOverride = result?.formatted === formatEquation(currentEquation) ? result.ionicOverride : null;
+    printSolution({
+      equation: currentEquation,
+      conditions: getConditions(),
+      type: result.type,
+      source: result.source,
+      explanation: [...(result.why || []), ...(result.assumptions || [])],
+      ionic: ionicOverride || buildIonicEquations(currentEquation, { solvent: getConditions().solvent })
+    });
   });
 
   try {
