@@ -244,7 +244,7 @@ Object.assign(dictionaries.en, {
 });
 
 Object.assign(dictionaries.ru, {
-  community: 'Сообщество', communitySubtitle: 'Проверенные пользователями дополнения к базе реакций.', communityOffline: 'Сервер сообщества недоступен. Калькулятор продолжает работать с локальной базой.', serverUnavailable: 'Сервер сообщества недоступен. Запустите проект через npm start.', pollingFallback: 'Онлайн-обновление прервано; список обновляется периодически.',
+  community: 'Сообщество', communitySubtitle: 'Проверенные пользователями дополнения к базе реакций.', communityOffline: 'Сервер сообщества недоступен. Калькулятор продолжает работать с локальной базой.', serverUnavailable: 'Сервис сообщества временно недоступен. Попробуйте повторить действие позже.', pollingFallback: 'Онлайн-обновление прервано; список обновляется периодически.',
   account: 'Аккаунт', login: 'Логин', password: 'Пароль', confirmPassword: 'Подтверждение пароля', signIn: 'Войти', signOut: 'Выйти', createAccount: 'Создать аккаунт', register: 'Зарегистрироваться', signedIn: 'Вход выполнен', role: 'Привилегии', registered: 'Дата регистрации', lastSession: 'Последний вход', pendingMine: 'Ожидающие заявки', userManagement: 'Пользователи и роли', userManagementHelp: 'Только GOD назначает администраторов. Пароли в списке не отображаются.', roleUpdated: 'Роль пользователя обновлена',
   newProposal: 'Новая заявка', editProposal: 'Редактирование заявки', correctionProposal: 'Исправление ответа', proposalFeed: 'Лента предложений', sort: 'Сортировка', byRating: 'По рейтингу', byDate: 'Сначала новые', feedHelp: 'Голоса помогают модераторам заметить заявку. Публикацию подтверждает только admin, admin+ или GOD.', moderation: 'Модерация', moderationHelp: 'Сравните уравнение с источником, проверьте условия и ионный состав. После утверждения правило станет активным для пользователей.', myProposals: 'Мои заявки', noProposals: 'Ожидающих заявок пока нет.', noOwnProposals: 'У вас пока нет заявок.',
   kind_new: 'Новое правило', kind_correction: 'Исправление', rating: 'Рейтинг', source: 'Источник', source_glinka: 'Учебник Глинки', source_lidine: 'Справочник Лидина', source_textbook: 'Другой учебник или статья', source_lab: 'Лабораторная работа', source_personal: 'Личное мнение', sourceDetails: 'Точное описание источника: страница, раздел, ссылка или условия опыта', comment: 'Пояснение и условия применимости', issues: 'Что нужно исправить', issue_products: 'Продукты реакции', issue_conditions: 'Условия реакции', issue_coefficients: 'Коэффициенты', issue_ionic: 'Ионное уравнение', issue_substance: 'Название или свойства вещества', issue_thermo: 'Термодинамика', issue_code: 'Ошибка обработки формулы',
@@ -255,7 +255,7 @@ Object.assign(dictionaries.ru, {
   atomsBalanced: '✓ Атомы и суммарный заряд сбалансированы.', atomsUnbalanced: 'Атомы или заряд не уравнены. Проверьте коэффициенты перед отправкой.', notMinimal: 'Коэффициенты не минимальные.', noReactionProposal: 'Будет предложен ответ «Реакция не идёт» для указанных реагентов и условий.', invalidEquation: 'Введите корректное уравнение с обеими сторонами или выберите «Реакция не идёт».', fixBalanceBeforeSubmit: 'Сначала исправьте ошибку в уравнении.', loginToPropose: 'Войдите или зарегистрируйтесь, чтобы отправить заявку.', suggestSolution: 'Предложить верное решение', reportInaccuracy: 'Нашли неточность? Предложите правки для этого случая', pendingAlternatives: 'Предложенные пользователями варианты', unverifiedAnswer: 'Ответ предложен пользователем и ещё не подтверждён', openInCommunity: 'Проверить в сообществе', reportCheckIssue: 'Предложить исправление условий или химического результата'
 });
 Object.assign(dictionaries.en, {
-  community: 'Community', communitySubtitle: 'Community contributions, verified before publication.', communityOffline: 'The community server is unavailable. The calculator still uses its local database.', serverUnavailable: 'The community server is unavailable. Start the project with npm start.', pollingFallback: 'Live updates disconnected; the feed will use periodic polling.',
+  community: 'Community', communitySubtitle: 'Community contributions, verified before publication.', communityOffline: 'The community server is unavailable. The calculator still uses its local database.', serverUnavailable: 'The community service is temporarily unavailable. Please try again later.', pollingFallback: 'Live updates disconnected; the feed will use periodic polling.',
   account: 'Account', login: 'Login', password: 'Password', confirmPassword: 'Confirm password', signIn: 'Sign in', signOut: 'Sign out', createAccount: 'Create account', register: 'Register', signedIn: 'Signed in', role: 'Privileges', registered: 'Registered', lastSession: 'Last sign-in', pendingMine: 'Pending proposals', userManagement: 'Users and roles', userManagementHelp: 'Only GOD assigns administrators. Passwords are never shown.', roleUpdated: 'User role updated',
   newProposal: 'New proposal', editProposal: 'Edit proposal', correctionProposal: 'Correct the answer', proposalFeed: 'Proposal feed', sort: 'Sort', byRating: 'By rating', byDate: 'Newest first', feedHelp: 'Votes help moderators find proposals. Only admin, admin+ or GOD can publish a rule.', moderation: 'Moderation', moderationHelp: 'Check the source, conditions and ion composition. Approval makes the rule active for users.', myProposals: 'My proposals', noProposals: 'No pending proposals.', noOwnProposals: 'You have no proposals yet.',
   kind_new: 'New rule', kind_correction: 'Correction', rating: 'Rating', source: 'Source', source_glinka: 'Glinka textbook', source_lidine: 'Lidin reference', source_textbook: 'Other textbook or article', source_lab: 'Laboratory work', source_personal: 'Personal opinion', sourceDetails: 'Exact source: page, section, link or experiment conditions', comment: 'Explanation and applicability', issues: 'What needs correction', issue_products: 'Reaction products', issue_conditions: 'Reaction conditions', issue_coefficients: 'Coefficients', issue_ionic: 'Ionic equation', issue_substance: 'Substance name or properties', issue_thermo: 'Thermodynamics', issue_code: 'Formula-processing error',
@@ -278,6 +278,44 @@ Object.assign(dictionaries.en, {
   specialCase: 'Special case / program inaccuracy', specialCaseHelp: 'Use this to submit a calculation for review despite balance or ionic warnings. An unbalanced rule cannot be published. Admin+ and GOD may submit such warnings without this flag.', specialCaseBadge: 'Special case / possible program inaccuracy — requires careful review', issue_balance_engine: 'Possible balancing-engine error',
   manualIonicTitle: 'Manual ionic equations (optional)', manualIonicHelp: 'Both fields may remain empty. Filled equations are checked for atoms and charge. A special-case proposal can be reviewed but not published with an invalid balance.', manualFull: 'Complete ionic equation', manualNet: 'Net ionic equation', manualIonicUnbalanced: 'The manual ionic form is not balanced for atoms or charge', manualIonicApproved: 'Showing the manual ionic form reviewed by a moderator.', reviewWarning: 'Warning: the proposal can be reviewed, but cannot be published until its balance is corrected.',
   ionsRequired: 'For a soluble strong electrolyte, specify its ions and coefficients.', ionsOptional: 'Leave empty for a metal, gas, water, precipitate or weak electrolyte.'
+});
+
+Object.assign(dictionaries.ru, {
+  selfReviewBlocked: 'Admin и admin+ не могут утверждать собственные заявки. Нужен другой модератор.',
+  reputation: 'Репутация (сумма голосов за правки)', byAuthorReputation: 'По репутации автора', reviewHistory: 'История решений модераторов', review_edited: 'Отредактировано перед решением'
+});
+Object.assign(dictionaries.en, {
+  selfReviewBlocked: 'Admin and admin+ cannot approve their own proposals. Another moderator is required.',
+  reputation: 'Reputation (sum of proposal votes)', byAuthorReputation: 'By author reputation', reviewHistory: 'Moderator decision history', review_edited: 'Edited before the review decision'
+});
+
+Object.assign(dictionaries.ru, {
+  field: 'Поле', proposedAnswer: 'Предлагаемый вариант', automaticCoefficients: 'Автоматически', noChanges: 'Изменений в этих полях нет', publishedVersions: 'Версии опубликованного правила', loadingVersions: 'Загрузка версий…', packageVersion: 'Версия пакета', currentVersion: 'Текущая версия', compareCurrent: 'Сравнить с текущей', rollbackVersion: 'Откатить до этой версии', confirmRollback: 'Опубликовать выбранную старую версию? Будет создана новая запись в истории.', rollbackComplete: 'Выбранная версия восстановлена и добавлена в журнал', status_rollback: 'Откат версии'
+});
+Object.assign(dictionaries.en, {
+  field: 'Field', proposedAnswer: 'Proposed answer', automaticCoefficients: 'Automatic', noChanges: 'No changes in these fields', publishedVersions: 'Published rule versions', loadingVersions: 'Loading versions…', packageVersion: 'Package version', currentVersion: 'Current version', compareCurrent: 'Compare with current', rollbackVersion: 'Roll back to this version', confirmRollback: 'Publish the selected older version? A new history entry will be created.', rollbackComplete: 'The selected version was restored and recorded', status_rollback: 'Version rollback'
+});
+
+Object.assign(dictionaries.ru, {
+  printSolution: 'Печать решения', printEquationInput: 'Исходное уравнение', printBalanceMethod: 'Коэффициенты из точного матричного расчёта',
+  drafts: 'Черновики заявок', noDrafts: 'Сохранённых черновиков нет', resumeDraft: 'Продолжить', deleteDraft: 'Удалить черновик', draftSaved: 'Черновик сохранён локально', confirmDeleteDraft: 'Удалить этот черновик?',
+  notifications: 'Уведомления', noNotifications: 'Новых уведомлений нет', unreadNotifications: 'Непрочитанные', markRead: 'Прочитано', markAllRead: 'Отметить все прочитанными',
+  notification_approved: 'Заявка одобрена', notification_rejected: 'Заявка отклонена', notification_needs_evidence: 'Запрошен источник', notification_changes_requested: 'Запрошены исправления', notification_edited: 'Заявка отредактирована модератором', notification_rollback: 'Выполнен откат правила'
+});
+Object.assign(dictionaries.en, {
+  printSolution: 'Print solution', printEquationInput: 'Input equation', printBalanceMethod: 'Coefficients from exact matrix calculation',
+  drafts: 'Proposal drafts', noDrafts: 'No saved drafts', resumeDraft: 'Continue', deleteDraft: 'Delete draft', draftSaved: 'Draft saved locally', confirmDeleteDraft: 'Delete this draft?',
+  notifications: 'Notifications', noNotifications: 'No notifications', unreadNotifications: 'Unread', markRead: 'Mark read', markAllRead: 'Mark all as read',
+  notification_approved: 'Proposal approved', notification_rejected: 'Proposal rejected', notification_needs_evidence: 'Evidence requested', notification_changes_requested: 'Changes requested', notification_edited: 'Proposal edited by a moderator', notification_rollback: 'Rule version rolled back'
+});
+
+Object.assign(dictionaries.ru, {
+  personalCabinet: 'Личный кабинет', openCabinet: 'Открыть личный кабинет', draftStorageNote: 'Черновики сохраняются только на этом устройстве.', publicProposalHistory: 'Публичная история заявок',
+  previousPage: 'Назад', nextPage: 'Вперёд', pageOf: 'Страница {page} из {pages} · всего {total}', noPublicProposals: 'У пользователя пока нет заявок.'
+});
+Object.assign(dictionaries.en, {
+  personalCabinet: 'Account dashboard', openCabinet: 'Open account dashboard', draftStorageNote: 'Drafts are stored only on this device.', publicProposalHistory: 'Public proposal history',
+  previousPage: 'Previous', nextPage: 'Next', pageOf: 'Page {page} of {pages} · {total} total', noPublicProposals: 'This user has no proposals yet.'
 });
 
 let locale = 'ru';

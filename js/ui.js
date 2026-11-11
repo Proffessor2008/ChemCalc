@@ -16,6 +16,7 @@ import { initStoichiometryUI } from './stoichiometry-ui.js';
 import { renderThermoPanel } from './thermo-panel.js';
 import { renderRedoxPanel } from './redox-view.js';
 import { getReactionRule } from './predictor.js';
+import { printSolution } from './print-solution.js';
 
 const memoryStorage = new Map();
 const storage = {
@@ -44,7 +45,7 @@ try {
 }
 const state = {
   mode: saved.mode === 'auto' ? 'auto' : 'check',
-  tab: ['calculator', 'stoichiometry', 'references', 'history', 'community', 'documentation'].includes(saved.tab) ? saved.tab : 'calculator',
+  tab: ['calculator', 'stoichiometry', 'references', 'history', 'community', 'account', 'documentation'].includes(saved.tab) ? saved.tab : 'calculator',
   draft: typeof saved.draft === 'string' ? saved.draft : '2H2 + O2 = 2H2O',
   autoDraft: typeof saved.autoDraft === 'string' ? saved.autoDraft : '',
   attempts: 0,
@@ -148,6 +149,7 @@ function clearResult() {
   $('#warning-list').replaceChildren();
   $('#copy-button').hidden = true;
   $('#latex-button').hidden = true;
+  $('#check-print').hidden = true;
   $('#solution').hidden = true;
   renderRedoxPanel($('#redox-panel'), $('#redox-steps'), null);
   $('#check-ionic-panel').hidden = true;
@@ -223,6 +225,7 @@ function renderResult(result) {
   $('#verdict-message').textContent = result.message;
   $('#copy-button').hidden = !result.equation;
   $('#latex-button').hidden = !result.equation;
+  $('#check-print').hidden = !result.equation;
   const warnings = $('#warning-list');
   warnings.replaceChildren();
   for (const warning of result.warnings || []) {
@@ -478,6 +481,15 @@ $('#latex-button').addEventListener('click', async () => {
   }
 });
 
+$('#check-print').addEventListener('click', () => {
+  if (!state.result?.equation) return;
+  printSolution({
+    equation: state.result.equation,
+    conditions: { solvent: state.checkSolvent },
+    explanation: (state.result.warnings || []).map((warning) => warning.message)
+  });
+});
+
 $$('[data-tab]').forEach((button) => button.addEventListener('click', () => setTab(button.dataset.tab)));
 $$('[data-mode]').forEach((button) => button.addEventListener('click', () => setMode(button.dataset.mode)));
 $('#brand-home').addEventListener('click', () => {
@@ -560,6 +572,7 @@ autoController = initAutoUI({
   onAlternatives(container, context) { communityController?.showAlternatives(container, context); }
 });
 communityController = initCommunityUI({
+  storage,
   showToast,
   onNavigate: setTab,
   getAutoContext() {

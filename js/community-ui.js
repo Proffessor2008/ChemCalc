@@ -5,6 +5,7 @@ import { buildIonicEquations } from './ionic.js';
 import { equationToUnicode, formatEquation, parseEquation, parseSide, parseSpecies } from './parser.js';
 import { updateCommunityData } from './predictor.js';
 import { getLocale, t } from './i18n.js';
+import { createDraftStore } from './drafts.js';
 
 const $ = (selector) => document.querySelector(selector);
 const CLASSES = ['salt', 'acid', 'base', 'oxide', 'acidic_oxide', 'basic_oxide', 'amphoteric_oxide', 'simple', 'metal', 'organic', 'binary', 'gas', 'complex', 'acidic_salt', 'basic_salt', 'organic_salt', 'peroxide', 'hydride', 'carbide', 'nitride', 'phosphide', 'sulfide', 'mineral', 'intermetallic', 'covalent_halide'];
@@ -75,11 +76,16 @@ function formatDate(value) {
   return new Intl.DateTimeFormat(getLocale(), { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
 }
 
+function signedNumber(value) {
+  const number = Number(value) || 0;
+  return `${number > 0 ? '+' : ''}${new Intl.NumberFormat(getLocale(), { maximumFractionDigits: 2 }).format(number)}`;
+}
+
 function selectOptions(values, selected, translate = (value) => t(value)) {
   return values.map((value) => `<option value="${value}"${value === selected ? ' selected' : ''}>${translate(value)}</option>`).join('');
 }
 
-export function initCommunityUI({ showToast, onNavigate, getAutoContext = () => null, getCheckContext = () => null }) {
+export function initCommunityUI({ storage, showToast, onNavigate, getAutoContext = () => null, getCheckContext = () => null }) {
   let user = null;
   let csrfToken = '';
   let proposals = [];
@@ -90,6 +96,57 @@ export function initCommunityUI({ showToast, onNavigate, getAutoContext = () => 
   let loading = false;
   let pendingRefresh = false;
   let requestGeneration = 0;
+  let draftStore = null;
+  let activeDraftId = null;
+  let draftTimer = null;
+  let feedPage = 1;
+  let ownPage = 1;
+  let usersPage = 1;
+  let feedPagination = null;
+  let ownPagination = null;
+  let usersPagination = null;
+  let notifications = [];
+  let unreadNotifications = 0;
+  let publicProfile = null;
+
+  function setDraftUser(account) {
+    clearTimeout(draftTimer);
+    draftStore = account ? createDraftStore(storage, account.id) : null;
+    activeDraftId = null;
+  }
+
+  function draftData(form) {
+    return {
+      equation: form.elements.equation.value,
+      outcome: form.elements.outcome.value,
+      conditions: conditionsKey(Object.fromEntries(new FormData(form))),
+      reactionType: form.elements.reactionType.value,
+      sourceType: form.elements.sourceType.value,
+      sourceDetails: form.elements.sourceDetails.value,
+      comment: form.elements.comment.value,
+      phaseSpecific: form.elements.phaseSpecific.checked,
+      specialCase: form.elements.specialCase.checked,
+      issueTypes: [...form.querySelectorAll('[name="issueTypes"]:checked')].map((input) => input.value),
+      manualIonicFull: form.elements.manualIonicFull.value,
+      manualIonicNet: form.elements.manualIonicNet.value,
+      substances: substanceValues($('#community-substance-list')),
+      proposal: editing,
+      originalRule: prefillRule,
+      kind: editing?.kind || prefillRule ? 'correction' : 'new'
+    };
+  }
+
+  function saveDraft() {
+    clearTimeout(draftTimer);
+    const form = $('#community-proposal-form');
+    if (!draftStore || !form || !$('#community-proposal-dialog').open) return;
+    activeDraftId = draftStore.save(draftData(form), activeDraftId || undefined);
+  }
+
+  function scheduleDraftSave() {
+    clearTimeout(draftTimer);
+    draftTimer = setTimeout(saveDraft, 500);
+  }
 
   async function api(path, { method = 'GET', body } = {}) {
     const response = await fetch(path, {
@@ -111,6 +168,7 @@ export function initCommunityUI({ showToast, onNavigate, getAutoContext = () => 
       if (response.status === 401 && user) {
         user = null;
         csrfToken = '';
+        setDraftUser(null);
         renderAccount();
       }
       throw error;
@@ -134,18 +192,83 @@ export function initCommunityUI({ showToast, onNavigate, getAutoContext = () => 
     }
   }
 
+  function renderPagination(selector, value, changePage) {
+    const container = $(selector);
+    container.replaceChildren();
+    if (!value || value.pages <= 1) return;
+    const previous = button(t('previousPage'), undefined, undefined, 'button ghost');
+    previous.disabled = !value.hasPrev;
+    previous.addEventListener('click', () => changePage(value.page - 1));
+    const next = button(t('nextPage'), undefined, undefined, 'button ghost');
+    next.disabled = !value.hasNext;
+    next.addEventListener('click', () => changePage(value.page + 1));
+    container.append(previous, element('span', 'help-text', t('pageOf', { page: value.page, pages: value.pages, total: value.total })), next);
+  }
+
+  function renderDrafts() {
+    const container = $('#cabinet-drafts');
+    container.replaceChildren();
+    const drafts = draftStore?.list() || [];
+    if (!drafts.length) container.append(element('p', 'help-text', t('noDrafts')));
+    for (const draft of drafts) {
+      const card = element('article', 'draft-item');
+      card.append(element('p', 'proposal-equation', draft.data.equation || '—'), element('p', 'help-text', formatDate(draft.updatedAt)));
+      const actions = element('div', 'proposal-actions');
+      const resume = button(t('resumeDraft'), undefined, undefined, 'button secondary');
+      resume.addEventListener('click', () => openProposal({ draft }));
+      const remove = button(t('deleteDraft'), undefined, undefined, 'button ghost');
+      remove.addEventListener('click', () => {
+        if (!window.confirm(t('confirmDeleteDraft'))) return;
+        draftStore.remove(draft.id);
+        renderDrafts();
+      });
+      actions.append(resume, remove);
+      card.append(actions);
+      container.append(card);
+    }
+  }
+
+  function renderNotifications() {
+    const container = $('#cabinet-notifications');
+    container.replaceChildren();
+    $('#notifications-read-all').disabled = !unreadNotifications;
+    if (!notifications.length) container.append(element('p', 'help-text', t('noNotifications')));
+    for (const notification of notifications) {
+      const card = element('article', `notification-item${notification.read_at ? '' : ' unread'}`);
+      card.append(element('strong', '', t(`notification_${notification.kind}`)), element('p', 'help-text', formatDate(notification.created_at)), element('p', '', notification.message));
+      if (!notification.read_at) {
+        const read = button(t('markRead'), undefined, undefined, 'text-button');
+        read.addEventListener('click', async () => {
+          try {
+            const data = await api(`/api/notifications/${encodeURIComponent(notification.id)}/read`, { method: 'POST', body: {} });
+            notifications = data.notifications;
+            unreadNotifications = data.unread;
+            renderNotifications();
+          } catch (error) { notifyError(error); }
+        });
+        card.append(read);
+      }
+      container.append(card);
+    }
+  }
+
   function renderAccount() {
     $('#community-auth-forms').hidden = Boolean(user);
-    $('#community-account').hidden = !user;
-    $('#community-own-section').hidden = !user;
+    $('#community-own-section').hidden = !user || Boolean(publicProfile);
     $('#community-users-section').hidden = user?.privileges !== 'GOD';
     $('#community-moderation-note').hidden = !MODERATORS.includes(user?.privileges);
-    const account = $('#community-account');
+    $('#cabinet-private').hidden = !user || Boolean(publicProfile);
+    $('#cabinet-public').hidden = !publicProfile;
+    if (!publicProfile) $('#cabinet-status').textContent = user ? '' : t('loginToPropose');
+    const account = $('#cabinet-summary');
     account.replaceChildren();
     if (!user) {
       ownProposals = [];
+      notifications = [];
       $('#community-own').replaceChildren();
       $('#community-users').replaceChildren();
+      $('#cabinet-drafts').replaceChildren();
+      $('#cabinet-notifications').replaceChildren();
       return;
     }
     account.append(
@@ -153,9 +276,15 @@ export function initCommunityUI({ showToast, onNavigate, getAutoContext = () => 
       element('p', `role-badge role-${user.privileges.toLowerCase()}`, `${t('role')}: ${user.privileges}`),
       element('p', 'help-text', `${t('registered')}: ${formatDate(user.created_at)}`),
       element('p', 'help-text', `${t('lastSession')}: ${formatDate(user.last_login_at)}`),
-      element('p', 'help-text', `${t('pendingMine')}: ${ownProposals.filter((item) => item.status === 'pending').length}`)
+      element('p', 'help-text community-reputation', `${t('reputation')}: ${signedNumber(user.reputation)}`),
+      element('p', 'help-text', `${t('pendingMine')}: ${ownProposals.filter((item) => item.status === 'pending').length}`),
+      element('p', 'help-text', `${t('unreadNotifications')}: ${unreadNotifications}`)
     );
-    account.append(button(t('signOut'), 'logout', undefined, 'button secondary'));
+    const link = element('a', 'help-text public-profile-link', `${location.origin}/${encodeURIComponent(user.login)}`);
+    link.href = `/${encodeURIComponent(user.login)}`;
+    account.append(link, button(t('signOut'), 'logout', undefined, 'button secondary'));
+    renderDrafts();
+    renderNotifications();
   }
 
   function proposalCard(proposal, compact = false) {
@@ -164,9 +293,9 @@ export function initCommunityUI({ showToast, onNavigate, getAutoContext = () => 
     card.id = `proposal-${proposal.id}`;
     const heading = element('div', 'proposal-heading');
     const author = element('div');
-    author.append(element('strong', '', proposal.author_login), element('small', 'help-text', `${t(`kind_${proposal.kind}`)} · ${formatDate(proposal.created_at)}`));
-    const score = element('span', 'proposal-score', `${proposal.score > 0 ? '+' : ''}${proposal.score}`);
-    score.setAttribute('aria-label', `${t('rating')}: ${proposal.score}`);
+    author.append(element('strong', '', proposal.author_login), element('small', 'help-text', `${t(`kind_${proposal.kind}`)} · ${formatDate(proposal.created_at)} · ${t('reputation')}: ${signedNumber(proposal.author_reputation)}`));
+    const score = element('span', 'proposal-score', signedNumber(proposal.score));
+    score.setAttribute('aria-label', `${t('rating')}: ${signedNumber(proposal.score)}`);
     heading.append(author, score);
     card.append(heading, element('p', 'proposal-equation', ruleEquation(rule)), element('p', 'proposal-conditions', conditionText(rule.when)));
     if (!compact) {
@@ -175,7 +304,7 @@ export function initCommunityUI({ showToast, onNavigate, getAutoContext = () => 
       if (proposal.issue_types?.length) card.append(element('p', 'help-text', `${t('issues')}: ${proposal.issue_types.map((issue) => t(`issue_${issue}`)).join(', ')}`));
       if (proposal.original_rule_json) {
         const original = element('details', 'original-rule');
-        original.append(element('summary', '', t('originalAnswer')), element('p', 'proposal-equation', ruleEquation(proposal.original_rule_json)));
+        original.append(element('summary', '', t('originalAnswer')), element('p', 'proposal-equation', ruleEquation(proposal.original_rule_json)), renderRuleDiff(proposal.original_rule_json, rule));
         card.append(original);
       }
       if (rule.substances?.length) card.append(element('p', 'help-text', `${t('newSubstances')}: ${rule.substances.map((item) => `${item.formula} — ${item.name_ru}`).join('; ')}`));
@@ -211,20 +340,68 @@ export function initCommunityUI({ showToast, onNavigate, getAutoContext = () => 
       note.maxLength = 2000;
       note.setAttribute('aria-label', t('reviewNote'));
       const buttons = element('div', 'proposal-actions');
-      buttons.append(button(t('approve'), 'approve', proposal.id, 'button primary'), button(t('needsEvidence'), 'needs_evidence', proposal.id), button(t('reject'), 'rejected', proposal.id));
+      const approve = button(t('approve'), 'approve', proposal.id, 'button primary');
+      const ownReview = proposal.author_id === user?.id && ['admin', 'admin+'].includes(user?.privileges);
+      approve.disabled = ownReview;
+      if (ownReview) moderation.append(element('p', 'help-text', t('selfReviewBlocked')));
+      buttons.append(approve, button(t('needsEvidence'), 'needs_evidence', proposal.id), button(t('reject'), 'rejected', proposal.id));
       moderation.append(note, buttons);
       card.append(moderation);
     }
     if (compact) {
-      const state = element('p', 'proposal-status', `${t(`status_${proposal.status}`)}${proposal.score ? ` · ${proposal.score}` : ''}`);
+      const state = element('p', 'proposal-status', `${t(`status_${proposal.status}`)}${proposal.score ? ` · ${signedNumber(proposal.score)}` : ''}`);
       card.append(state);
       if (proposal.status === 'pending') card.append(button(t('edit'), 'edit', proposal.id));
+    }
+    if (proposal.review_history?.length) {
+      const history = element('details', 'review-history');
+      history.append(element('summary', '', t('reviewHistory')));
+      const events = element('ol', 'review-history-list');
+      for (const event of proposal.review_history) {
+        events.append(element('li', '', `${formatDate(event.created_at)} · ${event.actor_login} · ${t(event.action === 'edited' ? 'review_edited' : `status_${event.action}`)} · v${event.proposal_version}${event.note ? ` — ${event.note}` : ''}`));
+      }
+      history.append(events);
+      card.append(history);
+    }
+    if (proposal.status === 'approved') {
+      const versions = element('details', 'version-details');
+      versions.dataset.proposal = proposal.id;
+      versions.append(element('summary', '', t('publishedVersions')), element('div', 'version-content'));
+      card.append(versions);
     }
     return card;
   }
 
   function conditionText(conditions = {}) {
     return [t(conditions.medium || 'neutral'), t(conditions.solvent || 'aqueous'), conditions.acidConcentration !== 'unspecified' ? t(conditions.acidConcentration) : '', conditions.catalyst ? `${t('catalyst')}: ${conditions.catalyst}` : '', conditions.heating ? t('heating') : '', conditions.current ? t('electricCurrent') : '', conditions.ratio === 'deficit' ? t('deficitRatio') : ''].filter(Boolean).join(' · ');
+  }
+
+  function renderRuleDiff(current, proposed) {
+    const fields = [
+      ['autoTitle', (rule) => (rule?.reactants || rule?.left || []).join(' + ')],
+      ['issue_products', (rule) => rule?.outcome === 'no-reaction' ? t('noReaction') : (rule?.products || []).join(' + ')],
+      ['conditions', (rule) => conditionText(rule?.when)],
+      ['coefficients', (rule) => rule?.coefficients?.join(', ') || t('automaticCoefficients')],
+      ['reactionTypeLabel', (rule) => rule?.type || ''],
+      ['ionicEquations', (rule) => rule?.ionicOverride ? `${rule.ionicOverride.full || ''}\n${rule.ionicOverride.net || ''}` : ''],
+      ['source', (rule) => rule?.source || '']
+    ];
+    const table = element('table', 'diff-table');
+    table.innerHTML = `<thead><tr><th>${t('field')}</th><th>${t('originalAnswer')}</th><th>${t('proposedAnswer')}</th></tr></thead>`;
+    const body = element('tbody');
+    for (const [label, read] of fields) {
+      const before = String(read(current) ?? '');
+      const after = String(read(proposed) ?? '');
+      if (before === after) continue;
+      const row = element('tr');
+      row.append(element('th', '', t(label)), element('td', '', before || '—'), element('td', '', after || '—'));
+      body.append(row);
+    }
+    if (!body.children.length) return element('p', 'help-text', t('noChanges'));
+    table.append(body);
+    const scroll = element('div', 'table-scroll');
+    scroll.append(table);
+    return scroll;
   }
 
   function renderFeed() {
@@ -236,14 +413,21 @@ export function initCommunityUI({ showToast, onNavigate, getAutoContext = () => 
     own.replaceChildren();
     if (!ownProposals.length && user) own.append(element('p', 'help-text', t('noOwnProposals')));
     for (const proposal of ownProposals) own.append(proposalCard(proposal, true));
+    renderPagination('#community-feed-pagination', feedPagination, (page) => { feedPage = page; refresh(); });
+    renderPagination('#community-own-pagination', ownPagination, (page) => { ownPage = page; refresh(); });
     renderAccount();
   }
 
   async function refreshUsers() {
     if (user?.privileges !== 'GOD') return;
-    const data = await api('/api/users');
+    const data = await api(`/api/users?page=${usersPage}&limit=50`);
+    if (data.pagination.pages && usersPage > data.pagination.pages) {
+      usersPage = data.pagination.pages;
+      return refreshUsers();
+    }
+    usersPagination = data.pagination;
     const table = element('table', 'community-users-table');
-    table.innerHTML = `<thead><tr><th>${t('login')}</th><th>${t('role')}</th><th>${t('registered')}</th><th>${t('lastSession')}</th><th>${t('pendingMine')}</th></tr></thead>`;
+    table.innerHTML = `<thead><tr><th>${t('login')}</th><th>${t('role')}</th><th>${t('reputation')}</th><th>${t('registered')}</th><th>${t('lastSession')}</th><th>${t('pendingMine')}</th></tr></thead>`;
     const body = element('tbody');
     for (const record of data.users) {
       const row = element('tr');
@@ -257,13 +441,14 @@ export function initCommunityUI({ showToast, onNavigate, getAutoContext = () => 
         select.innerHTML = selectOptions(['basic', 'admin', 'admin+'], record.privileges, (value) => value);
         roleCell.append(select);
       }
-      row.append(roleCell, element('td', '', formatDate(record.created_at)), element('td', '', formatDate(record.last_login_at)), element('td', '', String(record.pending_count)));
+      row.append(roleCell, element('td', '', signedNumber(record.reputation)), element('td', '', formatDate(record.created_at)), element('td', '', formatDate(record.last_login_at)), element('td', '', String(record.pending_count)));
       body.append(row);
     }
     table.append(body);
     const scroll = element('div', 'table-scroll');
     scroll.append(table);
     $('#community-users').replaceChildren(scroll);
+    renderPagination('#community-users-pagination', usersPagination, (page) => { usersPage = page; refreshUsers(); });
   }
 
   async function refresh() {
@@ -275,12 +460,29 @@ export function initCommunityUI({ showToast, onNavigate, getAutoContext = () => 
     const generation = ++requestGeneration;
     try {
       const sort = $('#community-sort').value;
-      const feedRequest = api(`/api/proposals?status=pending&sort=${encodeURIComponent(sort)}`);
-      const ownRequest = user ? api('/api/proposals?author=me') : Promise.resolve({ proposals: [] });
-      const [feed, own] = await Promise.all([feedRequest, ownRequest]);
+      const feedRequest = api(`/api/proposals?status=pending&sort=${encodeURIComponent(sort)}&page=${feedPage}&limit=50`);
+      const ownRequest = user ? api(`/api/proposals?author=me&page=${ownPage}&limit=50`) : Promise.resolve({ proposals: [], pagination: null });
+      const notificationRequest = user ? api('/api/notifications') : Promise.resolve({ notifications: [], unread: 0 });
+      const accountRequest = user ? api('/api/auth/me').then((session) => {
+        if (generation === requestGeneration) {
+          user = session.user;
+          csrfToken = session.csrfToken;
+        }
+      }) : Promise.resolve();
+      const [feed, own, notificationData] = await Promise.all([feedRequest, ownRequest, notificationRequest, accountRequest]);
       if (generation !== requestGeneration) return;
+      if ((feed.pagination.pages && feedPage > feed.pagination.pages) || (own.pagination?.pages && ownPage > own.pagination.pages)) {
+        feedPage = Math.min(feedPage, feed.pagination.pages || 1);
+        ownPage = Math.min(ownPage, own.pagination?.pages || 1);
+        pendingRefresh = true;
+        return;
+      }
       proposals = feed.proposals;
       ownProposals = own.proposals;
+      feedPagination = feed.pagination;
+      ownPagination = own.pagination;
+      notifications = notificationData.notifications;
+      unreadNotifications = notificationData.unread;
       renderFeed();
       if (user?.privileges === 'GOD') await refreshUsers();
     } catch (error) {
@@ -313,6 +515,7 @@ export function initCommunityUI({ showToast, onNavigate, getAutoContext = () => 
       const response = await api(path, { method: 'POST', body: data });
       user = response.user;
       csrfToken = response.csrfToken;
+      setDraftUser(user);
       form.reset();
       requestGeneration++;
       renderAccount();
@@ -333,7 +536,7 @@ export function initCommunityUI({ showToast, onNavigate, getAutoContext = () => 
     event.preventDefault();
     authenticate('/api/auth/register', event.currentTarget);
   });
-  $('#community-account').addEventListener('click', async (event) => {
+  $('#cabinet-summary').addEventListener('click', async (event) => {
     if (!event.target.closest('[data-action="logout"]')) return;
     try {
       await api('/api/auth/logout', { method: 'POST', body: {} });
@@ -342,12 +545,22 @@ export function initCommunityUI({ showToast, onNavigate, getAutoContext = () => 
     }
     user = null;
     csrfToken = '';
+    setDraftUser(null);
     requestGeneration++;
     renderAccount();
     await refresh();
   });
-  $('#community-sort').addEventListener('change', refresh);
+  $('#notifications-read-all').addEventListener('click', async () => {
+    try {
+      const data = await api('/api/notifications/read-all', { method: 'POST', body: {} });
+      notifications = data.notifications;
+      unreadNotifications = data.unread;
+      renderNotifications();
+    } catch (error) { notifyError(error); }
+  });
+  $('#community-sort').addEventListener('change', () => { feedPage = 1; refresh(); });
   $('#community-new-proposal').addEventListener('click', () => openProposal());
+  $('#cabinet-new-proposal').addEventListener('click', () => openProposal());
 
   function substanceValues(container) {
     return [...container.querySelectorAll('.substance-editor')].map((card) => ({
@@ -476,11 +689,13 @@ export function initCommunityUI({ showToast, onNavigate, getAutoContext = () => 
       showToast(t('loginToPropose'));
       return;
     }
-    editing = prefill.proposal || null;
-    prefillRule = editing ? null : prefill.originalRule || null;
-    const rule = editing?.proposed_rule_json || prefill.originalRule || null;
-    const kind = editing?.kind || prefill.kind || 'new';
-    const conditions = conditionsKey(editing ? rule.when : prefill.conditions);
+    const draft = prefill.draft?.data || null;
+    activeDraftId = prefill.draft?.id || null;
+    editing = prefill.proposal || draft?.proposal || null;
+    prefillRule = editing ? null : prefill.originalRule || draft?.originalRule || null;
+    const rule = editing?.proposed_rule_json || prefill.originalRule || draft?.originalRule || null;
+    const kind = editing?.kind || draft?.kind || prefill.kind || 'new';
+    const conditions = conditionsKey(draft?.conditions || (editing ? rule.when : prefill.conditions));
     const dialog = $('#community-proposal-dialog');
     $('#community-proposal-content').innerHTML = `<form id="community-proposal-form" novalidate>
       <div class="dialog-heading"><h2 id="community-proposal-title">${editing ? t('editProposal') : kind === 'correction' ? t('correctionProposal') : t('newProposal')}</h2><button class="icon-button" type="button" data-close-proposal aria-label="${t('close')}">×</button></div>
@@ -511,20 +726,22 @@ export function initCommunityUI({ showToast, onNavigate, getAutoContext = () => 
       <div class="dialog-actions"><button class="button ghost" type="button" data-close-proposal>${t('cancel')}</button><button class="button primary" type="submit">${editing ? t('saveChanges') : t('submitProposal')}</button></div>
     </form>`;
     const form = $('#community-proposal-form');
-    substanceDraft = new Map((rule?.substances || []).map((item) => [item.formula, item]));
-    form.elements.equation.value = editing ? plainEquation(rule) : prefill.equation || `${prefill.reactants || ''} = `;
-    form.elements.outcome.value = editing?.proposed_rule_json?.outcome || prefill.outcome || 'products';
-    form.elements.reactionType.value = rule?.type || t('communityRule');
-    form.elements.sourceDetails.value = editing?.source_details || '';
-    form.elements.comment.value = editing?.comment || prefill.comment || '';
-    form.elements.phaseSpecific.checked = conditions.solvent !== 'aqueous' && form.elements.outcome.value === 'products';
-    form.elements.specialCase.checked = Boolean(rule?.specialCase);
-    form.elements.manualIonicFull.value = rule?.ionicOverride?.full || '';
-    form.elements.manualIonicNet.value = rule?.ionicOverride?.net || '';
-    for (const input of form.querySelectorAll('[name="issueTypes"]')) input.checked = Boolean(editing?.issue_types?.includes(input.value) || prefill.issueTypes?.includes(input.value));
+    substanceDraft = new Map((draft?.substances || rule?.substances || []).map((item) => [item.formula, item]));
+    form.elements.equation.value = draft?.equation ?? (editing ? plainEquation(rule) : prefill.equation || `${prefill.reactants || ''} = `);
+    form.elements.outcome.value = draft?.outcome || editing?.proposed_rule_json?.outcome || prefill.outcome || 'products';
+    form.elements.reactionType.value = draft?.reactionType || rule?.type || t('communityRule');
+    form.elements.sourceType.value = draft?.sourceType || editing?.source_type || 'textbook';
+    form.elements.sourceDetails.value = draft?.sourceDetails ?? editing?.source_details ?? '';
+    form.elements.comment.value = draft?.comment ?? editing?.comment ?? prefill.comment ?? '';
+    form.elements.phaseSpecific.checked = draft?.phaseSpecific ?? (conditions.solvent !== 'aqueous' && form.elements.outcome.value === 'products');
+    form.elements.specialCase.checked = draft?.specialCase ?? Boolean(rule?.specialCase);
+    form.elements.manualIonicFull.value = draft?.manualIonicFull ?? rule?.ionicOverride?.full ?? '';
+    form.elements.manualIonicNet.value = draft?.manualIonicNet ?? rule?.ionicOverride?.net ?? '';
+    for (const input of form.querySelectorAll('[name="issueTypes"]')) input.checked = Boolean(draft?.issueTypes?.includes(input.value) || editing?.issue_types?.includes(input.value) || prefill.issueTypes?.includes(input.value));
     form.addEventListener('input', (event) => {
       if (event.target.name === 'equation') refreshSubstanceCards(rule);
       validatePreview();
+      scheduleDraftSave();
     });
     form.addEventListener('change', (event) => {
       if (['solvent', 'outcome'].includes(event.target.name)) {
@@ -533,9 +750,12 @@ export function initCommunityUI({ showToast, onNavigate, getAutoContext = () => 
       }
       updateManualIonicVisibility(form);
       validatePreview();
+      scheduleDraftSave();
     });
     form.addEventListener('submit', submitProposal);
     for (const close of form.querySelectorAll('[data-close-proposal]')) close.addEventListener('click', () => dialog.close());
+    dialog.addEventListener('close', saveDraft);
+    window.addEventListener('beforeunload', saveDraft);
     refreshSubstanceCards(rule);
     updateManualIonicVisibility(form);
     validatePreview();
@@ -580,6 +800,9 @@ export function initCommunityUI({ showToast, onNavigate, getAutoContext = () => 
       }
       const path = editing ? `/api/proposals/${encodeURIComponent(editing.id)}` : '/api/proposals';
       await api(path, { method: editing ? 'PATCH' : 'POST', body: data });
+      clearTimeout(draftTimer);
+      if (activeDraftId) draftStore?.remove(activeDraftId);
+      activeDraftId = null;
       $('#community-proposal-dialog').close();
       showToast(t('proposalSubmitted'));
       await refresh();
@@ -629,6 +852,57 @@ export function initCommunityUI({ showToast, onNavigate, getAutoContext = () => 
     }
   }
 
+  async function loadVersions(details) {
+    if (!details.open || details.dataset.loaded === 'true' || details.dataset.loading === 'true') return;
+    const id = details.dataset.proposal;
+    const content = details.querySelector('.version-content');
+    details.dataset.loading = 'true';
+    content.replaceChildren(element('p', 'help-text', t('loadingVersions')));
+    try {
+      const data = await api(`/api/proposals/${encodeURIComponent(id)}/versions`);
+      content.replaceChildren();
+      for (const version of data.versions) {
+        const entry = element('article', 'version-entry');
+        entry.append(element('p', 'help-text', `${t('packageVersion')} ${version.package_version} · ${version.publisher_login} · ${formatDate(version.published_at)}${version.current ? ` · ${t('currentVersion')}` : ''}`), element('p', 'proposal-equation', ruleEquation(version.rule)));
+        const actions = element('div', 'proposal-actions');
+        const compare = button(t('compareCurrent'), 'compare', version.id);
+        compare.addEventListener('click', () => {
+          entry.querySelector('.diff-output')?.remove();
+          const difference = renderRuleDiff(data.currentRule, version.rule);
+          difference.classList.add('diff-output');
+          entry.append(difference);
+        });
+        actions.append(compare);
+        if (!version.current && MODERATORS.includes(user?.privileges)) {
+          const rollback = button(t('rollbackVersion'), 'rollback', version.id, 'button secondary');
+          rollback.disabled = proposalOwns(user, id);
+          rollback.addEventListener('click', async () => {
+            if (!window.confirm(t('confirmRollback'))) return;
+            try {
+              await api(`/api/proposals/${encodeURIComponent(id)}/rollback`, { method: 'POST', body: { versionId: version.id } });
+              await refreshRules();
+              await refresh();
+              showToast(t('rollbackComplete'));
+            } catch (error) { notifyError(error); }
+          });
+          actions.append(rollback);
+        }
+        entry.append(actions);
+        content.append(entry);
+      }
+      details.dataset.loaded = 'true';
+    } catch (error) {
+      content.replaceChildren(element('p', 'inline-error', error.message));
+    } finally {
+      details.dataset.loading = 'false';
+    }
+  }
+
+  function proposalOwns(account, proposalId) {
+    const proposal = [...proposals, ...ownProposals].find((item) => item.id === proposalId);
+    return account?.privileges !== 'GOD' && proposal?.author_id === account?.id;
+  }
+
   for (const selector of ['#community-feed', '#community-own']) {
     $(selector).addEventListener('click', (event) => {
       const control = event.target.closest('[data-action]');
@@ -636,6 +910,9 @@ export function initCommunityUI({ showToast, onNavigate, getAutoContext = () => 
       const id = control.dataset.proposal || control.dataset.value;
       act(control.dataset.action, id, control.dataset.value, control.closest('.proposal-card'));
     });
+    $(selector).addEventListener('toggle', (event) => {
+      if (event.target.matches('.version-details')) loadVersions(event.target);
+    }, true);
   }
   $('#community-users').addEventListener('change', async (event) => {
     const select = event.target.closest('[data-user-role]');
@@ -650,14 +927,46 @@ export function initCommunityUI({ showToast, onNavigate, getAutoContext = () => 
     }
   });
 
+  function renderPublicProfile() {
+    const summary = $('#public-profile-summary');
+    const list = $('#public-profile-proposals');
+    summary.replaceChildren();
+    list.replaceChildren();
+    if (!publicProfile) return;
+    const account = publicProfile.user;
+    summary.append(element('h2', 'community-login', account.login), element('p', `role-badge role-${account.privileges.toLowerCase()}`, `${t('role')}: ${account.privileges}`), element('p', 'help-text', `${t('registered')}: ${formatDate(account.created_at)}`), element('p', 'community-reputation', `${t('reputation')}: ${signedNumber(account.reputation)}`));
+    if (!publicProfile.proposals.length) list.append(element('p', 'help-text', t('noPublicProposals')));
+    for (const proposal of publicProfile.proposals) {
+      const card = element('article', `proposal-card status-${proposal.status}`);
+      card.append(element('p', 'proposal-equation', ruleEquation(proposal.proposed_rule_json)), element('p', 'proposal-conditions', conditionText(proposal.proposed_rule_json.when)), element('p', 'proposal-status', `${t(`status_${proposal.status}`)} · ${formatDate(proposal.created_at)} · ${signedNumber(proposal.score)}`));
+      if (proposal.review_note) card.append(element('p', 'notice', `${t('reviewNote')}: ${proposal.review_note}`));
+      list.append(card);
+    }
+  }
+
+  async function showPublicProfile(login) {
+    try {
+      publicProfile = await api(`/api/users/${encodeURIComponent(login)}/public`);
+      $('#cabinet-status').textContent = '';
+      renderAccount();
+      renderPublicProfile();
+      onNavigate('account');
+    } catch (error) {
+      $('#cabinet-status').textContent = error.message;
+      onNavigate('account');
+    }
+  }
+
   async function restore() {
     try {
       const session = await api('/api/auth/me');
       user = session.user;
       csrfToken = session.csrfToken;
+      if (draftStore?.userId !== user.id) setDraftUser(user);
     } catch (error) {
       if (error.status !== 401) $('#community-status').textContent = t('communityOffline');
     }
+    if (!user && !publicProfile) $('#cabinet-status').textContent = t('loginToPropose');
     renderAccount();
     await Promise.all([refresh(), refreshRules()]);
   }
@@ -673,7 +982,13 @@ export function initCommunityUI({ showToast, onNavigate, getAutoContext = () => 
     events.onerror = () => { $('#community-status').textContent = t('pollingFallback'); };
   }
   setInterval(() => { if (!document.hidden) refresh(); }, 30000);
-  restore();
+  const profileMatch = location.pathname.match(/^\/([^/]+)\/?$/);
+  const initialWork = restore();
+  if (profileMatch && !location.pathname.includes('.')) {
+    initialWork.then(() => {
+      try { showPublicProfile(decodeURIComponent(profileMatch[1])); } catch { $('#cabinet-status').textContent = t('serverUnavailable'); }
+    });
+  }
 
   return {
     refresh,
