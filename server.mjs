@@ -34,6 +34,12 @@ function staticHandler(request, response) {
     response.writeHead(200, { 'Content-Type': MIME[extname(file)] || 'application/octet-stream', 'Content-Length': content.length, 'Cache-Control': 'no-cache' });
     response.end(request.method === 'HEAD' ? undefined : content);
   } catch {
+    if (!extname(pathname) && pathname !== '/index.html') {
+      const content = readFileSync(resolve(root, 'index.html'));
+      response.writeHead(200, { 'Content-Type': MIME['.html'], 'Content-Length': content.length, 'Cache-Control': 'no-cache' });
+      response.end(request.method === 'HEAD' ? undefined : content);
+      return;
+    }
     response.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
     response.end('Not found');
   }
@@ -46,11 +52,17 @@ const god = {
 };
 if (!god.password) throw new Error('Задайте COMMUNITY_GOD_PASSWORD перед публичным запуском');
 
-const app = createCommunityServer({ dbPath: process.env.COMMUNITY_DB || 'var/community.db', god, staticHandler });
-const host = process.env.HOST || '127.0.0.1';
+const app = await createCommunityServer({
+  dbPath: process.env.COMMUNITY_DB || 'var/community.db',
+  god,
+  staticHandler,
+  dbBackend: process.env.COMMUNITY_DB_BACKEND || (process.env.DATABASE_URL ? 'postgres' : 'sqlite'),
+  connectionString: process.env.DATABASE_URL
+});
+const host = process.env.HOST || (production ? '0.0.0.0' : '127.0.0.1');
 const port = Number(process.env.PORT || 8080);
 app.server.listen(port, host, () => {
   console.log(`ChemCalc: http://${host}:${port}`);
-  if (app.bootstrap) console.log(`GOD login: ${app.bootstrap.login}; password: ${app.bootstrap.password}`);
+  if (app.bootstrap) console.log(production ? `GOD login: ${app.bootstrap.login}; пароль берётся из секретной переменной окружения` : `GOD login: ${app.bootstrap.login}; password: ${app.bootstrap.password}`);
 });
 for (const signal of ['SIGINT', 'SIGTERM']) process.once(signal, () => app.close().then(() => process.exit(0)));

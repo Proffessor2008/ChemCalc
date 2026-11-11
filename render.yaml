@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: chemcalc
+    runtime: node
+    plan: free
+    buildCommand: npm ci && npm test
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeployTrigger: commit
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: HOST
+        value: 0.0.0.0
+      - key: COMMUNITY_DB_BACKEND
+        value: postgres
+      - key: DATABASE_URL
+        sync: false
+      - key: COMMUNITY_GOD_LOGIN
+        value: creator
+      - key: COMMUNITY_GOD_PASSWORD
+        sync: false
