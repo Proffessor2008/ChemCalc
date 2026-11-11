@@ -5,8 +5,9 @@ import { openCommunityDatabase, publicUser, jsonRecord, transaction } from './db
 import { openPostgresDatabase } from './postgres.mjs';
 import { createSession, destroySession, getSession, hashPassword, normalizeLogin, requireUser, validateCredentials, verifyPassword } from './auth.mjs';
 import { validateProposal } from './validation.mjs';
-import { communityPackage, publishProposal } from './production.mjs';
+import { communityPackage, publishProposal, rollbackRule } from './production.mjs';
 import { MAX_VOTES_PER_HOUR, recordReview, reputationForUser, reviewHistory, reviewHistoryMap, voteWeight } from './review.mjs';
+import { notificationsForUser, notifyProposalAuthor } from './notifications.mjs';
 
 const JSON_LIMIT = 250_000;
 const attempts = new Map();
@@ -37,6 +38,19 @@ function rateLimit(request) {
   if (recent.length >= 60) error(429, 'rate_limit', 'Слишком много попыток входа. Повторите позже.');
   recent.push(now);
   attempts.set(key, recent);
+}
+
+function pagination(url) {
+  const page = Number(url.searchParams.get('page') || 1);
+  const limit = Number(url.searchParams.get('limit') || 50);
+  if (!Number.isSafeInteger(page) || page < 1 || !Number.isSafeInteger(limit) || limit < 1 || limit > 100) error(422, 'invalid_pagination', 'Некорректные параметры страницы');
+  return { page, limit, offset: (page - 1) * limit };
+}
+
+function paginationResult({ page, limit }, total) {
+  const count = Number(total);
+  const pages = Math.ceil(count / limit);
+  return { page, limit, total: count, pages, hasNext: page < pages, hasPrev: page > 1 && pages > 0 };
 }
 
 function authResponse(response, status, user, session) {
@@ -105,7 +119,7 @@ export async function createCommunityServer({ dbPath, god, staticHandler, dbBack
         request.on('close', () => { clearInterval(timer); events.off('update', update); clients.delete(response); });
         return;
       }
-      if (path === '/api/health' && request.method === 'GET') return send(response, 200, { ok: true, database: db.kind || 'sqlite', schemaVersion: 3 });
+      if (path === '/api/health' && request.method === 'GET') return send(response, 200, { ok: true, database: db.kind || 'sqlite', schemaVersion: 5 });
       if (path === '/api/rules' && request.method === 'GET') return send(response, 200, await communityPackage(db));
       if (path === '/api/auth/register' && request.method === 'POST') {
         rateLimit(request);
@@ -141,16 +155,35 @@ export async function createCommunityServer({ dbPath, god, staticHandler, dbBack
         user.reputation = await reputationForUser(db, user.id);
         return send(response, 200, { user: publicUser(user), csrfToken: session.csrf_token, expiresAt: session.expires_at });
       }
+      if (path === '/api/notifications' && request.method === 'GET') {
+        const user = await requireUser(db, request);
+        return send(response, 200, await notificationsForUser(db, user.id));
+      }
+      if (path === '/api/notifications/read-all' && request.method === 'POST') {
+        const user = await requireUser(db, request, ['basic', 'admin', 'admin+', 'GOD'], true);
+        await db.prepare('UPDATE notifications SET read_at = ? WHERE user_id = ? AND read_at IS NULL').run(new Date().toISOString(), user.id);
+        return send(response, 200, await notificationsForUser(db, user.id));
+      }
+      const notificationMatch = path.match(/^\/api\/notifications\/([^/]+)\/read$/);
+      if (notificationMatch && request.method === 'POST') {
+        const user = await requireUser(db, request, ['basic', 'admin', 'admin+', 'GOD'], true);
+        const result = await db.prepare('UPDATE notifications SET read_at = ? WHERE id = ? AND user_id = ?').run(new Date().toISOString(), notificationMatch[1], user.id);
+        if (!result.changes) error(404, 'not_found', 'Уведомление не найдено');
+        return send(response, 200, await notificationsForUser(db, user.id));
+      }
       if (path === '/api/users' && request.method === 'GET') {
         await requireUser(db, request, ['GOD']);
+        const page = pagination(url);
+        const total = (await db.prepare('SELECT COUNT(*) AS count FROM users').get()).count;
         const users = (await db.prepare(`SELECT users.*,
           (SELECT COUNT(*) FROM proposals WHERE author_id = users.id AND status = 'pending') AS pending_count,
           (SELECT COALESCE(SUM(votes.value), 0) FROM proposals JOIN votes ON votes.proposal_id = proposals.id WHERE proposals.author_id = users.id) AS reputation
-          FROM users ORDER BY id`).all()).map(publicUser);
-        return send(response, 200, { users });
+          FROM users ORDER BY id LIMIT ? OFFSET ?`).all(page.limit, page.offset)).map(publicUser);
+        return send(response, 200, { users, pagination: paginationResult(page, total) });
       }
       if (path === '/api/proposals' && request.method === 'GET') {
         const viewer = await getSession(db, request);
+        const page = pagination(url);
         const sort = url.searchParams.get('sort');
         const order = sort === 'recent' ? 'created_at DESC' : sort === 'reputation' ? 'author_reputation DESC, score DESC, created_at DESC' : 'score DESC, created_at DESC';
         const selection = `SELECT proposals.*, users.login AS author_login,
@@ -160,16 +193,20 @@ export async function createCommunityServer({ dbPath, god, staticHandler, dbBack
           FROM proposals JOIN users ON users.id = proposals.author_id`;
         if (url.searchParams.get('author') === 'me') {
           const current = await requireUser(db, request);
-          const rows = await db.prepare(`${selection} WHERE author_id = ? ORDER BY created_at DESC LIMIT 200`).all(current.id);
-          return send(response, 200, { proposals: await presentRows(rows, current.id) });
+          const total = (await db.prepare('SELECT COUNT(*) AS count FROM proposals WHERE author_id = ?').get(current.id)).count;
+          const rows = await db.prepare(`${selection} WHERE author_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?`).all(current.id, page.limit, page.offset);
+          return send(response, 200, { proposals: await presentRows(rows, current.id), pagination: paginationResult(page, total) });
         }
         const allowed = ['pending', 'approved', 'rejected', 'needs_evidence', 'changes_requested', 'withdrawn'];
         const status = allowed.includes(url.searchParams.get('status')) ? url.searchParams.get('status') : 'pending';
         const key = url.searchParams.get('reactionKey');
+        const total = key
+          ? (await db.prepare('SELECT COUNT(*) AS count FROM proposals WHERE status = ? AND reaction_key = ?').get(status, key)).count
+          : (await db.prepare('SELECT COUNT(*) AS count FROM proposals WHERE status = ?').get(status)).count;
         const rows = key
-          ? await db.prepare(`${selection} WHERE status = ? AND reaction_key = ? ORDER BY ${order} LIMIT 200`).all(status, key)
-          : await db.prepare(`${selection} WHERE status = ? ORDER BY ${order} LIMIT 200`).all(status);
-        return send(response, 200, { proposals: await presentRows(rows, viewer?.user_id) });
+          ? await db.prepare(`${selection} WHERE status = ? AND reaction_key = ? ORDER BY ${order} LIMIT ? OFFSET ?`).all(status, key, page.limit, page.offset)
+          : await db.prepare(`${selection} WHERE status = ? ORDER BY ${order} LIMIT ? OFFSET ?`).all(status, page.limit, page.offset);
+        return send(response, 200, { proposals: await presentRows(rows, viewer?.user_id), pagination: paginationResult(page, total) });
       }
       if (path === '/api/proposals' && request.method === 'POST') {
         const user = await requireUser(db, request, ['basic', 'admin', 'admin+', 'GOD'], true);
@@ -184,12 +221,32 @@ export async function createCommunityServer({ dbPath, god, staticHandler, dbBack
         updated('proposal');
         return send(response, 201, { proposal: await getProposal(id, user.id), warnings: valid.warnings });
       }
-      const match = path.match(/^\/api\/proposals\/([^/]+)(?:\/(vote|review|withdraw|history))?$/);
+      const match = path.match(/^\/api\/proposals\/([^/]+)(?:\/(vote|review|withdraw|history|versions|rollback))?$/);
       if (match) {
         const [, id, action] = match;
         if (request.method === 'GET' && action === 'history') {
           await getProposal(id, null, true);
           return send(response, 200, { events: await reviewHistory(db, id) });
+        }
+        if (request.method === 'GET' && action === 'versions') {
+          const proposal = await getProposal(id, null, true);
+          const current = await db.prepare('SELECT rule_json FROM production_rules WHERE reaction_key = ? AND active = 1').get(proposal.reaction_key);
+          const rows = await db.prepare(`SELECT rule_versions.*, users.login AS publisher_login FROM rule_versions
+            JOIN users ON users.id = rule_versions.published_by WHERE reaction_key = ? ORDER BY package_version DESC`).all(proposal.reaction_key);
+          return send(response, 200, {
+            currentRule: current ? JSON.parse(current.rule_json) : null,
+            versions: rows.map((row) => ({ ...row, rule: JSON.parse(row.rule_json), current: current?.rule_json === row.rule_json }))
+          });
+        }
+        if (request.method === 'POST' && action === 'rollback') {
+          const reviewer = await requireUser(db, request, ['admin', 'admin+', 'GOD'], true);
+          const proposal = await getProposal(id, reviewer.id, true);
+          if (reviewer.privileges !== 'GOD' && proposal.author_id === reviewer.id) error(403, 'self_review', 'Откат собственной заявки должен подтвердить другой модератор');
+          const input = await body(request);
+          if (typeof input.versionId !== 'string' || !input.versionId || input.versionId.length > 160) error(422, 'invalid_version', 'Выберите корректную версию');
+          const rule = await rollbackRule(db, proposal, reviewer, input.versionId);
+          updated('review');
+          return send(response, 200, { proposal: await getProposal(id, reviewer.id), rule });
         }
         if (request.method === 'GET' && !action) return send(response, 200, { proposal: await getProposal(id, (await getSession(db, request))?.user_id) });
         if (request.method === 'PATCH' && !action) {
@@ -202,7 +259,10 @@ export async function createCommunityServer({ dbPath, god, staticHandler, dbBack
           await transaction(db, async () => {
             await db.prepare('UPDATE proposals SET reaction_key = ?, proposed_rule_json = ?, issue_types = ?, source_type = ?, source_details = ?, comment = ?, version = version + 1, updated_at = ? WHERE id = ?')
               .run(valid.reactionKey, JSON.stringify(valid.proposedRule), JSON.stringify(valid.issueTypes), valid.source.type, valid.source.details, valid.comment, new Date().toISOString(), id);
-            if (user.privileges !== 'basic') await recordReview(db, { ...proposal, version: proposal.version + 1 }, user, 'edited', 'Изменение перед решением модератора');
+            if (user.privileges !== 'basic') {
+              await recordReview(db, { ...proposal, version: proposal.version + 1 }, user, 'edited', 'Изменение перед решением модератора');
+              await notifyProposalAuthor(db, proposal, user, 'edited', 'Модератор отредактировал заявку перед решением');
+            }
           });
           updated('proposal');
           return send(response, 200, { proposal: await getProposal(id, user.id), warnings: valid.warnings });
@@ -253,10 +313,33 @@ export async function createCommunityServer({ dbPath, god, staticHandler, dbBack
             await db.prepare('UPDATE proposals SET status = ?, reviewed_by = ?, reviewed_at = ?, review_note = ?, updated_at = ? WHERE id = ?')
               .run(input.action, reviewer.id, new Date().toISOString(), note, new Date().toISOString(), id);
             await recordReview(db, proposal, reviewer, input.action, note);
+            await notifyProposalAuthor(db, proposal, reviewer, input.action, note || `Новый статус заявки: ${input.action}`);
           });
           updated('review');
           return send(response, 200, { proposal: await getProposal(id, reviewer.id) });
         }
+      }
+      const publicProfileMatch = path.match(/^\/api\/users\/([^/]+)\/public$/);
+      if (publicProfileMatch && request.method === 'GET') {
+        let login;
+        try { login = decodeURIComponent(publicProfileMatch[1]); } catch { error(422, 'invalid_login', 'Некорректный логин'); }
+        const record = await db.prepare('SELECT id, login, privileges, created_at FROM users WHERE login_canonical = ?').get(normalizeLogin(login));
+        if (!record) error(404, 'not_found', 'Пользователь не найден');
+        const rows = await db.prepare(`SELECT proposals.*, users.login AS author_login, 0 AS author_reputation
+          FROM proposals JOIN users ON users.id = proposals.author_id WHERE author_id = ? ORDER BY created_at DESC LIMIT 100`).all(record.id);
+        const proposals = (await presentRows(rows, null)).map((proposal) => ({
+          id: proposal.id,
+          kind: proposal.kind,
+          status: proposal.status,
+          score: proposal.score,
+          created_at: proposal.created_at,
+          updated_at: proposal.updated_at,
+          version: proposal.version,
+          review_note: proposal.review_note,
+          proposed_rule_json: proposal.proposed_rule_json,
+          review_history: proposal.review_history
+        }));
+        return send(response, 200, { user: { login: record.login, privileges: record.privileges, created_at: record.created_at, reputation: await reputationForUser(db, record.id) }, proposals });
       }
       const roleMatch = path.match(/^\/api\/users\/(\d+)\/role$/);
       if (roleMatch && request.method === 'PATCH') {
@@ -272,6 +355,7 @@ export async function createCommunityServer({ dbPath, god, staticHandler, dbBack
         updated('user');
         return send(response, 200, { user: publicUser(user) });
       }
+      if (path.startsWith('/api/')) return send(response, 404, { error: { code: 'not_found', message: 'Маршрут не найден' } });
       if (staticHandler) return staticHandler(request, response);
       return send(response, 404, { error: { code: 'not_found', message: 'Маршрут не найден' } });
     } catch (cause) {
