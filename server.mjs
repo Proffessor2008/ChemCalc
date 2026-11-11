@@ -34,6 +34,12 @@ function staticHandler(request, response) {
     response.writeHead(200, { 'Content-Type': MIME[extname(file)] || 'application/octet-stream', 'Content-Length': content.length, 'Cache-Control': 'no-cache' });
     response.end(request.method === 'HEAD' ? undefined : content);
   } catch {
+    if (!extname(pathname) && pathname !== '/index.html') {
+      const content = readFileSync(resolve(root, 'index.html'));
+      response.writeHead(200, { 'Content-Type': MIME['.html'], 'Content-Length': content.length, 'Cache-Control': 'no-cache' });
+      response.end(request.method === 'HEAD' ? undefined : content);
+      return;
+    }
     response.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
     response.end('Not found');
   }

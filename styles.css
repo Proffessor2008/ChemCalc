@@ -568,3 +568,34 @@ select.reference-select-mobile { width: 100%; min-height: 46px; padding: 8px 10p
 .review-history summary { min-height: 44px; padding: 10px 0; color: var(--accent); cursor: pointer; }
 .review-history-list { display: grid; gap: 7px; margin: 0; padding-left: 22px; color: var(--muted); font-size: .74rem; }
 .community-reputation { color: var(--accent-strong); font-weight: 750; }
+
+.diff-table { min-width: 620px; font-size: .74rem; }
+.diff-table td { white-space: pre-wrap; overflow-wrap: anywhere; }
+.version-details { margin-top: 12px; border-top: 1px solid var(--line); }
+.version-details summary { min-height: 44px; padding: 10px 0; color: var(--accent); cursor: pointer; }
+.version-content { display: grid; gap: 10px; }
+.version-entry { padding: 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-muted); }
+
+.cabinet-grid { display: grid; gap: 16px; }
+.cabinet-wide { grid-column: 1 / -1; }
+.cabinet-summary-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.notification-list, .draft-list { display: grid; gap: 10px; margin-top: 12px; }
+.notification-item, .draft-item { padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); }
+.notification-item.unread { border-left: 4px solid var(--accent); }
+.notification-item p, .draft-item p { margin: 5px 0; overflow-wrap: anywhere; }
+.pagination { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.pagination:empty { display: none; }
+.public-profile-link { overflow-wrap: anywhere; }
+@media (min-width: 850px) { .cabinet-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+#print-solution { display: none; }
+@media print {
+  body { padding: 0; background: white; color: black; }
+  body > *:not(#print-solution) { display: none !important; }
+  #print-solution { display: block !important; max-width: 760px; margin: 0 auto; font-size: 12pt; }
+  #print-solution h1 { font-size: 20pt; }
+  #print-solution h2 { margin-top: 20px; font-size: 14pt; break-after: avoid; }
+  #print-solution li { margin: 6px 0; }
+  .print-equation { font-family: Georgia, serif; font-size: 16pt; overflow-wrap: anywhere; }
+  .print-date { color: #444; }
+}
