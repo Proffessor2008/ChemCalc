@@ -56,7 +56,7 @@ test('community API: регистрация, заявки, голосовани�
   });
 
   const health = await request(port, '/api/health');
-  assert.deepEqual(health.data, { ok: true, database: 'sqlite', schemaVersion: 3 });
+  assert.deepEqual(health.data, { ok: true, database: 'sqlite', schemaVersion: 5 });
   const mismatch = await request(port, '/api/auth/register', { method: 'POST', body: { login: 'baduser', password: 'password123', confirmPassword: 'otherPassword' } });
   assert.equal(mismatch.status, 422);
   const alice = await register(port, 'alice');
@@ -101,6 +101,11 @@ test('community API: регистрация, заявки, голосовани�
   assert.ok(users.data.users.every((user) => !user.password_hash && !user.password));
   assert.equal(users.data.users.find((user) => user.login === 'alice').pending_count, 1);
   assert.equal(users.data.users.find((user) => user.login === 'alice').reputation, 1);
+  assert.deepEqual(users.data.pagination, { page: 1, limit: 50, total: 3, pages: 1, hasNext: false, hasPrev: false });
+  const usersPageTwo = await request(port, '/api/users?page=2&limit=2', { cookie: godLogin.cookie });
+  assert.equal(usersPageTwo.data.users.length, 1);
+  assert.equal(usersPageTwo.data.pagination.hasPrev, true);
+  assert.equal((await request(port, '/api/users?page=0', { cookie: godLogin.cookie })).status, 422);
 
   const promote = await request(port, '/api/users/3/role', { method: 'PATCH', body: { privileges: 'admin' }, cookie: godLogin.cookie, csrfToken: godLogin.csrfToken });
   assert.equal(promote.status, 200, JSON.stringify(promote.data));
@@ -119,6 +124,15 @@ test('community API: регистрация, заявки, голосовани�
   assert.equal(approved.data.proposal.status, 'approved');
   assert.equal(approved.data.rule.publishedBy, 'bob');
   assert.equal(approved.data.rule.priority, 600);
+  const notifications = await request(port, '/api/notifications', { cookie: alice.cookie });
+  assert.equal(notifications.status, 200);
+  assert.deepEqual(notifications.data.notifications.map((item) => item.kind), ['approved', 'edited']);
+  assert.equal(notifications.data.unread, 2);
+  const foreignRead = await request(port, `/api/notifications/${notifications.data.notifications[0].id}/read`, { method: 'POST', body: {}, cookie: adminLogin.cookie, csrfToken: adminLogin.csrfToken });
+  assert.equal(foreignRead.status, 404);
+  const read = await request(port, `/api/notifications/${notifications.data.notifications[0].id}/read`, { method: 'POST', body: {}, cookie: alice.cookie, csrfToken: alice.csrfToken });
+  assert.equal(read.status, 200);
+  assert.equal(read.data.unread, 1);
   const history = await request(port, `/api/proposals/${id}/history`);
   assert.equal(history.status, 200);
   assert.deepEqual(history.data.events.map((event) => event.action), ['edited', 'approved']);
@@ -162,6 +176,29 @@ test('community API: регистрация, заявки, голосовани�
   assert.equal(revision.rules[0].ionicOverride.net, 'H^+ + OH^- → H2O');
   updateCommunityData(revision);
   assert.equal(predictReaction('HCl + LiOH').ionicOverride.net, 'H^+ + OH^- → H2O');
+  assert.equal(revision.tests.length, 1);
+  assert.equal(revision.tests[0].expected.formatted, 'HCl + LiOH → LiCl + H2O');
+
+  const versions = await request(port, `/api/proposals/${corrected.data.proposal.id}/versions`);
+  assert.equal(versions.status, 200, JSON.stringify(versions.data));
+  assert.equal(versions.data.versions.length, 2);
+  const originalVersion = versions.data.versions.at(-1);
+  const rolledBack = await request(port, `/api/proposals/${corrected.data.proposal.id}/rollback`, { method: 'POST', body: { versionId: originalVersion.id }, cookie: adminLogin.cookie, csrfToken: adminLogin.csrfToken });
+  assert.equal(rolledBack.status, 200, JSON.stringify(rolledBack.data));
+  assert.equal(rolledBack.data.rule.rollbackOf, originalVersion.id);
+  const rollbackPackage = JSON.parse(readFileSync(PACKAGE, 'utf8'));
+  assert.equal(rollbackPackage.version, 3);
+  assert.equal(rollbackPackage.tests.length, 1);
+  assert.deepEqual(validateData().errors, []);
+  const afterRollback = await request(port, `/api/proposals/${corrected.data.proposal.id}/versions`);
+  assert.equal(afterRollback.data.versions.length, 3);
+  assert.equal(afterRollback.data.versions[0].current, true);
+  assert.ok(rolledBack.data.proposal.review_history.some((event) => event.action === 'rollback'));
+  const rollbackNotifications = await request(port, '/api/notifications', { cookie: alice.cookie });
+  assert.ok(rollbackNotifications.data.notifications.some((item) => item.kind === 'rollback'));
+  const allRead = await request(port, '/api/notifications/read-all', { method: 'POST', body: {}, cookie: alice.cookie, csrfToken: alice.csrfToken });
+  assert.equal(allRead.status, 200);
+  assert.equal(allRead.data.unread, 0);
 
   const personal = await request(port, '/api/proposals', { method: 'POST', body: { ...proposalPayload(), sourceType: 'personal', sourceDetails: 'Личное мнение' }, cookie: alice.cookie, csrfToken: alice.csrfToken });
   assert.equal(personal.status, 201);
@@ -180,6 +217,16 @@ test('community API: регистрация, заявки, голосовани�
   assert.ok(own.data.proposals.every((proposal) => Array.isArray(proposal.review_history)));
   assert.equal(own.data.proposals.length, 3);
   assert.ok(own.data.proposals.every((proposal) => proposal.author_login === 'alice'));
+  assert.equal(own.data.pagination.total, 3);
+  const ownPageTwo = await request(port, '/api/proposals?author=me&page=2&limit=2', { cookie: alice.cookie });
+  assert.equal(ownPageTwo.data.proposals.length, 1);
+  const publicProfile = await request(port, '/api/users/ALICE/public');
+  assert.equal(publicProfile.status, 200, JSON.stringify(publicProfile.data));
+  assert.equal(publicProfile.data.user.login, 'alice');
+  assert.equal(publicProfile.data.user.reputation, 1);
+  assert.equal(publicProfile.data.proposals.length, 3);
+  assert.ok(!('last_login_at' in publicProfile.data.user));
+  assert.ok(!('password_hash' in publicProfile.data.user));
   const alternatives = await request(port, `/api/proposals?status=pending&reactionKey=${encodeURIComponent(corrected.data.proposal.reaction_key)}`);
   assert.equal(alternatives.data.proposals.length, 1);
   assert.equal(alternatives.data.proposals[0].id, personal.data.proposal.id);

@@ -15,13 +15,13 @@ test('service worker кеширует все шесть источников с�
   for (const name of ['predictor', 'reaction-conditions', 'redox-predictor', 'redox-view', 'internal-redox', 'electrolytes', 'dissociation', 'clipboard', 'export', 'reference-ui', 'thermo', 'periodic-table', 'ui']) assert.ok(worker.includes(`./js/${name}.js`));
   assert.ok(worker.includes('./data/redox-sites.json'));
   assert.ok(worker.includes('./data/functional-groups.json'));
-  assert.ok(worker.includes('chemcalc-v31'));
+  assert.ok(worker.includes('chemcalc-v33'));
   assert.ok(worker.includes('./js/community-ui.js'));
   assert.ok(worker.includes('./data/reaction-rules-community.json'));
   assert.ok(worker.includes("url.pathname.startsWith('/api/')"));
   assert.ok(worker.includes("request.mode === 'navigate'"));
   const browserSuite = readFileSync('tests.html', 'utf8');
-  assert.ok(browserSuite.includes("caches.open('chemcalc-v31')"));
+  assert.ok(browserSuite.includes("caches.open('chemcalc-v33')"));
   assert.ok(browserSuite.includes('./js/community-ui.js'));
   assert.ok(browserSuite.includes('./data/reaction-rules-community.json'));
 });
