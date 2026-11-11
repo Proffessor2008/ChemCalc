@@ -1,14 +1,15 @@
 import { renameSync, unlinkSync, writeFileSync } from 'node:fs';
+import { randomUUID } from 'node:crypto';
 import reactionData from '../data/reaction-rules.json' with { type: 'json' };
 import finalReactionData from '../data/reaction-rules-final.json' with { type: 'json' };
 import { transaction } from './db.mjs';
 import { recordReview } from './review.mjs';
+import { regressionTestsForPackage } from './rule-tests.mjs';
+import { notifyProposalAuthor } from './notifications.mjs';
 import { validateData } from '../scripts/validate-data.mjs';
-
 const PRIORITIES = new Map([...finalReactionData.rules, ...reactionData.rules].map((rule) => [rule.id, rule.priority]));
 const PACKAGE_PATH = new URL('../data/reaction-rules-community.json', import.meta.url);
 const TEMP_PATH = new URL('../data/reaction-rules-community.tmp', import.meta.url);
-
 export async function communityPackage(db) {
   const rules = (await db.prepare('SELECT * FROM production_rules WHERE active = 1 ORDER BY published_at, id').all())
     .map((row) => JSON.parse(row.rule_json));
@@ -31,9 +32,20 @@ export async function communityPackage(db) {
     }
   }
   const version = Number((await db.prepare('SELECT COALESCE(MAX(version), 0) AS version FROM production_rules').get()).version);
-  return { version, source: 'Проверенные правила сообщества', rules, substances, solubility };
+  const packageData = { version, source: 'Проверенные правила сообщества', rules, tests: [], substances, solubility };
+  packageData.tests = regressionTestsForPackage(packageData);
+  return packageData;
 }
-
+async function writeValidatedPackage(db) {
+  const packageData = await communityPackage(db);
+  writeFileSync(TEMP_PATH, `${JSON.stringify(packageData, null, 2)}\n`);
+  const validation = validateData({ communityPath: TEMP_PATH });
+  if (validation.errors.length) {
+    try { unlinkSync(TEMP_PATH); } catch { /* already absent */ }
+    throw Object.assign(new Error(`Правило не прошло проверку базы: ${validation.errors.join('; ')}`), { status: 422, code: 'invalid_production_rule', details: validation.errors });
+  }
+  renameSync(TEMP_PATH, PACKAGE_PATH);
+}
 export async function publishProposal(db, proposal, reviewer) {
   if (proposal.source_type === 'personal') throw Object.assign(new Error('Личное мнение нельзя опубликовать без независимого источника'), { status: 422, code: 'source_required' });
   const previousRow = await db.prepare('SELECT * FROM production_rules WHERE reaction_key = ?').get(proposal.reaction_key);
@@ -61,17 +73,39 @@ export async function publishProposal(db, proposal, reviewer) {
         source_proposal_id = excluded.source_proposal_id, published_by = excluded.published_by,
         published_at = excluded.published_at, version = excluded.version, active = 1`)
       .run(id, proposal.reaction_key, JSON.stringify(rule), proposal.id, reviewer.id, rule.publishedAt, version);
+    await db.prepare(`INSERT INTO rule_versions(id,reaction_key,rule_json,proposal_id,published_by,published_at,package_version) VALUES(?,?,?,?,?,?,?)`)
+      .run(id, proposal.reaction_key, JSON.stringify(rule), proposal.id, reviewer.id, rule.publishedAt, version);
     await db.prepare("UPDATE proposals SET status = 'approved', reviewed_by = ?, reviewed_at = ?, review_note = ? WHERE id = ?")
       .run(reviewer.id, rule.publishedAt, 'Опубликовано модератором', proposal.id);
     await recordReview(db, proposal, reviewer, 'approved', 'Опубликовано модератором');
-    const packageData = await communityPackage(db);
-    writeFileSync(TEMP_PATH, `${JSON.stringify(packageData, null, 2)}\n`);
-    const validation = validateData({ communityPath: TEMP_PATH });
-    if (validation.errors.length) {
-      try { unlinkSync(TEMP_PATH); } catch { /* already absent */ }
-      throw Object.assign(new Error(`Правило не прошло проверку базы: ${validation.errors.join('; ')}`), { status: 422, code: 'invalid_production_rule', details: validation.errors });
-    }
-    renameSync(TEMP_PATH, PACKAGE_PATH);
+    await notifyProposalAuthor(db, proposal, reviewer, 'approved', 'Заявка одобрена, правило опубликовано');
+    await writeValidatedPackage(db);
   });
   return rule;
 }
+export async function rollbackRule(db, proposal, reviewer, versionId) {
+  const selected = await db.prepare('SELECT * FROM rule_versions WHERE id = ? AND reaction_key = ?').get(versionId, proposal.reaction_key);
+  if (!selected) throw Object.assign(new Error('Выбранная версия не найдена'), { status: 404, code: 'version_not_found' });
+  const current = await db.prepare('SELECT * FROM production_rules WHERE reaction_key = ? AND active = 1').get(proposal.reaction_key);
+  if (!current) throw Object.assign(new Error('Для этой заявки нет опубликованного правила'), { status: 409, code: 'not_published' });
+  if (current.rule_json === selected.rule_json) throw Object.assign(new Error('Эта версия уже активна'), { status: 409, code: 'already_current' });
+  const rule = {
+    ...JSON.parse(selected.rule_json),
+    sourceProposalId: proposal.id,
+    publishedBy: reviewer.login,
+    publishedAt: new Date().toISOString(),
+    rollbackOf: selected.id
+  };
+  await transaction(db, async () => {
+    const version = Number((await db.prepare('SELECT COALESCE(MAX(version), 0) + 1 AS version FROM production_rules').get()).version);
+    await db.prepare(`UPDATE production_rules SET id = ?, rule_json = ?, published_by = ?, published_at = ?, version = ? WHERE reaction_key = ?`)
+      .run(rule.id, JSON.stringify(rule), reviewer.id, rule.publishedAt, version, proposal.reaction_key);
+    await db.prepare(`INSERT INTO rule_versions(id,reaction_key,rule_json,proposal_id,published_by,published_at,package_version) VALUES(?,?,?,?,?,?,?)`)
+      .run(`version-${randomUUID()}`, proposal.reaction_key, JSON.stringify(rule), proposal.id, reviewer.id, rule.publishedAt, version);
+    await recordReview(db, proposal, reviewer, 'rollback', `Откат на версию пакета ${selected.package_version}`);
+    await notifyProposalAuthor(db, proposal, reviewer, 'rollback', `Опубликовано восстановление версии пакета ${selected.package_version}`);
+    await writeValidatedPackage(db);
+  });
+  return rule;
+}
+
