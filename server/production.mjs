@@ -7,9 +7,11 @@ import { recordReview } from './review.mjs';
 import { regressionTestsForPackage } from './rule-tests.mjs';
 import { notifyProposalAuthor } from './notifications.mjs';
 import { validateData } from '../scripts/validate-data.mjs';
+
 const PRIORITIES = new Map([...finalReactionData.rules, ...reactionData.rules].map((rule) => [rule.id, rule.priority]));
 const PACKAGE_PATH = new URL('../data/reaction-rules-community.json', import.meta.url);
 const TEMP_PATH = new URL('../data/reaction-rules-community.tmp', import.meta.url);
+
 export async function communityPackage(db) {
   const rules = (await db.prepare('SELECT * FROM production_rules WHERE active = 1 ORDER BY published_at, id').all())
     .map((row) => JSON.parse(row.rule_json));
@@ -36,6 +38,7 @@ export async function communityPackage(db) {
   packageData.tests = regressionTestsForPackage(packageData);
   return packageData;
 }
+
 async function writeValidatedPackage(db) {
   const packageData = await communityPackage(db);
   writeFileSync(TEMP_PATH, `${JSON.stringify(packageData, null, 2)}\n`);
@@ -46,6 +49,7 @@ async function writeValidatedPackage(db) {
   }
   renameSync(TEMP_PATH, PACKAGE_PATH);
 }
+
 export async function publishProposal(db, proposal, reviewer) {
   if (proposal.source_type === 'personal') throw Object.assign(new Error('Личное мнение нельзя опубликовать без независимого источника'), { status: 422, code: 'source_required' });
   const previousRow = await db.prepare('SELECT * FROM production_rules WHERE reaction_key = ?').get(proposal.reaction_key);
@@ -83,6 +87,7 @@ export async function publishProposal(db, proposal, reviewer) {
   });
   return rule;
 }
+
 export async function rollbackRule(db, proposal, reviewer, versionId) {
   const selected = await db.prepare('SELECT * FROM rule_versions WHERE id = ? AND reaction_key = ?').get(versionId, proposal.reaction_key);
   if (!selected) throw Object.assign(new Error('Выбранная версия не найдена'), { status: 404, code: 'version_not_found' });
@@ -108,4 +113,3 @@ export async function rollbackRule(db, proposal, reviewer, versionId) {
   });
   return rule;
 }
-

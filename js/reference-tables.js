@@ -4,10 +4,10 @@ import electrodeData from '../data/electrode-potentials.json' with { type: 'json
 import electronegativityData from '../data/electronegativity.json' with { type: 'json' };
 import solubilityData from '../data/solubility.json' with { type: 'json' };
 import { electrolyteRecord } from './electrolytes.js';
+import { FARADAY, GAS_CONSTANT, nernst } from './physical-constants.js';
 import { formulaFromIons } from './predictor.js';
 
-export const FARADAY = 96485.33212;
-export const GAS_CONSTANT = 8.314462618;
+export { FARADAY, GAS_CONSTANT, nernst };
 export const ACID_BASE_RECORDS = acidBaseData.records;
 export const ELECTRODE_RECORDS = electrodeData.records;
 export const ELECTRONEGATIVITY_RECORDS = electronegativityData.records;
@@ -127,14 +127,4 @@ export function galvanicCell(firstId, secondId, temperatureK = 298.15) {
     possible: E0 > 0,
     note: 'Положительная ЭДС показывает термодинамическую возможность, но не гарантирует скорость процесса.'
   };
-}
-
-export function nernst(E0Value, electronsValue, qValue, temperatureValue = 298.15) {
-  const E0 = Number(E0Value);
-  const electrons = Number(electronsValue);
-  const q = Number(qValue);
-  const temperature = Number(temperatureValue);
-  if (!Number.isFinite(E0) || !Number.isInteger(electrons) || electrons < 1 || !Number.isFinite(q) || q <= 0 || !Number.isFinite(temperature) || temperature <= 0) throw new RangeError('Проверьте E°, n, Q > 0 и T > 0 K');
-  const E = E0 - GAS_CONSTANT * temperature / (electrons * FARADAY) * Math.log(q);
-  return { E, steps: [`E = E° − RT/(nF) · ln Q = ${E0} − (${GAS_CONSTANT}·${temperature}) / (${electrons}·${FARADAY}) · ln(${q}) = ${E.toFixed(6)} В.`] };
 }

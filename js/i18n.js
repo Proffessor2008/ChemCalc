@@ -289,6 +289,35 @@ Object.assign(dictionaries.en, {
   reputation: 'Reputation (sum of proposal votes)', byAuthorReputation: 'By author reputation', reviewHistory: 'Moderator decision history', review_edited: 'Edited before the review decision'
 });
 
+Object.assign(dictionaries.ru, {
+  field: 'Поле', proposedAnswer: 'Предлагаемый вариант', automaticCoefficients: 'Автоматически', noChanges: 'Изменений в этих полях нет', publishedVersions: 'Версии опубликованного правила', loadingVersions: 'Загрузка версий…', packageVersion: 'Версия пакета', currentVersion: 'Текущая версия', compareCurrent: 'Сравнить с текущей', rollbackVersion: 'Откатить до этой версии', confirmRollback: 'Опубликовать выбранную старую версию? Будет создана новая запись в истории.', rollbackComplete: 'Выбранная версия восстановлена и добавлена в журнал', status_rollback: 'Откат версии'
+});
+Object.assign(dictionaries.en, {
+  field: 'Field', proposedAnswer: 'Proposed answer', automaticCoefficients: 'Automatic', noChanges: 'No changes in these fields', publishedVersions: 'Published rule versions', loadingVersions: 'Loading versions…', packageVersion: 'Package version', currentVersion: 'Current version', compareCurrent: 'Compare with current', rollbackVersion: 'Roll back to this version', confirmRollback: 'Publish the selected older version? A new history entry will be created.', rollbackComplete: 'The selected version was restored and recorded', status_rollback: 'Version rollback'
+});
+
+Object.assign(dictionaries.ru, {
+  printSolution: 'Печать решения', printEquationInput: 'Исходное уравнение', printBalanceMethod: 'Коэффициенты из точного матричного расчёта',
+  drafts: 'Черновики заявок', noDrafts: 'Сохранённых черновиков нет', resumeDraft: 'Продолжить', deleteDraft: 'Удалить черновик', draftSaved: 'Черновик сохранён локально', confirmDeleteDraft: 'Удалить этот черновик?',
+  notifications: 'Уведомления', noNotifications: 'Новых уведомлений нет', unreadNotifications: 'Непрочитанные', markRead: 'Прочитано', markAllRead: 'Отметить все прочитанными',
+  notification_approved: 'Заявка одобрена', notification_rejected: 'Заявка отклонена', notification_needs_evidence: 'Запрошен источник', notification_changes_requested: 'Запрошены исправления', notification_edited: 'Заявка отредактирована модератором', notification_rollback: 'Выполнен откат правила', loadingThermo: 'Загрузка термодинамических данных…'
+});
+Object.assign(dictionaries.en, {
+  printSolution: 'Print solution', printEquationInput: 'Input equation', printBalanceMethod: 'Coefficients from exact matrix calculation',
+  drafts: 'Proposal drafts', noDrafts: 'No saved drafts', resumeDraft: 'Continue', deleteDraft: 'Delete draft', draftSaved: 'Draft saved locally', confirmDeleteDraft: 'Delete this draft?',
+  notifications: 'Notifications', noNotifications: 'No notifications', unreadNotifications: 'Unread', markRead: 'Mark read', markAllRead: 'Mark all as read',
+  notification_approved: 'Proposal approved', notification_rejected: 'Proposal rejected', notification_needs_evidence: 'Evidence requested', notification_changes_requested: 'Changes requested', notification_edited: 'Proposal edited by a moderator', notification_rollback: 'Rule version rolled back', loadingThermo: 'Loading thermodynamic data…'
+});
+
+Object.assign(dictionaries.ru, {
+  personalCabinet: 'Личный кабинет', openCabinet: 'Открыть личный кабинет', draftStorageNote: 'Черновики сохраняются только на этом устройстве.', publicProposalHistory: 'Публичная история заявок',
+  previousPage: 'Назад', nextPage: 'Вперёд', pageOf: 'Страница {page} из {pages} · всего {total}', noPublicProposals: 'У пользователя пока нет заявок.'
+});
+Object.assign(dictionaries.en, {
+  personalCabinet: 'Account dashboard', openCabinet: 'Open account dashboard', draftStorageNote: 'Drafts are stored only on this device.', publicProposalHistory: 'Public proposal history',
+  previousPage: 'Previous', nextPage: 'Next', pageOf: 'Page {page} of {pages} · {total} total', noPublicProposals: 'This user has no proposals yet.'
+});
+
 let locale = 'ru';
 
 export function t(key, parameters = {}) {

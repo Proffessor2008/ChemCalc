@@ -1,7 +1,7 @@
 import potentialsData from '../data/electrode-potentials.json' with { type: 'json' };
 import { inspectBalance } from './balancer.js';
 import { equationToUnicode, parseSpecies } from './parser.js';
-import { nernst } from './reference-tables.js';
+import { nernst } from './physical-constants.js';
 import { t } from './i18n.js';
 
 const MEDIUM_SPECIES = new Set(['H2O', 'H^+', 'OH^-']);

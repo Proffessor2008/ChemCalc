@@ -5,7 +5,6 @@ import { copyText } from './clipboard.js';
 import { equationToLatex } from './export.js';
 import { equationToUnicode, formatEquation, formulaToUnicode, parseEquation, parseSide } from './parser.js';
 import { DEFAULT_CONDITIONS, predictReaction } from './predictor.js';
-import { printSolution } from './print-solution.js';
 import { renderThermoPanel } from './thermo-panel.js';
 
 const CONDITION_KEY = 'chemcalc-auto-conditions-v2';
@@ -378,17 +377,22 @@ export function initAutoUI({ storage, saveState, showToast, onHistory, onOpenChe
   $('#auto-to-stoich').addEventListener('click', () => {
     if (currentEquation) onStoich(formatEquation(currentEquation));
   });
-  $('#auto-print').addEventListener('click', () => {
+  $('#auto-print').addEventListener('click', async () => {
     if (!currentEquation) return;
-    const ionicOverride = result?.formatted === formatEquation(currentEquation) ? result.ionicOverride : null;
-    printSolution({
-      equation: currentEquation,
-      conditions: getConditions(),
-      type: result.type,
-      source: result.source,
-      explanation: [...(result.why || []), ...(result.assumptions || [])],
-      ionic: ionicOverride || buildIonicEquations(currentEquation, { solvent: getConditions().solvent })
-    });
+    try {
+      const { printSolution } = await import('./print-solution.js');
+      const ionicOverride = result?.formatted === formatEquation(currentEquation) ? result.ionicOverride : null;
+      printSolution({
+        equation: currentEquation,
+        conditions: getConditions(),
+        type: result.type,
+        source: result.source,
+        explanation: [...(result.why || []), ...(result.assumptions || [])],
+        ionic: ionicOverride || buildIonicEquations(currentEquation, { solvent: getConditions().solvent })
+      });
+    } catch {
+      showToast(t('serverUnavailable'));
+    }
   });
 
   try {

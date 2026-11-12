@@ -10,9 +10,6 @@ import { getLocale, setLocale, t } from './i18n.js';
 import { buildIonicEquations } from './ionic.js';
 import { initOnboarding } from './onboarding.js';
 import { equationToUnicode, formatEquation, parseEquation } from './parser.js';
-import { initPeriodicTable } from './periodic-table.js';
-import { initReferenceUI } from './reference-ui.js';
-import { initStoichiometryUI } from './stoichiometry-ui.js';
 import { renderThermoPanel } from './thermo-panel.js';
 import { renderRedoxPanel } from './redox-view.js';
 import { getReactionRule } from './predictor.js';
@@ -44,7 +41,7 @@ try {
 }
 const state = {
   mode: saved.mode === 'auto' ? 'auto' : 'check',
-  tab: ['calculator', 'stoichiometry', 'references', 'history', 'community', 'documentation'].includes(saved.tab) ? saved.tab : 'calculator',
+  tab: ['calculator', 'stoichiometry', 'references', 'history', 'community', 'account', 'documentation'].includes(saved.tab) ? saved.tab : 'calculator',
   draft: typeof saved.draft === 'string' ? saved.draft : '2H2 + O2 = 2H2O',
   autoDraft: typeof saved.autoDraft === 'string' ? saved.autoDraft : '',
   attempts: 0,
@@ -60,6 +57,90 @@ let autoController;
 let stoichController;
 let historyController;
 let communityController;
+let periodicController;
+let referencePromise;
+let stoichiometryPromise;
+let periodicPromise;
+
+function ensureReferences() {
+  referencePromise ||= import('./reference-ui.js').then(({ initReferenceUI }) => initReferenceUI({
+    storage,
+    getCurrentEquation: () => state.mode === 'auto' && autoController?.getCurrentEquation()
+      ? formatEquation(autoController.getCurrentEquation())
+      : input.value,
+    onOpenFormula(formula) {
+      autoController.setEquation(formula);
+      state.autoDirty = false;
+      setMode('auto', false);
+      setTab('calculator');
+      autoController.run(false);
+    },
+    onOpenEquation(equation) {
+      input.value = equation;
+      setMode('check', false);
+      setTab('calculator');
+      resetLearning();
+      updateLive();
+      saveState();
+    }
+  }));
+  return referencePromise;
+}
+
+function ensureStoichiometry() {
+  stoichiometryPromise ||= import('./stoichiometry-ui.js').then(({ initStoichiometryUI }) => {
+    stoichController = initStoichiometryUI({
+      getCurrentEquation: () => state.mode === 'auto' && autoController?.getCurrentEquation()
+        ? formatEquation(autoController.getCurrentEquation())
+        : input.value
+    });
+    return stoichController;
+  });
+  return stoichiometryPromise;
+}
+
+function ensurePeriodicTable() {
+  periodicPromise ||= import('./periodic-table.js').then(({ initPeriodicTable }) => {
+    periodicController = initPeriodicTable({
+      onInsert: insertElement,
+      showToast,
+      onReaction(equation) {
+        input.value = equation;
+        setMode('check', false);
+        setTab('calculator');
+        resetLearning();
+        updateLive();
+        saveState();
+        input.focus();
+      }
+    });
+    for (const button of $$('[data-open-periodic]')) button.dataset.periodicReady = 'true';
+    return periodicController;
+  });
+  return periodicPromise;
+}
+
+function openDeferredPeriodicTable() {
+  ensurePeriodicTable().then((controller) => controller.toggle()).catch(() => showToast(t('serverUnavailable')));
+}
+
+function initializeDeferredTools() {
+  for (const loader of [ensureReferences, ensureStoichiometry, ensurePeriodicTable]) loader().catch(() => {});
+}
+
+document.addEventListener('click', (event) => {
+  const button = event.target.closest('[data-open-periodic]');
+  if (!button || button.dataset.periodicReady === 'true') return;
+  event.preventDefault();
+  event.stopPropagation();
+  openDeferredPeriodicTable();
+}, true);
+document.addEventListener('keydown', (event) => {
+  if (event.key.toLowerCase() !== 't' || event.ctrlKey || event.metaKey || event.altKey || /INPUT|TEXTAREA|SELECT/.test(event.target.tagName)) return;
+  if (periodicController) return;
+  event.preventDefault();
+  openDeferredPeriodicTable();
+});
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
@@ -148,6 +229,7 @@ function clearResult() {
   $('#warning-list').replaceChildren();
   $('#copy-button').hidden = true;
   $('#latex-button').hidden = true;
+  $('#check-print').hidden = true;
   $('#solution').hidden = true;
   renderRedoxPanel($('#redox-panel'), $('#redox-steps'), null);
   $('#check-ionic-panel').hidden = true;
@@ -223,6 +305,7 @@ function renderResult(result) {
   $('#verdict-message').textContent = result.message;
   $('#copy-button').hidden = !result.equation;
   $('#latex-button').hidden = !result.equation;
+  $('#check-print').hidden = !result.equation;
   const warnings = $('#warning-list');
   warnings.replaceChildren();
   for (const warning of result.warnings || []) {
@@ -478,7 +561,25 @@ $('#latex-button').addEventListener('click', async () => {
   }
 });
 
-$$('[data-tab]').forEach((button) => button.addEventListener('click', () => setTab(button.dataset.tab)));
+$('#check-print').addEventListener('click', async () => {
+  if (!state.result?.equation) return;
+  try {
+    const { printSolution } = await import('./print-solution.js');
+    printSolution({
+      equation: state.result.equation,
+      conditions: { solvent: state.checkSolvent },
+      explanation: (state.result.warnings || []).map((warning) => warning.message)
+    });
+  } catch {
+    showToast(t('serverUnavailable'));
+  }
+});
+
+$$('[data-tab]').forEach((button) => button.addEventListener('click', () => {
+  if (button.dataset.tab === 'references') ensureReferences().catch(() => showToast(t('serverUnavailable')));
+  if (button.dataset.tab === 'stoichiometry') ensureStoichiometry().catch(() => showToast(t('serverUnavailable')));
+  setTab(button.dataset.tab);
+}));
 $$('[data-mode]').forEach((button) => button.addEventListener('click', () => setMode(button.dataset.mode)));
 $('#brand-home').addEventListener('click', () => {
   setMode('check');
@@ -529,11 +630,6 @@ $('#language-select').value = initialLocale;
 setLocale(initialLocale);
 input.value = state.draft;
 autoInput.value = state.autoDraft;
-stoichController = initStoichiometryUI({
-  getCurrentEquation: () => state.mode === 'auto' && autoController?.getCurrentEquation()
-    ? formatEquation(autoController.getCurrentEquation())
-    : input.value
-});
 autoController = initAutoUI({
   storage,
   saveState,
@@ -553,13 +649,16 @@ autoController = initAutoUI({
     saveState();
   },
   onStoich(equation) {
-    stoichController.setEquation(equation);
-    setTab('stoichiometry');
+    ensureStoichiometry().then((controller) => {
+      controller.setEquation(equation);
+      setTab('stoichiometry');
+    }).catch(() => showToast(t('serverUnavailable')));
   },
   onPropose(correction) { communityController?.openAutoProposal(correction); },
   onAlternatives(container, context) { communityController?.showAlternatives(container, context); }
 });
 communityController = initCommunityUI({
+  storage,
   showToast,
   onNavigate: setTab,
   getAutoContext() {
@@ -603,40 +702,6 @@ historyController = initHistoryUI({
     saveState();
   }
 });
-initReferenceUI({
-  storage,
-  getCurrentEquation: () => state.mode === 'auto' && autoController?.getCurrentEquation()
-    ? formatEquation(autoController.getCurrentEquation())
-    : input.value,
-  onOpenFormula(formula) {
-    autoController.setEquation(formula);
-    state.autoDirty = false;
-    setMode('auto', false);
-    setTab('calculator');
-    autoController.run(false);
-  },
-  onOpenEquation(equation) {
-    input.value = equation;
-    setMode('check', false);
-    setTab('calculator');
-    resetLearning();
-    updateLive();
-    saveState();
-  }
-});
-initPeriodicTable({
-  onInsert: insertElement,
-  showToast,
-  onReaction(equation) {
-    input.value = equation;
-    setMode('check', false);
-    setTab('calculator');
-    resetLearning();
-    updateLive();
-    saveState();
-    input.focus();
-  }
-});
 const shared = autoController.readShared();
 if (shared) {
   autoController.setEquation(shared.reactants);
@@ -649,6 +714,8 @@ setMode(state.mode, false);
 updateLive();
 clearResult();
 if (shared) autoController.run(false);
+const afterFirstPaint = window.requestAnimationFrame || ((callback) => setTimeout(callback, 0));
+afterFirstPaint(() => setTimeout(initializeDeferredTools, 0));
 initOnboarding(storage);
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
   window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
