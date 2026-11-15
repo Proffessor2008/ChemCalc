@@ -251,6 +251,7 @@
     "(NH4)2CrO4":{"source":"Глинка: хромат аммония растворим","solubility":"Р","strong":true,"ions":[{"formula":"NH4^+","coefficient":2},{"formula":"CrO4^2-","coefficient":1}]},
     "NaF":{"source":"Глинка: фторид натрия растворим","solubility":"Р","strong":true,"ions":[{"formula":"Na^+","coefficient":1},{"formula":"F^-","coefficient":1}]},
     "KF":{"source":"Глинка: фторид калия растворим","solubility":"Р","strong":true,"ions":[{"formula":"K^+","coefficient":1},{"formula":"F^-","coefficient":1}]},
-    "Hg2Cl2":{"source":"Глинка: хлорид ртути(I) нерастворим","solubility":"Н","strong":false,"ions":[]}
+    "Hg2Cl2":{"source":"Глинка: хлорид ртути(I) нерастворим","solubility":"Н","strong":false,"ions":[]},
+    "FeO2":{"source":"Глинка: оксид железа(IV) — неустойчивый оксид, в воде нерастворим и не диссоциирует","solubility":"Н","strong":false,"ions":[]}
   }
 }

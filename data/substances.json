@@ -55,6 +55,6 @@
     {"formula":"SnCl2","name_ru":"Хлорид олова(II)","class":"salt"},{"formula":"SnCl4","name_ru":"Хлорид олова(IV)","class":"salt"},{"formula":"SnSO4","name_ru":"Сульфат олова(II)","class":"salt"},{"formula":"Sn(OH)2","name_ru":"Гидроксид олова(II)","class":"base"},{"formula":"SnS","name_ru":"Сульфид олова(II)","class":"salt"},
     {"formula":"(NH4)3PO4","name_ru":"Фосфат аммония","class":"salt"},{"formula":"(NH4)2S","name_ru":"Сульфид аммония","class":"salt"},{"formula":"NH4F","name_ru":"Фторид аммония","class":"salt"},
     {"formula":"NaF","name_ru":"Фторид натрия","class":"salt"},{"formula":"KF","name_ru":"Фторид калия","class":"salt"},{"formula":"Hg2Cl2","name_ru":"Хлорид ртути(I)","class":"salt"},
-    {"formula":"HCN","name_ru":"Циановодородная кислота","class":"acid"},{"formula":"H3BO3","name_ru":"Борная кислота","class":"acid"},{"formula":"H2C2O4","name_ru":"Щавелевая кислота","class":"acid"}
+    {"formula":"HCN","name_ru":"Циановодородная кислота","class":"acid"},{"formula":"H3BO3","name_ru":"Борная кислота","class":"acid"},{"formula":"H2C2O4","name_ru":"Щавелевая кислота","class":"acid"},{"formula":"FeO2","name_ru":"Оксид железа(IV)","class":"oxide"}
   ]
 }

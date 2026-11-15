@@ -108,6 +108,11 @@ export function initCommunityUI({ storage, showToast, onNavigate, getAutoContext
   let notifications = [];
   let unreadNotifications = 0;
   let publicProfile = null;
+  let qaController = null;
+  let communityView = 'questions';
+  let lastAuthSignature = '';
+  let profileEditing = false;
+  let profileDraft = { avatar: '', nickname: '', privacy: 'public' };
 
   function setDraftUser(account) {
     clearTimeout(draftTimer);
@@ -253,9 +258,17 @@ export function initCommunityUI({ storage, showToast, onNavigate, getAutoContext
   }
 
   function renderAccount() {
-    $('#community-auth-forms').hidden = Boolean(user);
+    const authSignature = user ? `${user.id}:${user.nickname || user.login}:${user.login}:${user.avatar || ''}:${user.privileges}:${user.privacy || ''}` : '';
+    if (authSignature !== lastAuthSignature) {
+      lastAuthSignature = authSignature;
+      qaController?.onAuthChange({ reload: true });
+    }
+    $('#community-auth').hidden = Boolean(user) || Boolean(publicProfile);
+    $('#community-auth-forms').hidden = false;
+    $('#cabinet-new-proposal').hidden = !user || Boolean(publicProfile);
     $('#community-own-section').hidden = !user || Boolean(publicProfile);
     $('#community-users-section').hidden = user?.privileges !== 'GOD';
+    $('#community-sidebar').hidden = user?.privileges !== 'GOD';
     $('#community-moderation-note').hidden = !MODERATORS.includes(user?.privileges);
     $('#cabinet-private').hidden = !user || Boolean(publicProfile);
     $('#cabinet-public').hidden = !publicProfile;
@@ -263,16 +276,20 @@ export function initCommunityUI({ storage, showToast, onNavigate, getAutoContext
     const account = $('#cabinet-summary');
     account.replaceChildren();
     if (!user) {
+      profileEditing = false;
+      profileDraft = { avatar: '', nickname: '', privacy: 'public' };
       ownProposals = [];
       notifications = [];
       $('#community-own').replaceChildren();
       $('#community-users').replaceChildren();
       $('#cabinet-drafts').replaceChildren();
       $('#cabinet-notifications').replaceChildren();
+      renderProfileSettings();
       return;
     }
     account.append(
-      element('h3', 'community-login', user.login),
+      element('h3', 'community-login', user.nickname || user.login),
+      element('p', 'help-text', `${t('loginForAuth')}: ${user.login}`),
       element('p', `role-badge role-${user.privileges.toLowerCase()}`, `${t('role')}: ${user.privileges}`),
       element('p', 'help-text', `${t('registered')}: ${formatDate(user.created_at)}`),
       element('p', 'help-text', `${t('lastSession')}: ${formatDate(user.last_login_at)}`),
@@ -283,9 +300,156 @@ export function initCommunityUI({ storage, showToast, onNavigate, getAutoContext
     const link = element('a', 'help-text public-profile-link', `${location.origin}/${encodeURIComponent(user.login)}`);
     link.href = `/${encodeURIComponent(user.login)}`;
     account.append(link, button(t('signOut'), 'logout', undefined, 'button secondary'));
+    renderProfileSettings();
     renderDrafts();
     renderNotifications();
   }
+
+  function renderProfileAvatar(host, avatar, login) {
+    if (!host) return;
+    host.replaceChildren();
+    if (avatar) {
+      const image = element('img');
+      image.src = avatar;
+      image.alt = '';
+      host.append(image);
+    } else {
+      host.append(element('span', '', String(login || '?').slice(0, 1).toUpperCase()));
+    }
+  }
+
+  function privacyLabel(value) {
+    return value === 'private' ? t('privacyPrivate') : t('privacyPublic');
+  }
+
+  function renderProfileSettings() {
+    const view = $('#profile-view');
+    const editor = $('#profile-editor');
+    if (!view || !editor) return;
+    if (!user) {
+      profileEditing = false;
+      view.hidden = false;
+      editor.hidden = true;
+      return;
+    }
+    if (profileEditing) {
+      view.hidden = true;
+      editor.hidden = false;
+      $('#profile-edit').hidden = true;
+      renderProfileAvatar($('#profile-avatar-preview'), profileDraft.avatar, profileDraft.nickname || user.login);
+      const nickname = $('#profile-nickname');
+      if (nickname) nickname.value = profileDraft.nickname;
+      const loginReadonly = $('#profile-login-readonly');
+      if (loginReadonly) loginReadonly.textContent = user.login;
+      const privacy = $('#profile-privacy');
+      if (privacy) privacy.value = profileDraft.privacy;
+      const remove = $('#profile-avatar-remove');
+      if (remove) remove.hidden = !profileDraft.avatar;
+      return;
+    }
+    view.hidden = false;
+    editor.hidden = true;
+    $('#profile-edit').hidden = false;
+    renderProfileAvatar($('#profile-avatar-view'), user.avatar, user.nickname || user.login);
+    $('#profile-nickname-view').textContent = user.nickname || user.login;
+    $('#profile-login-view').textContent = user.login;
+    $('#profile-privacy-view').textContent = privacyLabel(user.privacy || 'public');
+    $('#profile-status').textContent = '';
+  }
+
+  function resizeAvatar(file) {
+    return new Promise((resolve, reject) => {
+      if (!file || !file.type || !file.type.startsWith('image/')) {
+        reject(new Error(t('invalidAvatar')));
+        return;
+      }
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error(t('invalidAvatar')));
+      reader.onload = () => {
+        const image = new Image();
+        image.onerror = () => reject(new Error(t('invalidAvatar')));
+        image.onload = () => {
+          const size = 128;
+          const canvas = document.createElement('canvas');
+          canvas.width = size;
+          canvas.height = size;
+          const context = canvas.getContext('2d');
+          const scale = Math.max(size / image.width, size / image.height);
+          const width = image.width * scale;
+          const height = image.height * scale;
+          context.drawImage(image, (size - width) / 2, (size - height) / 2, width, height);
+          resolve(canvas.toDataURL('image/jpeg', 0.82));
+        };
+        image.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  $('#profile-edit')?.addEventListener('click', () => {
+    if (!user) return;
+    profileEditing = true;
+    profileDraft = { avatar: user.avatar || '', nickname: user.nickname || user.login, privacy: user.privacy || 'public' };
+    $('#profile-status').textContent = '';
+    renderProfileSettings();
+    $('#profile-nickname')?.focus();
+  });
+
+  $('#profile-nickname')?.addEventListener('input', (event) => {
+    if (profileEditing) profileDraft.nickname = event.target.value;
+  });
+
+  $('#profile-privacy')?.addEventListener('change', (event) => {
+    if (profileEditing) profileDraft.privacy = event.target.value;
+  });
+
+  $('#profile-avatar-input')?.addEventListener('change', async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    try {
+      profileDraft.avatar = await resizeAvatar(file);
+      renderProfileSettings();
+    } catch (error) {
+      const status = $('#profile-status');
+      if (status) status.textContent = error.message;
+    }
+  });
+
+  $('#profile-avatar-remove')?.addEventListener('click', () => {
+    profileDraft.avatar = '';
+    renderProfileSettings();
+  });
+
+  $('#profile-cancel')?.addEventListener('click', () => {
+    profileEditing = false;
+    profileDraft = { avatar: '', nickname: '', privacy: 'public' };
+    renderProfileSettings();
+  });
+
+  $('#profile-save')?.addEventListener('click', async () => {
+    if (!profileEditing) return;
+    const nickname = profileDraft.nickname.trim();
+    const status = $('#profile-status');
+    if (!nickname) {
+      if (status) status.textContent = t('nickname');
+      return;
+    }
+    try {
+      const data = await api('/api/auth/profile', {
+        method: 'PATCH',
+        body: { nickname, privacy: profileDraft.privacy, avatar: profileDraft.avatar }
+      });
+      user = data.user;
+      profileEditing = false;
+      profileDraft = { avatar: user.avatar || '', nickname: user.nickname || user.login, privacy: user.privacy || 'public' };
+      renderAccount();
+      showToast(t('profileSaved'));
+    } catch (error) {
+      if (status) status.textContent = error.message;
+      notifyError(error);
+    }
+  });
 
   function proposalCard(proposal, compact = false) {
     const rule = proposal.proposed_rule_json;
@@ -684,8 +848,8 @@ export function initCommunityUI({ storage, showToast, onNavigate, getAutoContext
 
   function openProposal(prefill = {}) {
     if (!user) {
-      onNavigate('community');
-      $('#community-login').focus();
+      onNavigate('account');
+      setTimeout(() => $('#community-login')?.focus(), 50);
       showToast(t('loginToPropose'));
       return;
     }
@@ -934,7 +1098,13 @@ export function initCommunityUI({ storage, showToast, onNavigate, getAutoContext
     list.replaceChildren();
     if (!publicProfile) return;
     const account = publicProfile.user;
-    summary.append(element('h2', 'community-login', account.login), element('p', `role-badge role-${account.privileges.toLowerCase()}`, `${t('role')}: ${account.privileges}`), element('p', 'help-text', `${t('registered')}: ${formatDate(account.created_at)}`), element('p', 'community-reputation', `${t('reputation')}: ${signedNumber(account.reputation)}`));
+    if (account.avatar) {
+      const image = element('img', 'public-avatar');
+      image.src = account.avatar;
+      image.alt = '';
+      summary.append(image);
+    }
+    summary.append(element('h2', 'community-login', account.nickname || account.login), element('p', 'help-text', `${t('loginForAuth')}: ${account.login}`), element('p', `role-badge role-${account.privileges.toLowerCase()}`, `${t('role')}: ${account.privileges}`), element('p', 'help-text', `${t('registered')}: ${formatDate(account.created_at)}`), element('p', 'community-reputation', `${t('reputation')}: ${signedNumber(account.reputation)}`));
     if (!publicProfile.proposals.length) list.append(element('p', 'help-text', t('noPublicProposals')));
     for (const proposal of publicProfile.proposals) {
       const card = element('article', `proposal-card status-${proposal.status}`);
@@ -982,6 +1152,42 @@ export function initCommunityUI({ storage, showToast, onNavigate, getAutoContext
     events.onerror = () => { $('#community-status').textContent = t('pollingFallback'); };
   }
   setInterval(() => { if (!document.hidden) refresh(); }, 30000);
+
+  function renderCommunityView() {
+    $('#community-proposals-view').hidden = communityView !== 'proposals';
+    $('#community-questions-view').hidden = communityView !== 'questions';
+    $('#community-new-proposal').hidden = communityView !== 'proposals';
+    const askButton = $('#community-ask-question');
+    if (askButton) askButton.hidden = communityView !== 'questions';
+    document.querySelectorAll('[data-community-view]').forEach((button) => {
+      button.setAttribute('aria-pressed', String(button.dataset.communityView === communityView));
+    });
+    if (communityView === 'questions') qaController?.activate();
+  }
+
+  function showQuestions() {
+    communityView = 'questions';
+    renderCommunityView();
+  }
+  document.querySelectorAll('[data-community-view]').forEach((button) => {
+    button.addEventListener('click', () => {
+      communityView = button.dataset.communityView;
+      renderCommunityView();
+    });
+  });
+  async function mountQuestions() {
+    if (qaController) return qaController;
+    const { initQAUI } = await import('./qa-ui.js');
+    qaController = initQAUI({ container: $('#community-questions-view'), api, auth: () => ({ user }), showToast, onDeepLink: () => { onNavigate('community'); communityView = 'questions'; renderCommunityView(); }, onLoginRequired: () => { onNavigate('account'); setTimeout(() => $('#community-login')?.focus(), 50); } });
+    return qaController;
+  }
+  $('#community-ask-question')?.addEventListener('click', async () => {
+    if (!qaController) await mountQuestions();
+    qaController?.showAsk();
+  });
+  renderCommunityView();
+  mountQuestions().catch(() => {});
+
   const profileMatch = location.pathname.match(/^\/([^/]+)\/?$/);
   const initialWork = restore();
   if (profileMatch && !location.pathname.includes('.')) {
@@ -993,6 +1199,7 @@ export function initCommunityUI({ storage, showToast, onNavigate, getAutoContext
   return {
     refresh,
     refreshRules,
+    showQuestions,
     openProposal,
     openAutoProposal(correction = false) { openContextProposal(getAutoContext(), correction); },
     openCheckProposal() { openContextProposal(getCheckContext(), true); },

@@ -41,7 +41,7 @@ try {
 }
 const state = {
   mode: saved.mode === 'auto' ? 'auto' : 'check',
-  tab: ['calculator', 'stoichiometry', 'references', 'history', 'community', 'account', 'documentation'].includes(saved.tab) ? saved.tab : 'calculator',
+  tab: ['calculator', 'stoichiometry', 'references', 'history', 'community', 'account'].includes(saved.tab) ? saved.tab : 'calculator',
   draft: typeof saved.draft === 'string' ? saved.draft : '2H2 + O2 = 2H2O',
   autoDraft: typeof saved.autoDraft === 'string' ? saved.autoDraft : '',
   attempts: 0,
@@ -191,6 +191,7 @@ function setTab(tab) {
     if (button.dataset.tab === tab) button.setAttribute('aria-current', 'page');
     else button.removeAttribute('aria-current');
   });
+  if (tab === 'community') communityController?.showQuestions?.();
   saveState();
 }
 
@@ -222,10 +223,26 @@ function setMode(mode, transfer = true) {
   saveState();
 }
 
+function applyUiSize(size) {
+  const value = ['compact', 'normal', 'large'].includes(size) ? size : 'normal';
+  document.documentElement.dataset.uiSize = value;
+  storage.setItem('chemcalc-ui-size', value);
+  updateSettingsControls();
+}
+
+function updateSettingsControls() {
+  const theme = storage.getItem('chemcalc-theme') || 'system';
+  $$('[data-theme-option]').forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.themeOption === theme)));
+  const size = document.documentElement.dataset.uiSize || 'normal';
+  $$('[data-size-option]').forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.sizeOption === size)));
+}
+
 function setTheme(theme) {
-  document.documentElement.dataset.theme = theme;
-  $('#theme-toggle').setAttribute('aria-pressed', String(theme === 'dark'));
-  storage.setItem('chemcalc-theme', theme);
+  const value = ['light', 'dark', 'system'].includes(theme) ? theme : 'system';
+  if (value === 'system') document.documentElement.removeAttribute('data-theme');
+  else document.documentElement.dataset.theme = value;
+  storage.setItem('chemcalc-theme', value);
+  updateSettingsControls();
 }
 
 function clearResult() {
@@ -618,10 +635,13 @@ $('#language-select').addEventListener('change', (event) => {
   saveState();
 });
 
-$('#theme-toggle').addEventListener('click', () => {
-  const current = document.documentElement.dataset.theme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-  setTheme(current === 'dark' ? 'light' : 'dark');
+$('#settings-toggle').addEventListener('click', () => {
+  updateSettingsControls();
+  $('#settings-dialog').showModal();
 });
+$('#close-settings').addEventListener('click', () => $('#settings-dialog').close());
+$$('[data-theme-option]').forEach((button) => button.addEventListener('click', () => setTheme(button.dataset.themeOption)));
+$$('[data-size-option]').forEach((button) => button.addEventListener('click', () => applyUiSize(button.dataset.sizeOption)));
 
 function insertElement(symbol) {
   const target = state.mode === 'auto' ? autoInput : input;
@@ -643,8 +663,8 @@ function insertElement(symbol) {
 [input, autoInput].forEach((field) => field.addEventListener('focus', () => { field.dataset.editing = 'true'; }));
 
 const savedTheme = storage.getItem('chemcalc-theme');
-if (savedTheme === 'light' || savedTheme === 'dark') setTheme(savedTheme);
-else $('#theme-toggle').setAttribute('aria-pressed', String(matchMedia('(prefers-color-scheme: dark)').matches));
+setTheme(['light', 'dark', 'system'].includes(savedTheme) ? savedTheme : 'system');
+applyUiSize(storage.getItem('chemcalc-ui-size') || 'normal');
 const initialLocale = saved.locale === 'en' ? 'en' : 'ru';
 $('#language-select').value = initialLocale;
 setLocale(initialLocale);
@@ -737,7 +757,10 @@ if (shared) autoController.run(false);
 const afterFirstPaint = window.requestAnimationFrame || ((callback) => setTimeout(callback, 0));
 afterFirstPaint(() => setTimeout(initializeDeferredTools, 0));
 const onboardingController = initOnboarding({ storage, navigate: setTab, setMode });
-$('#restart-onboarding')?.addEventListener('click', () => onboardingController.restart());
+$('#restart-onboarding')?.addEventListener('click', () => {
+  $('#settings-dialog')?.close();
+  onboardingController.restart();
+});
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
   window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
 }
