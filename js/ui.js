@@ -736,7 +736,8 @@ clearResult();
 if (shared) autoController.run(false);
 const afterFirstPaint = window.requestAnimationFrame || ((callback) => setTimeout(callback, 0));
 afterFirstPaint(() => setTimeout(initializeDeferredTools, 0));
-initOnboarding(storage);
+const onboardingController = initOnboarding({ storage, navigate: setTab, setMode });
+$('#restart-onboarding')?.addEventListener('click', () => onboardingController.restart());
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
   window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
 }
