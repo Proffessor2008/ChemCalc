@@ -150,8 +150,8 @@ test('community API: регистрация, заявки, голосовани�
   assert.deepEqual(validation.errors, []);
   assert.deepEqual(validation.warnings, []);
   assert.equal(validation.stats.rules, 334);
-  assert.equal(validation.stats.substances, 267);
-  assert.equal(validation.stats.solubleRecords, 127);
+  assert.equal(validation.stats.substances, 374);
+  assert.equal(validation.stats.solubleRecords, 252);
 
   const { predictReaction, updateCommunityData } = await import('../js/predictor.js');
   const { buildIonicEquations } = await import('../js/ionic.js');

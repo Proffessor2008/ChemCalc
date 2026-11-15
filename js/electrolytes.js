@@ -3,9 +3,9 @@ import communityData from '../data/reaction-rules-community.json' with { type: '
 import { parseFormula } from './parser.js';
 
 const ANIONS = new Map([
-  ['Cl', -1], ['Br', -1], ['I', -1], ['NO3', -1], ['NO2', -1], ['ClO', -1], ['ClO3', -1], ['ClO4', -1], ['HSO4', -1],
-  ['SO4', -2], ['SO3', -2], ['CO3', -2], ['S', -2], ['CrO4', -2], ['Cr2O7', -2], ['MnO4', [-1, -2]], ['FeO4', -2],
-  ['PO4', -3], ['HPO4', -2], ['H2PO4', -1], ['HCO3', -1], ['HSO3', -1], ['HS', -1], ['CH3COO', -1], ['HCOO', -1]
+  ['Cl', -1], ['Br', -1], ['I', -1], ['NO3', -1], ['NO2', -1], ['ClO', -1], ['ClO3', -1], ['ClO4', -1], ['HSO4', -1], ['BrO3', -1], ['IO3', -1], ['BO2', -1], ['HCO3', -1], ['HSO3', -1], ['HS', -1], ['CH3COO', -1], ['HCOO', -1],
+  ['SO4', -2], ['SO3', -2], ['CO3', -2], ['S', -2], ['CrO4', -2], ['Cr2O7', -2], ['MnO4', [-1, -2]], ['FeO4', -2], ['SiO3', -2], ['S2O3', -2], ['S2O8', -2], ['C2O4', -2], ['B4O7', -2], ['SeO4', -2], ['SeO3', -2],
+  ['PO4', -3], ['HPO4', -2], ['H2PO4', -1], ['AsO4', -3], ['AsO3', -3], ['P2O7', -4]
 ].map(([base, charges]) => [base, (Array.isArray(charges) ? charges : [charges]).map((charge) => ({
   formula: `${base}^${Math.abs(charge) === 1 ? '' : Math.abs(charge)}-`,
   coefficient: 1

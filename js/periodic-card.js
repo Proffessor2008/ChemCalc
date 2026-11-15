@@ -99,7 +99,7 @@ export function renderElementCard(element, { onInsert, onReaction }) {
   nav.className = 'element-anchor-nav';
   nav.setAttribute('aria-label', 'Разделы карточки элемента');
   const sections = [
-    ['general', 'Общее'], ['physical', 'Физика'], ['chemical', 'Химия'], ['isotopes', 'Изотопы'], ['history', 'История'], ['nature', 'Природа'], ['applications', 'Применение'], ['safety', 'Безопасность'], ['facts', 'Факты'], ['sources', 'Источники']
+    ['summary', 'Кратко'], ['general', 'Общее'], ['physical', 'Физика'], ['chemical', 'Химия'], ['isotopes', 'Изотопы'], ['history', 'История'], ['nature', 'Природа'], ['applications', 'Применение'], ['safety', 'Безопасность'], ['facts', 'Факты'], ['sources', 'Источники']
   ];
   for (const [id, label] of sections) {
     const button = document.createElement('button');
@@ -109,6 +109,13 @@ export function renderElementCard(element, { onInsert, onReaction }) {
     nav.append(button);
   }
   root.append(nav);
+
+  const summary = makeSection('summary', 'Кратко');
+  const summaryText = document.createElement('p');
+  summaryText.className = 'element-summary';
+  summaryText.textContent = hasValue(element.summary) ? element.summary : 'Краткое описание для этого элемента пока не добавлено.';
+  summary.append(summaryText);
+  root.append(summary);
 
   const general = propertySection('general', '1. Общие сведения', [
     ['Символ', element.symbol], ['Название', element.name_ru], ['Название (англ.)', element.name_en], ['Название (лат.)', element.name_lat],

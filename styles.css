@@ -433,6 +433,7 @@ select.reference-select-mobile { width: 100%; min-height: 46px; padding: 8px 10p
 .reference-table tbody th { position: sticky; left: 0; z-index: 1; background: var(--surface); }
 .reference-table tbody tr:hover { background: var(--surface-muted); }
 .table-link { min-height: 44px; padding: 0; border: 0; background: transparent; color: var(--accent-strong); text-align: left; }
+#reference-detail-content { white-space: pre-line; overflow-wrap: anywhere; }
 .tool-card { display: grid; gap: 12px; }
 .tool-grid { display: grid; gap: 12px; }
 .tool-grid .button { align-self: end; }
@@ -596,3 +597,13 @@ select.reference-select-mobile { width: 100%; min-height: 46px; padding: 8px 10p
 .pagination:empty { display: none; }
 .public-profile-link { overflow-wrap: anywhere; }
 @media (min-width: 850px) { .cabinet-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+.tour-overlay { position: fixed; inset: 0; z-index: 1000; background: rgba(5, 20, 18, .5); pointer-events: none; }
+.tour-card { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); width: min(560px, calc(100vw - 24px)); z-index: 1003; background: var(--surface-raised); border: 1px solid var(--accent); border-radius: 16px; padding: 16px 18px; box-shadow: var(--shadow); }
+.tour-card .eyebrow { margin-bottom: 6px; }
+.tour-card h2 { margin: 0 0 6px; font-size: 1.05rem; }
+.tour-card .tour-text { margin: 0 0 12px; color: var(--text); font-size: .84rem; line-height: 1.5; }
+.tour-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+.tour-actions .button { min-height: 40px; }
+.tour-target { position: relative; z-index: 1002; outline: 3px solid var(--accent); outline-offset: 4px; border-radius: 6px; }
+@media (min-width: 700px) { .tour-card { bottom: 24px; } }

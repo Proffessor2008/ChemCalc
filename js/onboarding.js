@@ -1,34 +1,92 @@
 const STEPS = [
-  ['Два режима калькулятора', 'В режиме «Проверка» вы сами указываете продукты и коэффициенты. Правильный ответ раскрывается только после явного подтверждения.'],
-  ['Предсказание по правилам', 'В режиме «Авто» введите реагенты и условия. Приложение показывает уверенность, объяснение и допущения, но не утверждает полноту химических знаний.'],
-  ['Таблица и справочники', 'Нажмите «Таблица Менделеева» или клавишу T. Шесть справочников содержат инструменты pH, ЭДС, Нернста и закона Гесса. Всё работает локально.']
+  { title: 'Добро пожаловать в ChemCalc', tab: 'calculator', text: 'За пару минут покажу, как устроен калькулятор: два режима, таблица Менделеева, стехиометрия, семь справочников, экспорт, история, сообщество и личный кабинет. Всё работает локально — без внешних API.' },
+  { title: 'Навигация и вкладки', tab: 'calculator', target: 'header.app-header', text: 'Сверху — основные разделы: Калькулятор, Стехиометрия, Справочники, История, Сообщество, Кабинет и Документация. На телефоне они собраны в нижнюю панель. Переключать разделы можно в любой момент.' },
+  { title: 'Режим «Проверка»', tab: 'calculator', mode: 'check', target: '#equation-form', text: 'Здесь вы вводите полное уравнение с продуктами и коэффициентами. Баланс по элементам виден в реальном времени, но вердикт появляется только после кнопки «Проверить». Есть «Уравнять всё», три подсказки и показ правильного ответа.' },
+  { title: 'Режим «Авто»', tab: 'calculator', mode: 'auto', target: '[data-mode="auto"]', text: 'В режиме «Авто» вводятся только реагенты и условия (среда, концентрация, фаза, нагрев, ток, катализатор). Программа предсказывает продукты, уравнивает уравнение и объясняет «почему так», показывая уверенность и допущения.' },
+  { title: 'Таблица Менделеева', tab: 'calculator', target: '.periodic-top', text: 'Кнопка «Таблица Менделеева» (или клавиша T) открывает интерактивную таблицу со 118 элементами: фильтры, раскраски и подробные карточки с описанием, применением и безопасностью. Символ элемента можно вставить в формулу.' },
+  { title: 'Стехиометрия', tab: 'stoichiometry', target: '#stoich-form', text: 'Раздел «Стехиометрия» считает количества: массу, моли, объёмы газов и растворы. Задайте известное вещество и величину, при необходимости — наличия реагентов для лимитирующего, выход продукта в процентах и целевой продукт. Для газов появляется практический объём.' },
+  { title: 'Семь справочников', tab: 'references', target: '#reference-nav', text: 'Справочники теперь включают «Вещества» с описаниями, а также растворимость, ряд активности, электроотрицательность, Ka/Kb и pH, электродные потенциалы и термодинамику. В каждой таблице есть поиск, сортировка и карточки подробностей.' },
+  { title: 'Экспорт в PDF и DOCX', tab: 'references', target: '#reference-export-pdf', text: 'Любой результат — уравнение, предсказание, стехиометрию или справочник — можно скачать в PDF (сохраняет вёрстку страниц) или DOCX (редактируемый текст и таблицы). Кнопки экспорта есть во всех разделах.' },
+  { title: 'История', tab: 'history', target: '#history-filter', text: 'Последние 20 уравнений сохраняются локально. Их можно фильтровать (Проверка / Авто / избранное), отмечать звёздочкой и открывать заново.' },
+  { title: 'Сообщество и заявки на правку', tab: 'community', target: '#community-new-proposal', text: 'В «Сообществе» вы предлагаете новые правила реакций или правки. Заявки проходят проверку модераторами, голосуются и могут публиковаться. Кнопка «Предложить исправление» в результатах позволяет сообщить о неточности с доказательствами.' },
+  { title: 'Личный кабинет', tab: 'account', target: '#panel-account', text: 'Кабинет содержит профиль, черновики заявок, уведомления и публичную историю. Роли admin, admin+ и GOD получают инструменты модерации. Черновики хранятся только на этом устройстве.' },
+  { title: 'Офлайн, язык и тема', tab: 'account', target: '#language-select', text: 'Приложение — PWA: после первого открытия работает офлайн, service worker кеширует модули и справочники. Переключайте язык RU/EN и светлую/тёмную тему в шапке. Готово — приятной работы!' }
 ];
 
-export function initOnboarding(storage) {
-  if (storage.getItem('chemcalc-onboarding-v1') === 'seen') return;
-  const dialog = document.createElement('dialog');
-  dialog.className = 'dialog onboarding-dialog';
-  dialog.setAttribute('aria-labelledby', 'onboarding-title');
-  dialog.innerHTML = `<p class="eyebrow">Первый запуск · <span id="onboarding-step">1/3</span></p><h2 id="onboarding-title"></h2><p id="onboarding-text"></p><div class="dialog-actions"><button type="button" class="button ghost" id="onboarding-skip">Пропустить</button><button type="button" class="button primary" id="onboarding-next">Далее</button></div>`;
-  document.body.append(dialog);
-  let index = 0;
-  const render = () => {
-    dialog.querySelector('#onboarding-step').textContent = `${index + 1}/${STEPS.length}`;
-    dialog.querySelector('#onboarding-title').textContent = STEPS[index][0];
-    dialog.querySelector('#onboarding-text').textContent = STEPS[index][1];
-    dialog.querySelector('#onboarding-next').textContent = index === STEPS.length - 1 ? 'Начать работу' : 'Далее';
-  };
-  const finish = () => {
-    storage.setItem('chemcalc-onboarding-v1', 'seen');
-    dialog.close();
-    dialog.remove();
-  };
-  dialog.querySelector('#onboarding-skip').addEventListener('click', finish);
-  dialog.querySelector('#onboarding-next').addEventListener('click', () => {
-    if (index === STEPS.length - 1) finish();
-    else { index += 1; render(); }
-  });
-  dialog.addEventListener('cancel', (event) => { event.preventDefault(); finish(); });
-  render();
-  dialog.showModal();
+export function initOnboarding({ storage, navigate, setMode }) {
+  const KEY = 'chemcalc-onboarding-v2';
+
+  function start() {
+    storage.setItem(KEY, 'pending');
+    build();
+  }
+
+  function build() {
+    const overlay = document.createElement('div');
+    overlay.className = 'tour-overlay';
+    const card = document.createElement('div');
+    card.className = 'tour-card';
+    card.setAttribute('role', 'dialog');
+    card.setAttribute('aria-live', 'polite');
+    card.innerHTML = `<p class="eyebrow">Обучение · <span class="tour-step"></span></p><h2 class="tour-title"></h2><p class="tour-text"></p><div class="tour-actions"><button type="button" class="button ghost tour-back">Назад</button><button type="button" class="button ghost tour-skip">Пропустить</button><button type="button" class="button primary tour-next">Далее</button></div>`;
+    document.body.append(overlay, card);
+
+    let index = 0;
+    let highlighted = null;
+    const stepEl = card.querySelector('.tour-step');
+    const titleEl = card.querySelector('.tour-title');
+    const textEl = card.querySelector('.tour-text');
+    const backEl = card.querySelector('.tour-back');
+    const skipEl = card.querySelector('.tour-skip');
+    const nextEl = card.querySelector('.tour-next');
+
+    const clearHighlight = () => {
+      if (highlighted) {
+        highlighted.classList.remove('tour-target');
+        highlighted = null;
+      }
+    };
+
+    const render = () => {
+      const step = STEPS[index];
+      stepEl.textContent = `${index + 1}/${STEPS.length}`;
+      titleEl.textContent = step.title;
+      textEl.textContent = step.text;
+      backEl.hidden = index === 0;
+      nextEl.textContent = index === STEPS.length - 1 ? 'Завершить' : 'Далее';
+      if (step.tab) navigate(step.tab);
+      if (step.mode) setMode(step.mode);
+      clearHighlight();
+      requestAnimationFrame(() => {
+        if (!step.target) return;
+        const target = document.querySelector(step.target);
+        if (!target) return;
+        target.classList.add('tour-target');
+        highlighted = target;
+        try { target.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch { target.scrollIntoView(); }
+      });
+    };
+
+    const finish = () => {
+      clearHighlight();
+      overlay.remove();
+      card.remove();
+      storage.setItem(KEY, 'seen');
+    };
+
+    backEl.addEventListener('click', () => { if (index > 0) { index -= 1; render(); } });
+    skipEl.addEventListener('click', finish);
+    nextEl.addEventListener('click', () => {
+      if (index === STEPS.length - 1) finish();
+      else { index += 1; render(); }
+    });
+    card.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') finish();
+    });
+    render();
+    requestAnimationFrame(() => nextEl.focus());
+  }
+
+  if (storage.getItem(KEY) !== 'seen') build();
+  return { restart: start };
 }

@@ -1,7 +1,7 @@
-import elementData from '../data/elements.json' with { type: 'json' };
+import { PERIODIC_ELEMENTS } from './element-info.js';
 import { renderElementCard } from './periodic-card.js';
 
-export const PERIODIC_ELEMENTS = elementData.elements;
+export { PERIODIC_ELEMENTS };
 export const ELEMENT_BY_NUMBER = new Map(PERIODIC_ELEMENTS.map((element) => [element.number, element]));
 const METALS = new Set(['alkali-metal', 'alkaline-earth', 'transition-metal', 'post-transition', 'lanthanide', 'actinide']);
 const NONMETALS = new Set(['nonmetal', 'halogen', 'noble-gas']);

@@ -1,15 +1,19 @@
 import solubilityData from '../data/solubility.json' with { type: 'json' };
 import activityData from '../data/activity-series.json' with { type: 'json' };
 import substanceData from '../data/substances.json' with { type: 'json' };
+import substanceDescriptions from '../data/substance-descriptions.json' with { type: 'json' };
 import elementData from '../data/elements.json' with { type: 'json' };
 import { formulaToUnicode, parseFormula } from './parser.js';
 import { getLocale, t } from './i18n.js';
+import { classLabel } from './classes.js';
+import { electrolyteRecord } from './electrolytes.js';
 import { predictReaction } from './predictor.js';
 import { REFERENCE_SOURCES, ACID_BASE_RECORDS, ELECTRODE_RECORDS, ELECTRONEGATIVITY_RECORDS, bondType, bufferPH, calculatePH, checkIonPair, galvanicCell, nernst, willDisplace } from './reference-tables.js';
 import { THERMO_RECORDS, THERMO_SOURCE, calculateReactionThermo } from './thermo.js';
 
 const REFERENCES = [
   { id: 'solubility', label: 'Растворимость', symbol: 'Р / Н' },
+  { id: 'substances', label: 'Вещества', symbol: 'M' },
   { id: 'activity', label: 'Ряд активности', symbol: 'E°' },
   { id: 'electronegativity', label: 'Электроотрицательность', symbol: 'χ' },
   { id: 'acid-base', label: 'Ka / Kb и pH', symbol: 'pH' },
@@ -17,8 +21,8 @@ const REFERENCES = [
   { id: 'thermo', label: 'Термодинамика', symbol: 'ΔG°' }
 ];
 const $ = (selector) => document.querySelector(selector);
-const substanceNames = new Map(substanceData.items.map((item) => [item.formula, item.name_ru]));
 const recordName = (record) => getLocale() === 'en' ? (record.name_en || record.name_ru) : record.name_ru;
+const currentSource = (id) => id === 'thermo' ? THERMO_SOURCE : id === 'substances' ? substanceData.source : REFERENCE_SOURCES[id];
 const escapeHtml = (value) => String(value).replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
 const chemical = (formula) => { try { return escapeHtml(formulaToUnicode(formula)); } catch { return escapeHtml(formula); } };
 const formatNumber = (value) => value === null || value === undefined ? '—' : Number.isFinite(value) ? (Math.abs(value) >= 1e6 || Math.abs(value) < 0.001 && value !== 0 ? value.toExponential(4) : Number(value.toPrecision(6)).toLocaleString('ru')) : '∞';
@@ -239,13 +243,41 @@ export function initReferenceUI({ storage, onOpenFormula, onOpenEquation, getCur
     });
   }
 
+  function renderSubstances() {
+    const entries = substanceData.items.map((item) => {
+      const description = substanceDescriptions[item.formula] || null;
+      const record = electrolyteRecord(item.formula);
+      const mass = (() => { try { return parseFormula(item.formula).molarMass; } catch { return null; } })();
+      const solubility = record?.solubility || null;
+      const parts = [description?.description || `${classLabel(item.class)}; подробное описание пока отсутствует в локальной базе.`];
+      if (description?.uses?.length) parts.push(`Применение: ${description.uses.join('; ')}.`);
+      if (description?.hazards) parts.push(`Безопасность: ${description.hazards}`);
+      if (solubility) parts.push(`Растворимость: ${solubilityData.legend[solubility] || solubility}.`);
+      return {
+        id: `substance-${item.formula}`,
+        label: `${item.formula} — ${item.name_ru}`,
+        search: `${item.formula} ${item.name_ru} ${classLabel(item.class)} ${parts.join(' ')}`,
+        value: mass,
+        detail: parts.join('\n'),
+        formula: item.formula,
+        source: description?.source || substanceData.source
+      };
+    });
+    updateItems(entries);
+    $('#reference-content').innerHTML = `<section class="card"><h2>Вещества</h2><p class="help-text">Сводные описания веществ: класс, применение, безопасность и растворимость. Щелчок по формуле открывает карточку.</p>${table(['Формула', 'Название', 'Класс', 'M, г/моль'], sorted(entries).map((entry) => {
+      const item = substanceData.items.find((substance) => `substance-${substance.formula}` === entry.id);
+      const massText = Number.isFinite(entry.value) ? entry.value.toFixed(3) : '—';
+      return `<tr><th scope="row" class="chem"><button class="table-link" data-detail="${entry.id}">${chemical(entry.formula)}</button></th><td>${escapeHtml(item?.name_ru || '')}</td><td>${escapeHtml(item?.class ? classLabel(item.class) : '—')}</td><td>${massText}</td></tr>`;
+    }))}</section>`;
+  }
+
   function render() {
     const definition = REFERENCES.find((item) => item.id === current);
-    $('#reference-source').textContent = `Источник: ${current === 'thermo' ? THERMO_SOURCE : REFERENCE_SOURCES[current]}`;
+    $('#reference-source').textContent = `Источник: ${currentSource(current)}`;
     $('#reference-nav').querySelectorAll('button').forEach((button) => button.setAttribute('aria-current', String(button.dataset.reference === current)));
     $('#reference-select').value = current;
     $('#reference-content').dataset.reference = current;
-    ({ solubility: renderSolubility, activity: renderActivity, electronegativity: renderElectronegativity, 'acid-base': renderAcidBase, electrodes: renderElectrodes, thermo: renderThermo })[current]();
+    ({ solubility: renderSolubility, substances: renderSubstances, activity: renderActivity, electronegativity: renderElectronegativity, 'acid-base': renderAcidBase, electrodes: renderElectrodes, thermo: renderThermo })[current]();
     document.querySelectorAll('[data-panel="references"] [data-i18n]').forEach(() => {});
   }
 
@@ -287,7 +319,7 @@ export function initReferenceUI({ storage, onOpenFormula, onOpenEquation, getCur
         root: $('#reference-content'),
         id: current,
         label: definition?.label || '',
-        source: current === 'thermo' ? THERMO_SOURCE : REFERENCE_SOURCES[current],
+        source: currentSource(current),
         filter: $('#reference-search').value.trim()
       });
       await runReportExport(format, report, { button, showToast });

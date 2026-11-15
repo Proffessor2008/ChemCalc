@@ -364,7 +364,8 @@ Object.assign(dictionaries.ru, {
   limitingReactantLabel: 'Лимитирующий реагент',
   availableMolesShort: 'Наличие, моль',
   remainingMolesShort: 'Остаток, моль',
-  warnings: 'Предупреждения'
+  warnings: 'Предупреждения',
+  restartOnboarding: 'Пройти обучение'
 });
 Object.assign(dictionaries.en, {
   personalCabinet: 'Account dashboard', openCabinet: 'Open account dashboard', draftStorageNote: 'Drafts are stored only on this device.', publicProposalHistory: 'Public proposal history',
@@ -421,7 +422,8 @@ Object.assign(dictionaries.en, {
   limitingReactantLabel: 'Limiting reactant',
   availableMolesShort: 'Available, mol',
   remainingMolesShort: 'Remaining, mol',
-  warnings: 'Warnings'
+  warnings: 'Warnings',
+  restartOnboarding: 'Restart the tour'
 });
 
 let locale = 'ru';
