@@ -8,7 +8,7 @@ test('все локальные справочники согласованы', 
   assert.deepEqual(result.errors, []);
   assert.deepEqual(result.warnings, []);
   assert.equal(result.stats.elements, 118);
-  assert.equal(result.stats.substances, 372);
+  assert.equal(result.stats.substances, 373);
   assert.equal(result.stats.rules, 333);
   assert.equal(result.stats.thermoRecords, 486);
 });

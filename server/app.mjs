@@ -6,8 +6,8 @@ import { openPostgresDatabase } from './postgres.mjs';
 import { createSession, destroySession, getSession, hashPassword, normalizeLogin, requireUser, validateCredentials, verifyPassword } from './auth.mjs';
 import { validateProposal } from './validation.mjs';
 import { communityPackage, publishProposal, rollbackRule } from './production.mjs';
-import { MAX_VOTES_PER_HOUR, recordReview, reputationForUser, reviewHistory, reviewHistoryMap, voteWeight } from './review.mjs';
-import { notificationsForUser, notifyProposalAuthor } from './notifications.mjs';
+import { MAX_VOTES_PER_HOUR, REPUTATION_SQL, recordReview, reputationForUser, reviewHistory, reviewHistoryMap, voteWeight } from './review.mjs';
+import { notificationsForUser, notifyProposalAuthor, notifyUser } from './notifications.mjs';
 
 const JSON_LIMIT = 250_000;
 const attempts = new Map();
@@ -82,15 +82,15 @@ export async function createCommunityServer({ dbPath, god, staticHandler, dbBack
   let bootstrap = null;
   if (Number((await db.prepare('SELECT COUNT(*) AS count FROM users').get()).count) === 0) {
     const canonical = validateCredentials({ ...god, requireConfirmation: false });
-    await db.prepare('INSERT INTO users(login,login_canonical,password_hash,privileges,created_at) VALUES(?,?,?,?,?)')
-      .run(god.login.trim(), canonical, hashPassword(god.password), 'GOD', new Date().toISOString());
+    await db.prepare('INSERT INTO users(login,login_canonical,nickname,password_hash,privileges,created_at) VALUES(?,?,?,?,?,?)')
+      .run(god.login.trim(), canonical, god.login.trim(), hashPassword(god.password), 'GOD', new Date().toISOString());
     bootstrap = { login: god.login.trim(), password: god.password };
   }
 
   function updated(type) { events.emit('update', { type, at: new Date().toISOString() }); }
 
   async function getProposal(id, viewerId, raw = false) {
-    const row = await db.prepare(`SELECT proposals.*, users.login AS author_login,
+    const row = await db.prepare(`SELECT proposals.*, COALESCE(NULLIF(users.nickname, ''), users.login) AS author_login,
       (SELECT COALESCE(SUM(votes.value), 0) FROM votes JOIN proposals AS authored ON authored.id = votes.proposal_id WHERE authored.author_id = proposals.author_id) AS author_reputation
       FROM proposals JOIN users ON users.id = proposals.author_id WHERE proposals.id = ?`).get(id);
     if (!row) error(404, 'not_found', 'Заявка не найдена');
@@ -100,6 +100,151 @@ export async function createCommunityServer({ dbPath, god, staticHandler, dbBack
   async function presentRows(rows, viewerId) {
     const [history, votes] = await Promise.all([reviewHistoryMap(db, rows), viewerVoteMap(db, rows, viewerId)]);
     return Promise.all(rows.map((row) => proposalView(db, row, viewerId, history, votes)));
+  }
+
+  function parseTags(raw) {
+    const values = Array.isArray(raw) ? raw : String(raw || '').split(',');
+    const tags = [];
+    for (const value of values) {
+      const tag = String(value || '').trim().toLowerCase().replace(/[^\p{L}\p{N}._-]/gu, '').replace(/^-+|-+$/g, '').slice(0, 30);
+      if (tag && !tags.includes(tag)) tags.push(tag);
+      if (tags.length >= 5) break;
+    }
+    return tags;
+  }
+
+  function validateQuestionBody(input) {
+    const title = String(input.title || '').trim();
+    const body = String(input.body || '').trim();
+    if (!title || title.length > 200) error(422, 'invalid_title', 'Заголовок вопроса должен содержать от 1 до 200 символов');
+    if (!body || body.length > 8000) error(422, 'invalid_body', 'Текст вопроса должен содержать от 1 до 8000 символов');
+    return { title, body, tags: parseTags(input.tags) };
+  }
+
+  function validatePostBody(input, field = 'body', max = 8000) {
+    const body = String(input[field] || '').trim();
+    if (!body || body.length > max) error(422, 'invalid_body', `Текст должен содержать от 1 до ${max} символов`);
+    return body;
+  }
+
+  function validateCommentBody(input) {
+    const body = validatePostBody(input, 'body', 1000);
+    if (body.length < 5) error(422, 'comment_too_short', 'Комментарий должен содержать не менее 5 символов');
+    return body;
+  }
+
+  const QUESTION_SELECT = `SELECT questions.*, COALESCE(NULLIF(users.nickname, ''), users.login) AS author_login, users.avatar AS author_avatar,
+    (SELECT COUNT(*) FROM answers WHERE answers.question_id = questions.id) AS answers_count,
+    (SELECT COUNT(*) FROM answers WHERE answers.question_id = questions.id AND answers.accepted = 1) AS has_accepted,
+    ${REPUTATION_SQL} AS author_reputation
+    FROM questions JOIN users ON users.id = questions.author_id`;
+  const ANSWER_SELECT = `SELECT answers.*, COALESCE(NULLIF(users.nickname, ''), users.login) AS author_login, users.avatar AS author_avatar, ${REPUTATION_SQL} AS author_reputation
+    FROM answers JOIN users ON users.id = answers.author_id`;
+
+  async function questionView(db, row, viewerId) {
+    const question = { ...row };
+    try { question.tags = JSON.parse(question.tags); } catch { question.tags = []; }
+    if (!Array.isArray(question.tags)) question.tags = [];
+    question.score = Number(question.score);
+    question.answers_count = Number(question.answers_count ?? 0);
+    question.has_accepted = Number(question.has_accepted ?? 0) > 0;
+    question.author_reputation = Number(question.author_reputation ?? 0);
+    question.closed = Number(question.closed ?? 0) > 0;
+    question.closed_reason = question.closed_reason || '';
+    question.duplicate_of = question.duplicate_of || null;
+    question.views = Number(question.views ?? 0);
+    question.viewer_vote = viewerId ? (await db.prepare("SELECT value FROM post_votes WHERE target_type = 'question' AND target_id = ? AND user_id = ?").get(question.id, viewerId))?.value ?? 0 : null;
+    return question;
+  }
+
+  async function answerView(db, row, viewerId) {
+    const answer = { ...row };
+    answer.score = Number(answer.score);
+    answer.accepted = Number(answer.accepted) > 0;
+    answer.author_reputation = Number(answer.author_reputation ?? 0);
+    answer.viewer_vote = viewerId ? (await db.prepare("SELECT value FROM post_votes WHERE target_type = 'answer' AND target_id = ? AND user_id = ?").get(answer.id, viewerId))?.value ?? 0 : null;
+    return answer;
+  }
+
+  async function commentsFor(db, type, id, viewerId) {
+    const rows = await db.prepare(`SELECT comments.*, COALESCE(NULLIF(users.nickname, ''), users.login) AS author_login FROM comments
+      JOIN users ON users.id = comments.author_id WHERE target_type = ? AND target_id = ? ORDER BY created_at ASC, id ASC`).all(type, id);
+    return rows;
+  }
+
+  async function getQuestion(id, viewerId) {
+    const row = await db.prepare(QUESTION_SELECT + ' WHERE questions.id = ?').get(id);
+    if (!row) error(404, 'not_found', 'Вопрос не найден');
+    return questionView(db, row, viewerId);
+  }
+
+  async function getAnswer(id, viewerId) {
+    const row = await db.prepare(ANSWER_SELECT + ' WHERE answers.id = ?').get(id);
+    if (!row) error(404, 'not_found', 'Ответ не найден');
+    return answerView(db, row, viewerId);
+  }
+
+  async function postVote(db, targetType, targetId, user, input, ownAuthorId, ownCode) {
+    if (ownAuthorId === user.id) error(403, 'own_vote', ownCode || 'Нельзя голосовать за собственное сообщение');
+    const recent = await db.prepare('SELECT COUNT(*) AS count FROM post_votes WHERE user_id = ? AND updated_at >= ?').get(user.id, new Date(Date.now() - 3600000).toISOString());
+    if (Number(recent.count) >= MAX_VOTES_PER_HOUR) error(429, 'vote_rate_limit', 'Слишком много голосов за час.');
+    const value = input.value === -1 ? -1 : input.value === 1 ? 1 : error(422, 'invalid_vote', 'Голос должен быть +1 или −1');
+    const timestamp = new Date().toISOString();
+    await transaction(db, async () => {
+      await db.prepare(`INSERT INTO post_votes(target_type,target_id,user_id,value,created_at,updated_at) VALUES(?,?,?,?,?,?)
+        ON CONFLICT(target_type,target_id,user_id) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`)
+        .run(targetType, targetId, user.id, value, timestamp, timestamp);
+      if (targetType === 'question') {
+        await db.prepare('UPDATE questions SET score = (SELECT COALESCE(SUM(value), 0) FROM post_votes WHERE target_type = ? AND target_id = ?) WHERE id = ?').run(targetType, targetId, targetId);
+      } else {
+        await db.prepare('UPDATE answers SET score = (SELECT COALESCE(SUM(value), 0) FROM post_votes WHERE target_type = ? AND target_id = ?) WHERE id = ?').run(targetType, targetId, targetId);
+      }
+    });
+    updated(targetType);
+  }
+
+  const MODERATOR_ROLES = ['admin', 'admin+', 'GOD'];
+  const isModerator = (user) => Boolean(user && MODERATOR_ROLES.includes(user.privileges));
+  const displayName = (user) => user?.nickname || user?.login || '';
+
+  async function postEditsFor(db, type, id) {
+    return db.prepare(`SELECT post_edits.*, COALESCE(NULLIF(users.nickname, ''), users.login) AS editor_login FROM post_edits
+      JOIN users ON users.id = post_edits.editor_id WHERE target_type = ? AND target_id = ? ORDER BY created_at ASC, id ASC`).all(type, id);
+  }
+
+  async function recordPostEdit(db, type, id, editor, before, after, reason) {
+    await db.prepare(`INSERT INTO post_edits(id,target_type,target_id,editor_id,title_before,title_after,body_before,body_after,reason,created_at)
+      VALUES(?,?,?,?,?,?,?,?,?,?)`).run(randomUUID(), type, id, editor.id, before.title ?? null, after.title ?? null, String(before.body || ''), String(after.body || ''), String(reason || '').slice(0, 1000), new Date().toISOString());
+  }
+
+  async function deletePostRows(db, type, ids) {
+    if (!ids.length) return;
+    const placeholders = ids.map(() => '?').join(',');
+    await db.prepare(`DELETE FROM comments WHERE target_type = ? AND target_id IN (${placeholders})`).run(type, ...ids);
+    await db.prepare(`DELETE FROM post_votes WHERE target_type = ? AND target_id IN (${placeholders})`).run(type, ...ids);
+    await db.prepare(`DELETE FROM post_edits WHERE target_type = ? AND target_id IN (${placeholders})`).run(type, ...ids);
+  }
+
+  async function deleteAnswerRecord(db, id) {
+    await transaction(db, async () => {
+      await deletePostRows(db, 'answer', [id]);
+      await db.prepare('DELETE FROM answers WHERE id = ?').run(id);
+    });
+  }
+
+  async function deleteQuestionRecord(db, id) {
+    const answers = await db.prepare('SELECT id FROM answers WHERE question_id = ?').all(id);
+    await transaction(db, async () => {
+      await deletePostRows(db, 'question', [id]);
+      await deletePostRows(db, 'answer', answers.map((answer) => answer.id));
+      await db.prepare('DELETE FROM answers WHERE question_id = ?').run(id);
+      await db.prepare('DELETE FROM questions WHERE id = ?').run(id);
+    });
+  }
+
+  async function notifyModerators(db, actorId, kind, message) {
+    const moderators = await db.prepare("SELECT id FROM users WHERE privileges IN ('admin', 'admin+', 'GOD')").all();
+    for (const moderator of moderators) await notifyUser(db, moderator.id, actorId, kind, message);
   }
 
   const server = createServer(async (request, response) => {
@@ -127,8 +272,8 @@ export async function createCommunityServer({ dbPath, god, staticHandler, dbBack
         const canonical = validateCredentials(input);
         if (await db.prepare('SELECT id FROM users WHERE login_canonical = ?').get(canonical)) error(409, 'login_taken', 'Этот логин уже занят');
         const timestamp = new Date().toISOString();
-        const userId = (await db.prepare('INSERT INTO users(login,login_canonical,password_hash,privileges,created_at,last_login_at) VALUES(?,?,?,?,?,?)')
-          .run(String(input.login).trim(), canonical, hashPassword(input.password), 'basic', timestamp, timestamp)).lastInsertRowid;
+        const userId = (await db.prepare('INSERT INTO users(login,login_canonical,nickname,password_hash,privileges,created_at,last_login_at) VALUES(?,?,?,?,?,?,?)')
+          .run(String(input.login).trim(), canonical, String(input.login).trim(), hashPassword(input.password), 'basic', timestamp, timestamp)).lastInsertRowid;
         const user = await db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
         updated('user');
         return authResponse(response, 201, user, await createSession(db, userId));
@@ -149,9 +294,40 @@ export async function createCommunityServer({ dbPath, god, staticHandler, dbBack
         updated('user');
         return send(response, 200, { ok: true }, { 'Set-Cookie': await destroySession(db, request) });
       }
+      if (path === '/api/auth/profile' && request.method === 'PATCH') {
+        const current = await requireUser(db, request, ['basic', 'admin', 'admin+', 'GOD'], true);
+        const input = await body(request);
+        const updates = [];
+        const parameters = [];
+        if (input.login !== undefined) error(422, 'login_immutable', 'Логин изменить нельзя: он используется для входа. Измените никнейм.');
+        if (input.nickname !== undefined) {
+          const nickname = String(input.nickname).trim();
+          if (!/^[\p{L}\p{N} ._-]{2,40}$/u.test(nickname)) error(422, 'invalid_nickname', 'Никнейм должен содержать 2–40 букв, цифр, пробелов, точек, подчёркиваний или дефисов');
+          updates.push('nickname = ?');
+          parameters.push(nickname);
+        }
+        if (input.avatar !== undefined) {
+          const avatar = input.avatar === null ? '' : String(input.avatar);
+          if (avatar && (!/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(avatar) || avatar.length > 120000)) error(422, 'invalid_avatar', 'Некорректный формат аватара');
+          updates.push('avatar = ?');
+          parameters.push(avatar);
+        }
+        if (input.privacy !== undefined) {
+          if (!['public', 'private'].includes(input.privacy)) error(422, 'invalid_privacy', 'Некорректная настройка приватности');
+          updates.push('privacy = ?');
+          parameters.push(input.privacy);
+        }
+        if (!updates.length) error(422, 'no_changes', 'Нет изменений профиля');
+        parameters.push(current.id);
+        await db.prepare(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`).run(...parameters);
+        const updatedUser = await db.prepare('SELECT * FROM users WHERE id = ?').get(current.id);
+        updatedUser.reputation = await reputationForUser(db, current.id);
+        updated('user');
+        return send(response, 200, { user: publicUser(updatedUser) });
+      }
       if (path === '/api/auth/me' && request.method === 'GET') {
-        const user = await requireUser(db, request);
         const session = await getSession(db, request);
+        const user = await requireUser(db, request);
         user.reputation = await reputationForUser(db, user.id);
         return send(response, 200, { user: publicUser(user), csrfToken: session.csrf_token, expiresAt: session.expires_at });
       }
@@ -177,7 +353,7 @@ export async function createCommunityServer({ dbPath, god, staticHandler, dbBack
         const total = (await db.prepare('SELECT COUNT(*) AS count FROM users').get()).count;
         const users = (await db.prepare(`SELECT users.*,
           (SELECT COUNT(*) FROM proposals WHERE author_id = users.id AND status = 'pending') AS pending_count,
-          (SELECT COALESCE(SUM(votes.value), 0) FROM proposals JOIN votes ON votes.proposal_id = proposals.id WHERE proposals.author_id = users.id) AS reputation
+          ${REPUTATION_SQL} AS reputation
           FROM users ORDER BY id LIMIT ? OFFSET ?`).all(page.limit, page.offset)).map(publicUser);
         return send(response, 200, { users, pagination: paginationResult(page, total) });
       }
@@ -186,7 +362,7 @@ export async function createCommunityServer({ dbPath, god, staticHandler, dbBack
         const page = pagination(url);
         const sort = url.searchParams.get('sort');
         const order = sort === 'recent' ? 'created_at DESC' : sort === 'reputation' ? 'author_reputation DESC, score DESC, created_at DESC' : 'score DESC, created_at DESC';
-        const selection = `SELECT proposals.*, users.login AS author_login,
+        const selection = `SELECT proposals.*, COALESCE(NULLIF(users.nickname, ''), users.login) AS author_login,
           (SELECT COALESCE(SUM(author_votes.value), 0) FROM votes AS author_votes
             JOIN proposals AS author_proposals ON author_proposals.id = author_votes.proposal_id
             WHERE author_proposals.author_id = proposals.author_id) AS author_reputation
@@ -231,7 +407,7 @@ export async function createCommunityServer({ dbPath, god, staticHandler, dbBack
         if (request.method === 'GET' && action === 'versions') {
           const proposal = await getProposal(id, null, true);
           const current = await db.prepare('SELECT rule_json FROM production_rules WHERE reaction_key = ? AND active = 1').get(proposal.reaction_key);
-          const rows = await db.prepare(`SELECT rule_versions.*, users.login AS publisher_login FROM rule_versions
+          const rows = await db.prepare(`SELECT rule_versions.*, COALESCE(NULLIF(users.nickname, ''), users.login) AS publisher_login FROM rule_versions
             JOIN users ON users.id = rule_versions.published_by WHERE reaction_key = ? ORDER BY package_version DESC`).all(proposal.reaction_key);
           return send(response, 200, {
             currentRule: current ? JSON.parse(current.rule_json) : null,
@@ -319,13 +495,260 @@ export async function createCommunityServer({ dbPath, god, staticHandler, dbBack
           return send(response, 200, { proposal: await getProposal(id, reviewer.id) });
         }
       }
+      if (path === '/api/tags' && request.method === 'GET') {
+        const rows = await db.prepare('SELECT tags FROM questions').all();
+        const counts = new Map();
+        for (const row of rows) {
+          let tags = [];
+          try { tags = JSON.parse(row.tags); } catch { tags = []; }
+          for (const tag of tags) counts.set(tag, (counts.get(tag) || 0) + 1);
+        }
+        const tags = [...counts.entries()].map(([name, count]) => ({ name, count }))
+          .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, 'ru')).slice(0, 200);
+        return send(response, 200, { tags });
+      }
+      if (path === '/api/questions' && request.method === 'GET') {
+        const viewer = await getSession(db, request);
+        const page = pagination(url);
+        const sort = url.searchParams.get('sort');
+        const order = sort === 'recent' || sort === 'unanswered' ? 'questions.created_at DESC' : 'questions.score DESC, questions.created_at DESC';
+        const tags = url.searchParams.getAll('tag').map((tag) => tag.trim().toLowerCase()).filter(Boolean).slice(0, 10);
+        const conditions = [];
+        const filterParams = [];
+        for (const tag of tags) {
+          conditions.push('questions.tags LIKE ?');
+          filterParams.push(`%\"${tag}\"%`);
+        }
+        if (sort === 'unanswered') conditions.push('(SELECT COUNT(*) FROM answers WHERE answers.question_id = questions.id) = 0');
+        const where = conditions.length ? conditions.join(' AND ') : '1 = 1';
+        if (url.searchParams.get('author') === 'me') {
+          const current = await requireUser(db, request);
+          const mineWhere = `questions.author_id = ?${conditions.length ? ` AND ${where}` : ''}`;
+          const total = (await db.prepare(`SELECT COUNT(*) AS count FROM questions WHERE ${mineWhere}`).get(current.id, ...filterParams)).count;
+          const rows = await db.prepare(`${QUESTION_SELECT} WHERE ${mineWhere} ORDER BY ${order} LIMIT ? OFFSET ?`).all(current.id, ...filterParams, page.limit, page.offset);
+          return send(response, 200, { questions: await Promise.all(rows.map((row) => questionView(db, row, current.id))), pagination: paginationResult(page, total) });
+        }
+        const total = (await db.prepare(`SELECT COUNT(*) AS count FROM questions WHERE ${where}`).get(...filterParams)).count;
+        const rows = await db.prepare(`${QUESTION_SELECT} WHERE ${where} ORDER BY ${order} LIMIT ? OFFSET ?`).all(...filterParams, page.limit, page.offset);
+        return send(response, 200, { questions: await Promise.all(rows.map((row) => questionView(db, row, viewer?.user_id))), pagination: paginationResult(page, total) });
+      }
+      if (path === '/api/questions' && request.method === 'POST') {
+        const user = await requireUser(db, request, ['basic', 'admin', 'admin+', 'GOD'], true);
+        const input = await body(request);
+        const valid = validateQuestionBody(input);
+        const id = randomUUID();
+        const timestamp = new Date().toISOString();
+        await db.prepare('INSERT INTO questions(id,author_id,title,body,tags,created_at,updated_at) VALUES(?,?,?,?,?,?,?)')
+          .run(id, user.id, valid.title, valid.body, JSON.stringify(valid.tags), timestamp, timestamp);
+        updated('question');
+        return send(response, 201, { question: await getQuestion(id, user.id) });
+      }
+      const questionMatch = path.match(/^\/api\/questions\/([^/]+)(?:\/(vote|comment|close|reopen|flag))?$/);
+      if (questionMatch) {
+        const [, id, action] = questionMatch;
+        const viewer = await getSession(db, request);
+        if (request.method === 'GET' && !action) {
+          if (url.searchParams.get('view') !== '0') await db.prepare('UPDATE questions SET views = views + 1 WHERE id = ?').run(id);
+          const question = await getQuestion(id, viewer?.user_id);
+          question.comments = await commentsFor(db, 'question', id, viewer?.user_id);
+          question.edits = await postEditsFor(db, 'question', id);
+          if (question.duplicate_of) {
+            const duplicate = await db.prepare('SELECT id, title FROM questions WHERE id = ?').get(question.duplicate_of);
+            question.duplicate_title = duplicate?.title || null;
+          }
+          const answers = await Promise.all((await db.prepare(`${ANSWER_SELECT} WHERE answers.question_id = ? ORDER BY answers.accepted DESC, answers.score DESC, answers.created_at ASC`).all(id))
+            .map((row) => answerView(db, row, viewer?.user_id)));
+          for (const answer of answers) {
+            answer.comments = await commentsFor(db, 'answer', answer.id, viewer?.user_id);
+            answer.edits = await postEditsFor(db, 'answer', answer.id);
+          }
+          return send(response, 200, { question, answers });
+        }
+        if (request.method === 'POST' && action === 'vote') {
+          const user = await requireUser(db, request, ['basic', 'admin', 'admin+', 'GOD'], true);
+          const question = await getQuestion(id, user.id);
+          await postVote(db, 'question', id, user, await body(request), question.author_id, 'Нельзя голосовать за свой вопрос');
+          return send(response, 200, { question: await getQuestion(id, user.id) });
+        }
+        if (request.method === 'POST' && action === 'comment') {
+          const user = await requireUser(db, request, ['basic', 'admin', 'admin+', 'GOD'], true);
+          const question = await getQuestion(id, user.id);
+          const text = validateCommentBody(await body(request));
+          const commentId = randomUUID();
+          const timestamp = new Date().toISOString();
+          await db.prepare('INSERT INTO comments(id,target_type,target_id,author_id,body,created_at,updated_at) VALUES(?,?,?,?,?,?,?)')
+            .run(commentId, 'question', id, user.id, text, timestamp, timestamp);
+          await notifyUser(db, question.author_id, user.id, 'question_comment', `${displayName(user)} прокомментировал ваш вопрос: «${question.title}»`);
+          updated('comment');
+          return send(response, 201, { comments: await commentsFor(db, 'question', id, user.id) });
+        }
+        if (request.method === 'POST' && action === 'flag') {
+          const user = await requireUser(db, request, ['basic', 'admin', 'admin+', 'GOD'], true);
+          const question = await getQuestion(id, user.id);
+          const input = await body(request);
+          const reason = String(input.reason || '').trim().slice(0, 1000);
+          if (!reason) error(422, 'invalid_reason', 'Укажите причину жалобы');
+          const existing = await db.prepare('SELECT id FROM question_flags WHERE question_id = ? AND user_id = ?').get(id, user.id);
+          if (existing) error(409, 'already_flagged', 'Вы уже отправили жалобу на этот вопрос');
+          await db.prepare('INSERT INTO question_flags(id,question_id,user_id,reason,created_at) VALUES(?,?,?,?,?)')
+            .run(randomUUID(), id, user.id, reason, new Date().toISOString());
+          await notifyModerators(db, user.id, 'question_flag', `${displayName(user)} пожаловался на вопрос «${question.title}»: ${reason}`);
+          updated('review');
+          return send(response, 201, { ok: true });
+        }
+        if (request.method === 'POST' && (action === 'close' || action === 'reopen')) {
+          const user = await requireUser(db, request, MODERATOR_ROLES, true);
+          const question = await getQuestion(id, user.id);
+          const timestamp = new Date().toISOString();
+          if (action === 'close') {
+            const input = await body(request);
+            const reason = String(input.reason || '').trim().slice(0, 1000);
+            if (!reason) error(422, 'invalid_reason', 'Укажите причину закрытия');
+            let duplicateOf = null;
+            if (input.duplicateOf) {
+              duplicateOf = String(input.duplicateOf).trim();
+              if (duplicateOf === id) error(422, 'invalid_duplicate', 'Вопрос не может быть дубликатом самого себя');
+              const target = await db.prepare('SELECT id FROM questions WHERE id = ?').get(duplicateOf);
+              if (!target) error(404, 'not_found', 'Вопрос-дубликат не найден');
+            }
+            await db.prepare('UPDATE questions SET closed = 1, closed_reason = ?, duplicate_of = ?, updated_at = ? WHERE id = ?')
+              .run(reason, duplicateOf, timestamp, id);
+            await notifyUser(db, question.author_id, user.id, 'question_closed', `Модератор ${displayName(user)} закрыл ваш вопрос «${question.title}»: ${reason}`);
+          } else {
+            await db.prepare("UPDATE questions SET closed = 0, closed_reason = '', duplicate_of = NULL, updated_at = ? WHERE id = ?").run(timestamp, id);
+            await notifyUser(db, question.author_id, user.id, 'question_reopened', `Модератор ${displayName(user)} открыл ваш вопрос «${question.title}»`);
+          }
+          updated('question');
+          return send(response, 200, { question: await getQuestion(id, user.id) });
+        }
+        if (request.method === 'PATCH' && !action) {
+          const user = await requireUser(db, request, ['basic', 'admin', 'admin+', 'GOD'], true);
+          const question = await getQuestion(id, user.id);
+          if (question.author_id !== user.id && !isModerator(user)) error(403, 'forbidden', 'Редактировать вопрос может автор или модератор');
+          const input = await body(request);
+          const title = input.title !== undefined ? String(input.title).trim() : question.title;
+          const bodyText = input.body !== undefined ? String(input.body).trim() : question.body;
+          const tags = input.tags !== undefined ? parseTags(input.tags) : question.tags;
+          if (!title || title.length > 200) error(422, 'invalid_title', 'Заголовок вопроса: 1–200 символов');
+          if (!bodyText || bodyText.length > 8000) error(422, 'invalid_body', 'Текст вопроса: 1–8000 символов');
+          const reason = String(input.reason || '').trim().slice(0, 1000);
+          if (isModerator(user) && question.author_id !== user.id && !reason) error(422, 'invalid_reason', 'Модератор должен указать причину изменения');
+          await transaction(db, async () => {
+            await db.prepare('UPDATE questions SET title = ?, body = ?, tags = ?, updated_at = ? WHERE id = ?')
+              .run(title, bodyText, JSON.stringify(tags), new Date().toISOString(), id);
+            await recordPostEdit(db, 'question', id, user, { title: question.title, body: question.body }, { title, body: bodyText }, reason);
+          });
+          if (question.author_id !== user.id) await notifyUser(db, question.author_id, user.id, 'question_edited', `Модератор ${displayName(user)} изменил ваш вопрос «${question.title}»: ${reason}`);
+          updated('question');
+          return send(response, 200, { question: await getQuestion(id, user.id) });
+        }
+        if (request.method === 'DELETE' && !action) {
+          const user = await requireUser(db, request, MODERATOR_ROLES, true);
+          const question = await getQuestion(id, user.id);
+          const input = await body(request);
+          const reason = String(input.reason || '').trim().slice(0, 1000);
+          if (!reason) error(422, 'invalid_reason', 'Укажите причину удаления');
+          await deleteQuestionRecord(db, id);
+          await notifyUser(db, question.author_id, user.id, 'question_deleted', `Модератор ${displayName(user)} удалил ваш вопрос «${question.title}»: ${reason}`);
+          updated('question');
+          return send(response, 200, { ok: true });
+        }
+      }
+      if (path === '/api/answers' && request.method === 'POST') {
+        const user = await requireUser(db, request, ['basic', 'admin', 'admin+', 'GOD'], true);
+        const input = await body(request);
+        const questionId = String(input.questionId || '').trim();
+        if (!questionId) error(422, 'invalid_question', 'Укажите вопрос');
+        const question = await getQuestion(questionId, user.id);
+        if (question.closed) error(409, 'question_closed', 'Вопрос закрыт, новые ответы недоступны');
+        const text = validatePostBody(input, 'body', 8000);
+        const id = randomUUID();
+        const timestamp = new Date().toISOString();
+        await db.prepare('INSERT INTO answers(id,question_id,author_id,body,created_at,updated_at) VALUES(?,?,?,?,?,?)')
+          .run(id, questionId, user.id, text, timestamp, timestamp);
+        await notifyUser(db, question.author_id, user.id, 'question_answer', `${displayName(user)} ответил на ваш вопрос: «${question.title}»`);
+        updated('answer');
+        return send(response, 201, { answer: await getAnswer(id, user.id) });
+      }
+      const answerMatch = path.match(/^\/api\/answers\/([^/]+)(?:\/(vote|accept|comment))?$/);
+      if (answerMatch) {
+        const [, id, action] = answerMatch;
+        if (request.method === 'PATCH' && !action) {
+          const user = await requireUser(db, request, ['basic', 'admin', 'admin+', 'GOD'], true);
+          const answer = await getAnswer(id, user.id);
+          if (answer.author_id !== user.id && !isModerator(user)) error(403, 'forbidden', 'Редактировать ответ может автор или модератор');
+          const input = await body(request);
+          const text = input.body !== undefined ? String(input.body).trim() : answer.body;
+          if (!text || text.length > 8000) error(422, 'invalid_body', 'Текст ответа: 1–8000 символов');
+          const reason = String(input.reason || '').trim().slice(0, 1000);
+          if (isModerator(user) && answer.author_id !== user.id && !reason) error(422, 'invalid_reason', 'Модератор должен указать причину изменения');
+          await transaction(db, async () => {
+            await db.prepare('UPDATE answers SET body = ?, updated_at = ? WHERE id = ?').run(text, new Date().toISOString(), id);
+            await recordPostEdit(db, 'answer', id, user, { body: answer.body }, { body: text }, reason);
+          });
+          if (answer.author_id !== user.id) await notifyUser(db, answer.author_id, user.id, 'answer_edited', `Модератор ${displayName(user)} изменил ваш ответ: ${reason}`);
+          updated('answer');
+          return send(response, 200, { answer: await getAnswer(id, user.id) });
+        }
+        if (request.method === 'DELETE' && !action) {
+          const user = await requireUser(db, request, MODERATOR_ROLES, true);
+          const answer = await getAnswer(id, user.id);
+          const input = await body(request);
+          const reason = String(input.reason || '').trim().slice(0, 1000);
+          if (!reason) error(422, 'invalid_reason', 'Укажите причину удаления');
+          await deleteAnswerRecord(db, id);
+          await notifyUser(db, answer.author_id, user.id, 'answer_deleted', `Модератор ${displayName(user)} удалил ваш ответ: ${reason}`);
+          updated('answer');
+          return send(response, 200, { ok: true });
+        }
+        if (request.method === 'POST' && action) {
+          const user = await requireUser(db, request, ['basic', 'admin', 'admin+', 'GOD'], true);
+          const answer = await getAnswer(id, user.id);
+          if (action === 'vote') {
+            await postVote(db, 'answer', id, user, await body(request), answer.author_id, 'Нельзя голосовать за свой ответ');
+            return send(response, 200, { answer: await getAnswer(id, user.id) });
+          }
+          if (action === 'comment') {
+            const text = validateCommentBody(await body(request));
+            const commentId = randomUUID();
+            const timestamp = new Date().toISOString();
+            await db.prepare('INSERT INTO comments(id,target_type,target_id,author_id,body,created_at,updated_at) VALUES(?,?,?,?,?,?,?)')
+              .run(commentId, 'answer', id, user.id, text, timestamp, timestamp);
+            await notifyUser(db, answer.author_id, user.id, 'answer_comment', `${displayName(user)} прокомментировал ваш ответ`);
+            updated('comment');
+            return send(response, 201, { comments: await commentsFor(db, 'answer', id, user.id) });
+          }
+          if (action === 'accept') {
+            const question = await getQuestion(answer.question_id, user.id);
+            if (question.author_id !== user.id) error(403, 'forbidden', 'Отметить ответ может только автор вопроса');
+            const accept = answer.accepted ? 0 : 1;
+            const timestamp = new Date().toISOString();
+            await transaction(db, async () => {
+              if (accept) {
+                await db.prepare('UPDATE answers SET accepted = 0, updated_at = ? WHERE question_id = ?').run(timestamp, answer.question_id);
+                await db.prepare('UPDATE answers SET accepted = 1, updated_at = ? WHERE id = ?').run(timestamp, id);
+              } else {
+                await db.prepare('UPDATE answers SET accepted = 0, updated_at = ? WHERE id = ?').run(timestamp, id);
+              }
+            });
+            if (accept) await notifyUser(db, answer.author_id, user.id, 'answer_accepted', `${displayName(user)} отметил ваш ответ как полезный`);
+            updated('answer');
+            return send(response, 200, { answer: await getAnswer(id, user.id) });
+          }
+        }
+      }
       const publicProfileMatch = path.match(/^\/api\/users\/([^/]+)\/public$/);
       if (publicProfileMatch && request.method === 'GET') {
         let login;
         try { login = decodeURIComponent(publicProfileMatch[1]); } catch { error(422, 'invalid_login', 'Некорректный логин'); }
-        const record = await db.prepare('SELECT id, login, privileges, created_at FROM users WHERE login_canonical = ?').get(normalizeLogin(login));
+        const record = await db.prepare('SELECT id, login, nickname, privileges, avatar, privacy, created_at FROM users WHERE login_canonical = ?').get(normalizeLogin(login));
         if (!record) error(404, 'not_found', 'Пользователь не найден');
-        const rows = await db.prepare(`SELECT proposals.*, users.login AS author_login, 0 AS author_reputation
+        if (record.privacy === 'private') {
+          const viewerSession = await getSession(db, request);
+          const viewer = viewerSession ? await db.prepare('SELECT id, privileges FROM users WHERE id = ?').get(viewerSession.user_id) : null;
+          if (viewer?.id !== record.id && viewer?.privileges !== 'GOD') error(403, 'private_profile', 'Профиль пользователя скрыт настройками приватности');
+        }
+        const rows = await db.prepare(`SELECT proposals.*, COALESCE(NULLIF(users.nickname, ''), users.login) AS author_login, 0 AS author_reputation
           FROM proposals JOIN users ON users.id = proposals.author_id WHERE author_id = ? ORDER BY created_at DESC LIMIT 100`).all(record.id);
         const proposals = (await presentRows(rows, null)).map((proposal) => ({
           id: proposal.id,
@@ -339,7 +762,7 @@ export async function createCommunityServer({ dbPath, god, staticHandler, dbBack
           proposed_rule_json: proposal.proposed_rule_json,
           review_history: proposal.review_history
         }));
-        return send(response, 200, { user: { login: record.login, privileges: record.privileges, created_at: record.created_at, reputation: await reputationForUser(db, record.id) }, proposals });
+        return send(response, 200, { user: { login: record.login, nickname: record.nickname || record.login, privileges: record.privileges, avatar: record.avatar, privacy: record.privacy, created_at: record.created_at, reputation: await reputationForUser(db, record.id) }, proposals });
       }
       const roleMatch = path.match(/^\/api\/users\/(\d+)\/role$/);
       if (roleMatch && request.method === 'PATCH') {

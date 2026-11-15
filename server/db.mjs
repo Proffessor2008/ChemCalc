@@ -67,6 +67,22 @@ function migrateCommunityFeatures(db) {
     WHERE NOT EXISTS(SELECT 1 FROM rule_versions WHERE rule_versions.id = production_rules.id)`);
 }
 
+function migrateQaFeatures(db) {
+  const columns = new Set(db.prepare('PRAGMA table_info(questions)').all().map((column) => column.name));
+  if (!columns.has('closed')) db.exec('ALTER TABLE questions ADD COLUMN closed INTEGER NOT NULL DEFAULT 0');
+  if (!columns.has('closed_reason')) db.exec("ALTER TABLE questions ADD COLUMN closed_reason TEXT NOT NULL DEFAULT ''");
+  if (!columns.has('duplicate_of')) db.exec('ALTER TABLE questions ADD COLUMN duplicate_of TEXT');
+  if (!columns.has('views')) db.exec('ALTER TABLE questions ADD COLUMN views INTEGER NOT NULL DEFAULT 0');
+}
+
+function migrateProfileFeatures(db) {
+  const columns = new Set(db.prepare('PRAGMA table_info(users)').all().map((column) => column.name));
+  if (!columns.has('avatar')) db.exec("ALTER TABLE users ADD COLUMN avatar TEXT NOT NULL DEFAULT ''");
+  if (!columns.has('privacy')) db.exec("ALTER TABLE users ADD COLUMN privacy TEXT NOT NULL DEFAULT 'public'");
+  if (!columns.has('nickname')) db.exec("ALTER TABLE users ADD COLUMN nickname TEXT NOT NULL DEFAULT ''");
+  db.prepare("UPDATE users SET nickname = login WHERE nickname = '' OR nickname IS NULL").run();
+}
+
 export function openCommunityDatabase(path) {
   if (path !== ':memory:') mkdirSync(dirname(path), { recursive: true });
   const db = new DatabaseSync(path);
@@ -76,8 +92,11 @@ export function openCommunityDatabase(path) {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       login TEXT NOT NULL,
       login_canonical TEXT NOT NULL UNIQUE,
+      nickname TEXT NOT NULL DEFAULT '',
       password_hash TEXT NOT NULL,
       privileges TEXT NOT NULL CHECK(privileges IN ('basic', 'admin', 'admin+', 'GOD')),
+      avatar TEXT NOT NULL DEFAULT '',
+      privacy TEXT NOT NULL DEFAULT 'public',
       created_at TEXT NOT NULL,
       last_login_at TEXT
     );
@@ -167,9 +186,83 @@ export function openCommunityDatabase(path) {
     );
     CREATE INDEX IF NOT EXISTS notifications_user_created ON notifications(user_id, created_at DESC);
     CREATE INDEX IF NOT EXISTS notifications_user_unread ON notifications(user_id, read_at);
+    CREATE TABLE IF NOT EXISTS questions (
+      id TEXT PRIMARY KEY,
+      author_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      title TEXT NOT NULL,
+      body TEXT NOT NULL,
+      tags TEXT NOT NULL DEFAULT '[]',
+      score REAL NOT NULL DEFAULT 0,
+      closed INTEGER NOT NULL DEFAULT 0,
+      closed_reason TEXT NOT NULL DEFAULT '',
+      duplicate_of TEXT,
+      views INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS questions_score ON questions(score DESC, created_at DESC);
+    CREATE INDEX IF NOT EXISTS questions_created ON questions(created_at DESC);
+    CREATE INDEX IF NOT EXISTS questions_author ON questions(author_id);
+    CREATE TABLE IF NOT EXISTS answers (
+      id TEXT PRIMARY KEY,
+      question_id TEXT NOT NULL REFERENCES questions(id) ON DELETE CASCADE,
+      author_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      body TEXT NOT NULL,
+      score REAL NOT NULL DEFAULT 0,
+      accepted INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS answers_question ON answers(question_id, accepted DESC, score DESC, created_at ASC);
+    CREATE INDEX IF NOT EXISTS answers_author ON answers(author_id);
+    CREATE TABLE IF NOT EXISTS post_votes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      target_type TEXT NOT NULL CHECK(target_type IN ('question', 'answer')),
+      target_id TEXT NOT NULL,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      value INTEGER NOT NULL CHECK(value IN (-1, 1)),
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      UNIQUE(target_type, target_id, user_id)
+    );
+    CREATE INDEX IF NOT EXISTS post_votes_user_updated ON post_votes(user_id, updated_at);
+    CREATE TABLE IF NOT EXISTS comments (
+      id TEXT PRIMARY KEY,
+      target_type TEXT NOT NULL CHECK(target_type IN ('question', 'answer')),
+      target_id TEXT NOT NULL,
+      author_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      body TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS comments_target ON comments(target_type, target_id, created_at ASC);
+    CREATE TABLE IF NOT EXISTS post_edits (
+      id TEXT PRIMARY KEY,
+      target_type TEXT NOT NULL CHECK(target_type IN ('question', 'answer')),
+      target_id TEXT NOT NULL,
+      editor_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      title_before TEXT,
+      title_after TEXT,
+      body_before TEXT NOT NULL,
+      body_after TEXT NOT NULL,
+      reason TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS post_edits_target ON post_edits(target_type, target_id, created_at ASC);
+    CREATE TABLE IF NOT EXISTS question_flags (
+      id TEXT PRIMARY KEY,
+      question_id TEXT NOT NULL REFERENCES questions(id) ON DELETE CASCADE,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      reason TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL,
+      UNIQUE(question_id, user_id)
+    );
+    CREATE INDEX IF NOT EXISTS question_flags_question ON question_flags(question_id, created_at DESC);
   `);
   migratePrivileges(db);
   migrateCommunityFeatures(db);
+  migrateQaFeatures(db);
+  migrateProfileFeatures(db);
   return db;
 }
 
@@ -177,7 +270,10 @@ export function publicUser(row) {
   return row && {
     id: row.id,
     login: row.login,
+    nickname: row.nickname || row.login,
     privileges: row.privileges,
+    avatar: row.avatar || '',
+    privacy: row.privacy || 'public',
     created_at: row.created_at,
     last_login_at: row.last_login_at,
     pending_count: Number(row.pending_count ?? 0),

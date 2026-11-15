@@ -1,4 +1,4 @@
-const CACHE_NAME = 'chemcalc-v37';
+const CACHE_NAME = 'chemcalc-v44';
 const COMMUNITY_PACKAGE = './data/reaction-rules-community.json';
 const SHELL = [
   './', './index.html', './styles.css', './manifest.webmanifest', './icons/icon-192.svg', './icons/icon-512.svg',
@@ -6,7 +6,7 @@ const SHELL = [
   './data/elements.json', './data/redox-sites.json', './data/functional-groups.json', './data/solubility.json', './data/activity-series.json', './data/acid-base-constants.json', './data/electrode-potentials.json', './data/substances.json', './data/reaction-rules.json', './data/reaction-rules-final.json', COMMUNITY_PACKAGE
 ];
 const FULL = [
-  './js/periodic-card.js', './js/periodic-table.js', './js/element-info.js', './js/print-solution.js', './js/reference-tables.js', './js/reference-ui.js', './js/stoichiometry.js', './js/stoichiometry-ui.js', './js/thermo.js', './js/report.js', './js/report-builders.js', './js/report-docx.js', './js/report-pdf.js', './js/report-ui.js',
+  './js/periodic-card.js', './js/periodic-table.js', './js/element-info.js', './js/print-solution.js', './js/reference-tables.js', './js/reference-ui.js', './js/stoichiometry.js', './js/stoichiometry-ui.js', './js/thermo.js', './js/report.js', './js/report-builders.js', './js/report-docx.js', './js/report-pdf.js', './js/report-ui.js', './js/qa-ui.js',
   './data/element-overrides.json', './data/element-descriptions.json', './data/substance-descriptions.json', './data/electronegativity.json', './data/thermo.json', './data/thermo-extra.json'
 ];
 

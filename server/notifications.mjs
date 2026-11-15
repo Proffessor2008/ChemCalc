@@ -6,6 +6,12 @@ export async function notifyProposalAuthor(db, proposal, actor, kind, message) {
     .run(randomUUID(), proposal.author_id, proposal.id, kind, String(message || '').slice(0, 2000), new Date().toISOString());
 }
 
+export async function notifyUser(db, userId, actorId, kind, message) {
+  if (!userId || userId === actorId) return;
+  await db.prepare('INSERT INTO notifications(id,user_id,proposal_id,kind,message,created_at) VALUES(?,?,?,?,?,?)')
+    .run(randomUUID(), userId, null, kind, String(message || '').slice(0, 2000), new Date().toISOString());
+}
+
 export async function notificationsForUser(db, userId) {
   const [notifications, unread] = await Promise.all([
     db.prepare(`SELECT notifications.*, proposals.reaction_key FROM notifications

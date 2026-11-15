@@ -66,7 +66,7 @@ export async function publishProposal(db, proposal, reviewer) {
     contributors: [...new Set([...(previous?.contributors || []), proposal.author_login])],
     basedOn: proposal.base_rule_id || null,
     sourceProposalId: proposal.id,
-    publishedBy: reviewer.login,
+    publishedBy: reviewer.nickname || reviewer.login,
     publishedAt: new Date().toISOString()
   };
   delete rule.substances;
@@ -97,7 +97,7 @@ export async function rollbackRule(db, proposal, reviewer, versionId) {
   const rule = {
     ...JSON.parse(selected.rule_json),
     sourceProposalId: proposal.id,
-    publishedBy: reviewer.login,
+    publishedBy: reviewer.nickname || reviewer.login,
     publishedAt: new Date().toISOString(),
     rollbackOf: selected.id
   };

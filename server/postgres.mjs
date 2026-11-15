@@ -16,11 +16,18 @@ const SCHEMA = `
     id BIGSERIAL PRIMARY KEY,
     login TEXT NOT NULL,
     login_canonical TEXT NOT NULL UNIQUE,
+    nickname TEXT NOT NULL DEFAULT '',
     password_hash TEXT NOT NULL,
     privileges TEXT NOT NULL CHECK(privileges IN ('basic', 'admin', 'admin+', 'GOD')),
+    avatar TEXT NOT NULL DEFAULT '',
+    privacy TEXT NOT NULL DEFAULT 'public',
     created_at TEXT NOT NULL,
     last_login_at TEXT
   );
+  ALTER TABLE users ADD COLUMN IF NOT EXISTS nickname TEXT NOT NULL DEFAULT '';
+  ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar TEXT NOT NULL DEFAULT '';
+  ALTER TABLE users ADD COLUMN IF NOT EXISTS privacy TEXT NOT NULL DEFAULT 'public';
+  UPDATE users SET nickname = login WHERE nickname = '' OR nickname IS NULL;
   CREATE TABLE IF NOT EXISTS sessions (
     token_hash TEXT PRIMARY KEY,
     user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -107,6 +114,82 @@ const SCHEMA = `
   );
   CREATE INDEX IF NOT EXISTS notifications_user_created ON notifications(user_id, created_at DESC);
   CREATE INDEX IF NOT EXISTS notifications_user_unread ON notifications(user_id, read_at);
+  CREATE TABLE IF NOT EXISTS questions (
+    id TEXT PRIMARY KEY,
+    author_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    body TEXT NOT NULL,
+    tags TEXT NOT NULL DEFAULT '[]',
+    score DOUBLE PRECISION NOT NULL DEFAULT 0,
+    closed INTEGER NOT NULL DEFAULT 0,
+    closed_reason TEXT NOT NULL DEFAULT '',
+    duplicate_of TEXT,
+    views INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
+  ALTER TABLE questions ADD COLUMN IF NOT EXISTS closed INTEGER NOT NULL DEFAULT 0;
+  ALTER TABLE questions ADD COLUMN IF NOT EXISTS closed_reason TEXT NOT NULL DEFAULT '';
+  ALTER TABLE questions ADD COLUMN IF NOT EXISTS duplicate_of TEXT;
+  ALTER TABLE questions ADD COLUMN IF NOT EXISTS views INTEGER NOT NULL DEFAULT 0;
+  CREATE INDEX IF NOT EXISTS questions_score ON questions(score DESC, created_at DESC);
+  CREATE INDEX IF NOT EXISTS questions_created ON questions(created_at DESC);
+  CREATE INDEX IF NOT EXISTS questions_author ON questions(author_id);
+  CREATE TABLE IF NOT EXISTS answers (
+    id TEXT PRIMARY KEY,
+    question_id TEXT NOT NULL REFERENCES questions(id) ON DELETE CASCADE,
+    author_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    body TEXT NOT NULL,
+    score DOUBLE PRECISION NOT NULL DEFAULT 0,
+    accepted INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS answers_question ON answers(question_id, accepted DESC, score DESC, created_at ASC);
+  CREATE INDEX IF NOT EXISTS answers_author ON answers(author_id);
+  CREATE TABLE IF NOT EXISTS post_votes (
+    id BIGSERIAL PRIMARY KEY,
+    target_type TEXT NOT NULL CHECK(target_type IN ('question', 'answer')),
+    target_id TEXT NOT NULL,
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    value INTEGER NOT NULL CHECK(value IN (-1, 1)),
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    UNIQUE(target_type, target_id, user_id)
+  );
+  CREATE INDEX IF NOT EXISTS post_votes_user_updated ON post_votes(user_id, updated_at);
+  CREATE TABLE IF NOT EXISTS comments (
+    id TEXT PRIMARY KEY,
+    target_type TEXT NOT NULL CHECK(target_type IN ('question', 'answer')),
+    target_id TEXT NOT NULL,
+    author_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    body TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS comments_target ON comments(target_type, target_id, created_at ASC);
+  CREATE TABLE IF NOT EXISTS post_edits (
+    id TEXT PRIMARY KEY,
+    target_type TEXT NOT NULL CHECK(target_type IN ('question', 'answer')),
+    target_id TEXT NOT NULL,
+    editor_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    title_before TEXT,
+    title_after TEXT,
+    body_before TEXT NOT NULL,
+    body_after TEXT NOT NULL,
+    reason TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS post_edits_target ON post_edits(target_type, target_id, created_at ASC);
+  CREATE TABLE IF NOT EXISTS question_flags (
+    id TEXT PRIMARY KEY,
+    question_id TEXT NOT NULL REFERENCES questions(id) ON DELETE CASCADE,
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    reason TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL,
+    UNIQUE(question_id, user_id)
+  );
+  CREATE INDEX IF NOT EXISTS question_flags_question ON question_flags(question_id, created_at DESC);
   ALTER TABLE users DROP CONSTRAINT IF EXISTS users_privileges_check;
   ALTER TABLE users ADD CONSTRAINT users_privileges_check CHECK(privileges IN ('basic', 'admin', 'admin+', 'GOD'));
   ALTER TABLE proposals ALTER COLUMN score TYPE DOUBLE PRECISION;

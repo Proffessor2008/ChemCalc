@@ -46,16 +46,17 @@ test('переключение языка меняет lang и видимост�
   }
 });
 
-test('документация содержит полные английские и русские разделы', () => {
+test('документация удалена, настройки содержат темы, размер и обучение', () => {
   const html = readFileSync('index.html', 'utf8');
-  const englishSections = [...html.matchAll(/data-doc-lang="en" id="(docs-en-[^"]+)"/g)].map((match) => match[1]);
-  assert.deepEqual(englishSections, ['docs-en-start', 'docs-en-modes', 'docs-en-features', 'docs-en-logic', 'docs-en-table', 'docs-en-tools', 'docs-en-workflows', 'docs-en-pwa', 'docs-en-access', 'docs-en-limits', 'docs-en-tests']);
-  assert.equal((html.match(/data-doc-lang="ru" id="docs-/g) || []).length, 11);
-  assert.ok(html.includes('id="docs-workflows"'));
-  for (const text of ['Quick start', 'Calculator modes', 'Calculation logic', 'Scientific limits and safety', 'Testing and source data', 'Try the net ionic equation']) {
-    if (text !== 'Try the net ionic equation') assert.ok(html.includes(text), text);
-  }
-  assert.ok(html.includes('data-doc-lang="en" aria-label="Documentation sections"'));
+  const i18n = readFileSync('js/i18n.js', 'utf8');
+  assert.ok(!html.includes('data-doc-lang="en"'));
+  assert.ok(!html.includes('id="docs-workflows"'));
+  assert.ok(html.includes('id="settings-dialog"'));
+  for (const option of ['light', 'dark', 'system']) assert.ok(html.includes(`data-theme-option="${option}"`));
+  for (const size of ['compact', 'normal', 'large']) assert.ok(html.includes(`data-size-option="${size}"`));
+  assert.ok(html.includes('id="restart-onboarding"'));
+  assert.ok(i18n.includes("settings: 'Настройки'"));
+  assert.ok(i18n.includes("profileSettings: 'Настройки профиля'"));
 });
 
 test('пользовательский интерфейс не содержит инструкций локального запуска', () => {

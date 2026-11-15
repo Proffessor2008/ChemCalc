@@ -1,8 +1,10 @@
 import { randomBytes } from 'node:crypto';
+import { fileURLToPath } from 'node:url';
 import { createCommunityServer } from './server/app.mjs';
 import { createStaticHandler } from './server/static.mjs';
 
-const staticHandler = createStaticHandler(process.cwd());
+const projectRoot = fileURLToPath(new URL('.', import.meta.url));
+const staticHandler = createStaticHandler(projectRoot);
 
 const production = process.env.NODE_ENV === 'production';
 const god = {
