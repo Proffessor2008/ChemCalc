@@ -154,7 +154,7 @@ Object.assign(dictionaries.ru, {
   useCurrent: 'Взять уравнение из калькулятора', balancedEquation: 'Уравнение (коэффициенты будут подобраны автоматически)', knownSubstance: 'Известное вещество', inputKind: 'Исходная величина', mass: 'Масса, г', amount: 'Количество, моль', gasVolume: 'Объём газа, л', solutionVolume: 'Объём раствора, л', value: 'Значение', concentration: 'Концентрация, моль/л', gasConditions: 'Условия для газов', normalConditions: 'н. у.: 22,4 л/моль', yield: 'Выход продукта, %', calculate: 'Рассчитать',
   clearHistory: 'Очистить историю', historyHelp: 'Сохраняются последние 20 уравнений. Избранное можно отметить звёздочкой.', historyEmpty: 'История пока пуста. Проверьте или предскажите уравнение.',
   highConfidence: 'Высокая уверенность', mediumConfidence: 'Средняя уверенность', lowConfidence: 'Низкая / неоднозначно', noReaction: 'Реакция не идёт', noRule: 'Нет подходящего правила', ambiguous: 'Нужно выбрать условия', needsConditions: 'Недостаточно условий',
-  diluteCondition: 'Разбавленная кислота', concentratedCondition: 'Концентрированная кислота', availableAmounts: 'Наличие реагентов, моль (необязательно)', availableHelp: 'Если заданы хотя бы два реагента, расчёт выполняется по лимитирующему.', actualProduct: 'Практический выход', usedAmount: 'n, моль', theoreticalMass: 'm, г', gasVolumeShort: 'V(газ), л', actualMassShort: 'm практ., г', favorite: 'В избранное', removeFavorite: 'Убрать из избранного', delete: 'Удалить', open: 'Открыть', clearHistoryConfirm: 'Удалить все 20 последних записей, включая избранные?', linked: 'Ссылка скопирована', copiedEquation: 'Уравнение скопировано', noHistory: 'Нет записей'
+  diluteCondition: 'Разбавленная кислота', concentratedCondition: 'Концентрированная кислота', availableAmounts: 'Наличие реагентов, моль (необязательно)', availableHelp: 'Если заданы хотя бы два реагента, расчёт выполняется по лимитирующему.', actualProduct: 'Практический выход', usedAmount: 'n, моль', theoreticalMass: 'm, г', gasVolumeShort: 'V(газ), л', actualMolesShort: 'n практ., моль', actualMassShort: 'm практ., г', actualGasVolumeShort: 'V практ., л', favorite: 'В избранное', removeFavorite: 'Убрать из избранного', delete: 'Удалить', open: 'Открыть', clearHistoryConfirm: 'Удалить все 20 последних записей, включая избранные?', linked: 'Ссылка скопирована', copiedEquation: 'Уравнение скопировано', noHistory: 'Нет записей'
 });
 Object.assign(dictionaries.en, {
   autoDescription: 'Enter reactants and conditions — the app applies a local rule and balances the products.',
@@ -162,7 +162,7 @@ Object.assign(dictionaries.en, {
   acidConcentration: 'Acid concentration', unspecified: 'Not specified', dilute: 'Dilute', concentrated: 'Concentrated', solvent: 'Phase / solvent', aqueous: 'Aqueous solution', melt: 'Melt', gasPhase: 'Gas phase', organicSolvent: 'Organic solvent',
   ratio: 'Reactant ratio', normalRatio: 'Normal / excess base', deficitRatio: 'Base deficit', catalyst: 'Catalyst', heating: 'Heating (t°)', electricCurrent: 'Electric current', predict: 'Predict and balance', predictionResult: 'Prediction result', autoEmpty: 'Products appear only after a suitable local rule is applied.', why: 'Why', restoreCoefficients: 'Restore rule coefficients',
   ionicEquations: 'Ionic equations', fullIonic: 'Complete', netIonic: 'Net', share: 'Share link', openCheck: 'Open in Check mode', openStoich: 'Calculate amounts', useCurrent: 'Use calculator equation', balancedEquation: 'Equation (coefficients will be balanced automatically)', knownSubstance: 'Known substance', inputKind: 'Input quantity', mass: 'Mass, g', amount: 'Amount, mol', gasVolume: 'Gas volume, L', solutionVolume: 'Solution volume, L', value: 'Value', concentration: 'Concentration, mol/L', gasConditions: 'Gas conditions', normalConditions: 'STP: 22.4 L/mol', yield: 'Product yield, %', calculate: 'Calculate',
-  clearHistory: 'Clear history', historyHelp: 'The latest 20 equations are stored. Star an item to favourite it.', historyEmpty: 'No history yet. Check or predict an equation.', highConfidence: 'High confidence', mediumConfidence: 'Medium confidence', lowConfidence: 'Low / ambiguous', noReaction: 'No reaction', noRule: 'No suitable rule', ambiguous: 'Choose conditions', needsConditions: 'More conditions needed', diluteCondition: 'Dilute acid', concentratedCondition: 'Concentrated acid', availableAmounts: 'Available reactants, mol (optional)', availableHelp: 'With at least two values, the limiting reactant determines the calculation.', actualProduct: 'Actual yield', usedAmount: 'n, mol', theoreticalMass: 'm, g', gasVolumeShort: 'V(gas), L', actualMassShort: 'Actual m, g', favorite: 'Add to favourites', removeFavorite: 'Remove from favourites', delete: 'Delete', open: 'Open', clearHistoryConfirm: 'Delete all recent entries, including favourites?', linked: 'Link copied', copiedEquation: 'Equation copied', noHistory: 'No entries'
+  clearHistory: 'Clear history', historyHelp: 'The latest 20 equations are stored. Star an item to favourite it.', historyEmpty: 'No history yet. Check or predict an equation.', highConfidence: 'High confidence', mediumConfidence: 'Medium confidence', lowConfidence: 'Low / ambiguous', noReaction: 'No reaction', noRule: 'No suitable rule', ambiguous: 'Choose conditions', needsConditions: 'More conditions needed', diluteCondition: 'Dilute acid', concentratedCondition: 'Concentrated acid', availableAmounts: 'Available reactants, mol (optional)', availableHelp: 'With at least two values, the limiting reactant determines the calculation.', actualProduct: 'Actual yield', usedAmount: 'n, mol', theoreticalMass: 'm, g', gasVolumeShort: 'V(gas), L', actualMolesShort: 'Actual n, mol', actualMassShort: 'Actual m, g', actualGasVolumeShort: 'Actual V, L', favorite: 'Add to favourites', removeFavorite: 'Remove from favourites', delete: 'Delete', open: 'Open', clearHistoryConfirm: 'Delete all recent entries, including favourites?', linked: 'Link copied', copiedEquation: 'Equation copied', noHistory: 'No entries'
 });
 Object.assign(dictionaries.ru, {
   elementSearch: 'Поиск по символу, названию или номеру', colorMode: 'Раскраска', byCategory: 'По категории', byPhase: 'По агрегатному состоянию', byElectronegativity: 'По электроотрицательности', byRadius: 'По радиусу', byDensity: 'По плотности', byDiscovery: 'По году открытия', referenceMode: 'Справка', insertMode: 'Вставка', clickHint: 'Щелчок по элементу откроет подробную справку.', filters: 'Фильтры', elementType: 'Тип', all: 'Все', metals: 'Металлы', nonmetals: 'Неметаллы', metalloids: 'Металлоиды', group: 'Группа', period: 'Период', radioactiveOnly: 'Только радиоактивные', temperature: 'Температура'
@@ -300,22 +300,128 @@ Object.assign(dictionaries.ru, {
   printSolution: 'Печать решения', printEquationInput: 'Исходное уравнение', printBalanceMethod: 'Коэффициенты из точного матричного расчёта',
   drafts: 'Черновики заявок', noDrafts: 'Сохранённых черновиков нет', resumeDraft: 'Продолжить', deleteDraft: 'Удалить черновик', draftSaved: 'Черновик сохранён локально', confirmDeleteDraft: 'Удалить этот черновик?',
   notifications: 'Уведомления', noNotifications: 'Новых уведомлений нет', unreadNotifications: 'Непрочитанные', markRead: 'Прочитано', markAllRead: 'Отметить все прочитанными',
-  notification_approved: 'Заявка одобрена', notification_rejected: 'Заявка отклонена', notification_needs_evidence: 'Запрошен источник', notification_changes_requested: 'Запрошены исправления', notification_edited: 'Заявка отредактирована модератором', notification_rollback: 'Выполнен откат правила'
+  notification_approved: 'Заявка одобрена', notification_rejected: 'Заявка отклонена', notification_needs_evidence: 'Запрошен источник', notification_changes_requested: 'Запрошены исправления', notification_edited: 'Заявка отредактирована модератором', notification_rollback: 'Выполнен откат правила', loadingThermo: 'Загрузка термодинамических данных…'
 });
 Object.assign(dictionaries.en, {
   printSolution: 'Print solution', printEquationInput: 'Input equation', printBalanceMethod: 'Coefficients from exact matrix calculation',
   drafts: 'Proposal drafts', noDrafts: 'No saved drafts', resumeDraft: 'Continue', deleteDraft: 'Delete draft', draftSaved: 'Draft saved locally', confirmDeleteDraft: 'Delete this draft?',
   notifications: 'Notifications', noNotifications: 'No notifications', unreadNotifications: 'Unread', markRead: 'Mark read', markAllRead: 'Mark all as read',
-  notification_approved: 'Proposal approved', notification_rejected: 'Proposal rejected', notification_needs_evidence: 'Evidence requested', notification_changes_requested: 'Changes requested', notification_edited: 'Proposal edited by a moderator', notification_rollback: 'Rule version rolled back'
+  notification_approved: 'Proposal approved', notification_rejected: 'Proposal rejected', notification_needs_evidence: 'Evidence requested', notification_changes_requested: 'Changes requested', notification_edited: 'Proposal edited by a moderator', notification_rollback: 'Rule version rolled back', loadingThermo: 'Loading thermodynamic data…'
 });
 
 Object.assign(dictionaries.ru, {
   personalCabinet: 'Личный кабинет', openCabinet: 'Открыть личный кабинет', draftStorageNote: 'Черновики сохраняются только на этом устройстве.', publicProposalHistory: 'Публичная история заявок',
-  previousPage: 'Назад', nextPage: 'Вперёд', pageOf: 'Страница {page} из {pages} · всего {total}', noPublicProposals: 'У пользователя пока нет заявок.'
+  previousPage: 'Назад', nextPage: 'Вперёд', pageOf: 'Страница {page} из {pages} · всего {total}', noPublicProposals: 'У пользователя пока нет заявок.',
+  stoichBasisLimiting: 'Расчёт по лимитирующему реагенту {formula}: {moles} моль. Верхние поля «Известное вещество» и «Значение» не используются.',
+  limitingReactant: 'Лимитирующий реагент: {formula}.',
+  stoichBasisSingleAvailable: 'Задано только одно наличие реагента ({formula}): для расчёта по лимитирующему нужно минимум два. Используется верхнее поле «Известное вещество».',
+  practicalProductsTitle: 'Практический выход',
+  practicalLine: '{formula}: n = {moles} моль; m = {mass} г',
+  practicalLineGas: '{formula}: n = {moles} моль; m = {mass} г; V = {volume} л ({conditions})',
+  gasConditionsShortNormal: 'н. у.',
+  gasConditionsShortSatp: 'САТП',
+  substanceClass_salt: 'Соль',
+  substanceClass_acid: 'Кислота',
+  substanceClass_base: 'Основание',
+  substanceClass_oxide: 'Оксид',
+  substanceClass_acidic_oxide: 'Кислотный оксид',
+  substanceClass_basic_oxide: 'Основный оксид',
+  substanceClass_amphoteric_oxide: 'Амфотерный оксид',
+  substanceClass_simple: 'Простое вещество',
+  substanceClass_metal: 'Металл',
+  substanceClass_organic: 'Органическое вещество',
+  substanceClass_binary: 'Бинарное соединение',
+  substanceClass_gas: 'Газ',
+  substanceClass_complex: 'Комплексное соединение',
+  substanceClass_acidic_salt: 'Кислая соль',
+  substanceClass_basic_salt: 'Основная соль',
+  substanceClass_organic_salt: 'Органическая соль',
+  substanceClass_peroxide: 'Пероксид',
+  substanceClass_hydride: 'Гидрид',
+  substanceClass_carbide: 'Карбид',
+  substanceClass_nitride: 'Нитрид',
+  substanceClass_phosphide: 'Фосфид',
+  substanceClass_sulfide: 'Сульфид',
+  substanceClass_mineral: 'Минерал',
+  substanceClass_intermetallic: 'Интерметаллид',
+  substanceClass_covalent_halide: 'Ковалентный галогенид',
+  exportPdf: 'Скачать PDF',
+  exportDocx: 'Скачать DOCX',
+  exportPreparing: 'Формируем файл…',
+  exportPage: 'Страница {page} из {total}…',
+  exportReady: 'Файл сформирован',
+  exportFailed: 'Не удалось сформировать файл',
+  exportPdfFailed: 'Не удалось создать PDF в этом браузере. Скачайте DOCX.',
+  exportHint: 'PDF сохраняет вёрстку страниц, DOCX — редактируемый текст и таблицы.',
+  reportCheckTitle: 'Проверка уравнения',
+  reportAutoTitle: 'Предсказание реакции',
+  reportStoichTitle: 'Стехиометрия',
+  reportReferenceTitle: 'Справочник',
+  reportGenerated: 'Сформировано',
+  reportVerdict: 'Вердикт',
+  reportFilter: 'Фильтр',
+  reportEquation: 'Уравнение',
+  limitingReactantLabel: 'Лимитирующий реагент',
+  availableMolesShort: 'Наличие, моль',
+  remainingMolesShort: 'Остаток, моль',
+  warnings: 'Предупреждения'
 });
 Object.assign(dictionaries.en, {
   personalCabinet: 'Account dashboard', openCabinet: 'Open account dashboard', draftStorageNote: 'Drafts are stored only on this device.', publicProposalHistory: 'Public proposal history',
-  previousPage: 'Previous', nextPage: 'Next', pageOf: 'Page {page} of {pages} · {total} total', noPublicProposals: 'This user has no proposals yet.'
+  previousPage: 'Previous', nextPage: 'Next', pageOf: 'Page {page} of {pages} · {total} total', noPublicProposals: 'This user has no proposals yet.',
+  stoichBasisLimiting: 'Calculated from the limiting reactant {formula}: {moles} mol. The top “Known substance” and “Value” fields are not used.',
+  limitingReactant: 'Limiting reactant: {formula}.',
+  stoichBasisSingleAvailable: 'Only one available amount is set ({formula}): at least two are needed for a limiting-reactant calculation. The top “Known substance” field is used.',
+  practicalProductsTitle: 'Actual yield',
+  practicalLine: '{formula}: n = {moles} mol; m = {mass} g',
+  practicalLineGas: '{formula}: n = {moles} mol; m = {mass} g; V = {volume} L ({conditions})',
+  gasConditionsShortNormal: 'STP',
+  gasConditionsShortSatp: 'SATP',
+  substanceClass_salt: 'Salt',
+  substanceClass_acid: 'Acid',
+  substanceClass_base: 'Base',
+  substanceClass_oxide: 'Oxide',
+  substanceClass_acidic_oxide: 'Acidic oxide',
+  substanceClass_basic_oxide: 'Basic oxide',
+  substanceClass_amphoteric_oxide: 'Amphoteric oxide',
+  substanceClass_simple: 'Simple substance',
+  substanceClass_metal: 'Metal',
+  substanceClass_organic: 'Organic compound',
+  substanceClass_binary: 'Binary compound',
+  substanceClass_gas: 'Gas',
+  substanceClass_complex: 'Complex compound',
+  substanceClass_acidic_salt: 'Acidic salt',
+  substanceClass_basic_salt: 'Basic salt',
+  substanceClass_organic_salt: 'Organic salt',
+  substanceClass_peroxide: 'Peroxide',
+  substanceClass_hydride: 'Hydride',
+  substanceClass_carbide: 'Carbide',
+  substanceClass_nitride: 'Nitride',
+  substanceClass_phosphide: 'Phosphide',
+  substanceClass_sulfide: 'Sulfide',
+  substanceClass_mineral: 'Mineral',
+  substanceClass_intermetallic: 'Intermetallic',
+  substanceClass_covalent_halide: 'Covalent halide',
+  exportPdf: 'Download PDF',
+  exportDocx: 'Download DOCX',
+  exportPreparing: 'Preparing file…',
+  exportPage: 'Page {page} of {total}…',
+  exportReady: 'File generated',
+  exportFailed: 'Could not generate the file',
+  exportPdfFailed: 'Could not create a PDF in this browser. Download DOCX instead.',
+  exportHint: 'PDF keeps the page layout; DOCX is editable text and tables.',
+  reportCheckTitle: 'Equation check',
+  reportAutoTitle: 'Reaction prediction',
+  reportStoichTitle: 'Stoichiometry',
+  reportReferenceTitle: 'Reference',
+  reportGenerated: 'Generated',
+  reportVerdict: 'Verdict',
+  reportFilter: 'Filter',
+  reportEquation: 'Equation',
+  limitingReactantLabel: 'Limiting reactant',
+  availableMolesShort: 'Available, mol',
+  remainingMolesShort: 'Remaining, mol',
+  warnings: 'Warnings'
 });
 
 let locale = 'ru';

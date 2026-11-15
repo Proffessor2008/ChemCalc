@@ -5,7 +5,7 @@ import { balanceEquation } from './balancer.js';
 import { buildIonicEquations } from './ionic.js';
 import { t } from './i18n.js';
 import { parseEquation } from './parser.js';
-import { GAS_CONSTANT } from './reference-tables.js';
+import { GAS_CONSTANT } from './physical-constants.js';
 
 export const THERMO_RECORDS = [...thermoData.records, ...thermoExtraData.records];
 export const THERMO_SOURCE = `${thermoData.source}; ${thermoExtraData.source}`;

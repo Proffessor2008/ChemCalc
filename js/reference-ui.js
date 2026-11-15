@@ -3,6 +3,7 @@ import activityData from '../data/activity-series.json' with { type: 'json' };
 import substanceData from '../data/substances.json' with { type: 'json' };
 import elementData from '../data/elements.json' with { type: 'json' };
 import { formulaToUnicode, parseFormula } from './parser.js';
+import { getLocale, t } from './i18n.js';
 import { predictReaction } from './predictor.js';
 import { REFERENCE_SOURCES, ACID_BASE_RECORDS, ELECTRODE_RECORDS, ELECTRONEGATIVITY_RECORDS, bondType, bufferPH, calculatePH, checkIonPair, galvanicCell, nernst, willDisplace } from './reference-tables.js';
 import { THERMO_RECORDS, THERMO_SOURCE, calculateReactionThermo } from './thermo.js';
@@ -17,6 +18,7 @@ const REFERENCES = [
 ];
 const $ = (selector) => document.querySelector(selector);
 const substanceNames = new Map(substanceData.items.map((item) => [item.formula, item.name_ru]));
+const recordName = (record) => getLocale() === 'en' ? (record.name_en || record.name_ru) : record.name_ru;
 const escapeHtml = (value) => String(value).replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
 const chemical = (formula) => { try { return escapeHtml(formulaToUnicode(formula)); } catch { return escapeHtml(formula); } };
 const formatNumber = (value) => value === null || value === undefined ? '—' : Number.isFinite(value) ? (Math.abs(value) >= 1e6 || Math.abs(value) < 0.001 && value !== 0 ? value.toExponential(4) : Number(value.toPrecision(6)).toLocaleString('ru')) : '∞';
@@ -30,7 +32,7 @@ function svgThermoCurve(curve) {
   return `<svg class="thermo-curve" viewBox="0 0 540 210" role="img" aria-label="График приближённой зависимости ΔG от температуры"><path d="M30 10V170H510" fill="none" stroke="currentColor"/><text x="4" y="18">ΔG</text><text x="450" y="198">T, K</text><polyline points="${points}" fill="none" stroke="currentColor" stroke-width="3"/></svg>`;
 }
 
-export function initReferenceUI({ storage, onOpenFormula, onOpenEquation, getCurrentEquation }) {
+export function initReferenceUI({ storage, onOpenFormula, onOpenEquation, getCurrentEquation, showToast = null }) {
   let current = 'solubility';
   let items = [];
   let activityMode = 'practical';
@@ -83,7 +85,7 @@ export function initReferenceUI({ storage, onOpenFormula, onOpenEquation, getCur
   }
 
   function table(headers, rows) {
-    return `<div class="table-scroll reference-table"><table><thead><tr>${headers.map((header) => `<th scope="col">${header}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table></div>`;
+    return `<div class="table-scroll reference-table"><table><thead><tr>${headers.map((header) => `<th scope="col" class="chem">${header}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table></div>`;
   }
 
   function renderSolubility() {
@@ -98,7 +100,7 @@ export function initReferenceUI({ storage, onOpenFormula, onOpenEquation, getCur
         const id = `solubility-${cation}-${anion}`.replace(/[^a-zA-Z0-9]+/g, '-');
         return `<td id="${id}"><button class="solubility-cell sol-${result.status}" data-cation="${cation}" data-anion="${anion}" title="${chemical(result.formula)}: ${result.status}">${result.status}</button></td>`;
       }).join('');
-      return `<tr><th scope="row">${chemical(cation)}</th>${cells}</tr>`;
+      return `<tr><th scope="row" class="chem">${chemical(cation)}</th>${cells}</tr>`;
     });
     $('#reference-content').innerHTML = `<section class="card"><h2>Матрица растворимости</h2><p class="help-text">Р — растворимо, М — малорастворимо, Н — нерастворимо, ? — нет данных. Буква видна независимо от цвета.</p><label class="check-control"><input id="solubility-insoluble" type="checkbox"><span>Подсветить только нерастворимые</span></label>${table(anions.map((anion) => chemical(anion)), matrixRows)}</section>
       <form id="ion-pair-form" class="card tool-card"><h2>Проверить пару ионов</h2><div class="tool-grid"><label>Катион<select id="ion-cation">${options(cations)}</select></label><label>Анион<select id="ion-anion">${options(anions)}</select></label><button class="button primary" type="submit">Проверить</button></form><div id="ion-pair-result" class="tool-result" aria-live="polite"></div>`;
@@ -217,11 +219,11 @@ export function initReferenceUI({ storage, onOpenFormula, onOpenEquation, getCur
   }
 
   function renderThermo() {
-    const entries = THERMO_RECORDS.filter((record) => !thermoPhase || record.phase === thermoPhase).map((record) => ({ id: `thermo-${record.id}`, label: `${record.formula} (${record.phase}) — ${record.name_ru}`, value: record.Hf_kJ_mol, detail: `ΔfH° = ${record.Hf_kJ_mol}${record.uncertainty ? ` ± ${record.uncertainty.Hf_kJ_mol}` : ''} кДж/моль; ΔfG° = ${record.Gf_kJ_mol}${record.uncertainty ? ` ± ${record.uncertainty.Gf_kJ_mol}` : ''} кДж/моль; S° = ${record.S_J_mol_K}${record.uncertainty ? ` ± ${record.uncertainty.S_J_mol_K}` : ''} Дж/(моль·K); Cp° = ${record.Cp_J_mol_K ?? '—'}${record.note ? `. ${record.note}` : ''}`, source: record.source }));
+    const entries = THERMO_RECORDS.filter((record) => !thermoPhase || record.phase === thermoPhase).map((record) => ({ id: `thermo-${record.id}`, label: `${record.formula} (${record.phase}) — ${recordName(record)}`, value: record.Hf_kJ_mol, detail: `ΔfH° = ${record.Hf_kJ_mol}${record.uncertainty ? ` ± ${record.uncertainty.Hf_kJ_mol}` : ''} кДж/моль; ΔfG° = ${record.Gf_kJ_mol}${record.uncertainty ? ` ± ${record.uncertainty.Gf_kJ_mol}` : ''} кДж/моль; S° = ${record.S_J_mol_K}${record.uncertainty ? ` ± ${record.uncertainty.S_J_mol_K}` : ''} Дж/(моль·K); Cp° = ${record.Cp_J_mol_K ?? '—'}${record.note ? `. ${record.note}` : ''}`, source: record.source }));
     updateItems(entries);
     $('#reference-content').innerHTML = `<section class="card"><div class="section-inline"><h2>Стандартные свойства: ${THERMO_RECORDS.length} записей</h2><label>Фаза<select id="thermo-phase"><option value="">Все</option><option value="s" ${thermoPhase === 's' ? 'selected' : ''}>Твёрдые</option><option value="l" ${thermoPhase === 'l' ? 'selected' : ''}>Жидкие</option><option value="g" ${thermoPhase === 'g' ? 'selected' : ''}>Газы</option><option value="aq" ${thermoPhase === 'aq' ? 'selected' : ''}>Водные ионы</option></select></label></div><p class="help-text">298,15 K, 1 бар. Для простых веществ в стандартном состоянии ΔfH° = 0 и ΔfG° = 0.</p>${table(['Формула', 'Название', 'Фаза', 'ΔfH°, кДж/моль', 'ΔfG°, кДж/моль', 'S°, Дж/(моль·K)'], sorted(entries).map((entry) => {
       const record = THERMO_RECORDS.find((item) => `thermo-${item.id}` === entry.id);
-      return `<tr><th scope="row"><button class="table-link" data-detail="${entry.id}">${chemical(record.formula)}</button></th><td>${escapeHtml(record.name_ru)}</td><td>${phaseName[record.phase]}</td><td>${record.Hf_kJ_mol}</td><td>${record.Gf_kJ_mol}</td><td>${record.S_J_mol_K}</td></tr>`;
+      return `<tr><th scope="row" class="chem"><button class="table-link" data-detail="${entry.id}">${chemical(record.formula)}</button></th><td>${escapeHtml(recordName(record))}</td><td>${phaseName[record.phase]}</td><td>${record.Hf_kJ_mol}</td><td>${record.Gf_kJ_mol}</td><td>${record.S_J_mol_K}</td></tr>`;
     }))}</section><form id="hess-form" class="card tool-card"><h2>Расчёт реакции по закону Гесса</h2><label>Уравнение<input id="hess-equation" class="equation-input" value="2H2 + O2 = 2H2O" spellcheck="false"></label><div class="tool-grid"><label>T, K<input id="hess-temperature" type="number" min="0" step="any" value="298.15"></label><button id="hess-current" class="button ghost" type="button">Взять из калькулятора</button></div><button class="button primary" type="submit">Рассчитать ΔH°, ΔS°, ΔG° и K</button></form><div id="hess-result" class="tool-result"></div>`;
     $('#thermo-phase').addEventListener('change', (event) => { thermoPhase = event.target.value; renderThermo(); });
     $('#hess-current').addEventListener('click', () => { $('#hess-equation').value = getCurrentEquation(); });
@@ -274,7 +276,28 @@ export function initReferenceUI({ storage, onOpenFormula, onOpenEquation, getCur
   $('#reference-sort').addEventListener('change', render);
   $('#reference-compare-a').addEventListener('change', renderComparison);
   $('#reference-compare-b').addEventListener('change', renderComparison);
-  $('#reference-print').addEventListener('click', () => window.print());
+  async function exportReference(format, button) {
+    try {
+      const [{ buildReferenceReport }, { runReportExport }] = await Promise.all([
+        import('./report-builders.js'),
+        import('./report-ui.js')
+      ]);
+      const definition = REFERENCES.find((item) => item.id === current);
+      const report = buildReferenceReport({
+        root: $('#reference-content'),
+        id: current,
+        label: definition?.label || '',
+        source: current === 'thermo' ? THERMO_SOURCE : REFERENCE_SOURCES[current],
+        filter: $('#reference-search').value.trim()
+      });
+      await runReportExport(format, report, { button, showToast });
+    } catch (error) {
+      console.error('ChemCalc reference export failed', error);
+      if (showToast) showToast(t('exportFailed'));
+    }
+  }
+  $('#reference-export-pdf').addEventListener('click', (event) => exportReference('pdf', event.currentTarget));
+  $('#reference-export-docx').addEventListener('click', (event) => exportReference('docx', event.currentTarget));
   $('#reference-explain').addEventListener('click', () => showDetail(REFERENCES.find((item) => item.id === current).label, current === 'solubility' ? 'Р — растворимо, М — малорастворимо, Н — нерастворимо, ? — нет данных. Щелчок по ячейке открывает подробности.' : 'Численные значения действительны только при условиях, указанных под названием справочника. — означает отсутствие данных.', REFERENCE_SOURCES[current] || THERMO_SOURCE));
   $('#reference-detail-close').addEventListener('click', () => $('#reference-detail').close());
   $('#reference-content').addEventListener('click', (event) => {

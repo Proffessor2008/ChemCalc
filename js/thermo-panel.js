@@ -1,11 +1,9 @@
-import { calculateIonicReactionThermo, calculateReactionThermo } from './thermo.js';
 import { t } from './i18n.js';
 import { isNonAqueousSolvent } from './reaction-conditions.js';
 
-export function renderThermoPanel(selector, equation, options = {}) {
+export async function renderThermoPanel(selector, equation, options = {}) {
   const panel = document.querySelector(selector);
   if (!panel || !equation) return;
-  const result = options.ionic ? calculateIonicReactionThermo(equation, options) : calculateReactionThermo(equation, options);
   panel.hidden = false;
   panel.replaceChildren();
   const heading = document.createElement('h3');
@@ -17,6 +15,21 @@ export function renderThermoPanel(selector, equation, options = {}) {
     phaseNote.textContent = t('nonAqueousThermo');
     panel.append(phaseNote);
   }
+  const status = document.createElement('p');
+  status.className = 'help-text';
+  status.textContent = t('loadingThermo');
+  panel.append(status);
+  let result;
+  try {
+    const thermo = await import('./thermo.js');
+    result = options.ionic
+      ? await thermo.calculateIonicReactionThermo(equation, options)
+      : await thermo.calculateReactionThermo(equation, options);
+  } catch {
+    status.textContent = t('serverUnavailable');
+    return;
+  }
+  status.remove();
   const text = document.createElement('p');
   if (result.status !== 'ok') {
     text.textContent = result.message;

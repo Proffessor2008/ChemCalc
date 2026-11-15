@@ -6,9 +6,9 @@ import { equationToUnicode, formatEquation, parseEquation, parseSide, parseSpeci
 import { updateCommunityData } from './predictor.js';
 import { getLocale, t } from './i18n.js';
 import { createDraftStore } from './drafts.js';
+import { SUBSTANCE_CLASSES, classLabel } from './classes.js';
 
 const $ = (selector) => document.querySelector(selector);
-const CLASSES = ['salt', 'acid', 'base', 'oxide', 'acidic_oxide', 'basic_oxide', 'amphoteric_oxide', 'simple', 'metal', 'organic', 'binary', 'gas', 'complex', 'acidic_salt', 'basic_salt', 'organic_salt', 'peroxide', 'hydride', 'carbide', 'nitride', 'phosphide', 'sulfide', 'mineral', 'intermetallic', 'covalent_halide'];
 const SOURCES = ['glinka', 'lidine', 'textbook', 'lab', 'personal'];
 const ISSUES = ['products', 'conditions', 'coefficients', 'ionic', 'substance', 'thermo', 'code', 'balance_engine'];
 const MODERATORS = ['admin', 'admin+', 'GOD'];
@@ -589,7 +589,7 @@ export function initCommunityUI({ storage, showToast, onNavigate, getAutoContext
       card.dataset.formula = formula;
       card.innerHTML = `<legend>${formula}</legend>
         <label><span>${t('substanceName')}</span><input data-field="name_ru" maxlength="180" required></label>
-        <div class="conditions-grid"><label><span>${t('substanceClass')}</span><select data-field="class">${selectOptions(CLASSES, record.class || knownName?.class || 'salt', (value) => value)}</select></label>
+        <div class="conditions-grid"><label><span>${t('substanceClass')}</span><select data-field="class">${selectOptions(SUBSTANCE_CLASSES, record.class || knownName?.class || 'salt', classLabel)}</select></label>
         <label><span>${t('solubility')}</span><select data-field="solubility">${selectOptions(['Р', 'М', 'Н', '—'], record.solubility || knownElectrolyte?.solubility || '—', (value) => value)}</select></label></div>
         <label class="check-control"><input data-field="strong" type="checkbox"><span>${t('strongElectrolyte')}</span></label>
         <label><span>${t('ionComposition')}</span><input data-field="ions"></label><p class="help-text ion-field-hint"></p>`;
