@@ -370,7 +370,7 @@ export function initQAUI({ container, api, auth, showToast, onDeepLink = () => {
     const answerForm = question.closed
       ? `<p class="notice">${t('questionClosed')}${question.closed_reason ? `: ${escapeHtml(question.closed_reason)}` : ''}</p>`
       : user()
-        ? `<section class="card qa-answer-form"><h3>${t('writeAnswer')}</h3><p class="help-text">${t('formattingHint')}</p><textarea id="qa-answer-text" rows="5" maxlength="8000">${escapeHtml(answerDraft)}</textarea><label class="qa-field"><span>${t('attachments')}</span><input type="file" data-attachment-input="answer" accept="${ATTACHMENT_ACCEPT}" multiple><small class="help-text">${t('attachmentsHint')}</small></label><div class="qa-pending-list" data-attachment-list="answer"></div><div class="qa-form-actions"><button type="button" class="button primary" data-qa-submit-answer>${t('postAnswer')}</button></div></section>`
+        ? `<section class="card qa-answer-form"><h3>${t('writeAnswer')}</h3>${formatButtons('qa-answer-text', 'answer')}<textarea id="qa-answer-text" rows="5" maxlength="8000">${escapeHtml(answerDraft)}</textarea><label class="qa-field"><span>${t('attachments')}</span><input type="file" data-attachment-input="answer" accept="${ATTACHMENT_ACCEPT}" multiple><small class="help-text">${t('attachmentsHint')}</small></label><div class="qa-pending-list" data-attachment-list="answer"></div><div class="qa-form-actions"><button type="button" class="button primary" data-qa-submit-answer>${t('postAnswer')}</button></div></section>`
         : `<p class="notice">${t('loginToParticipate')}</p>`;
 
     $('#qa-content').innerHTML = `<article class="card qa-detail">
@@ -400,14 +400,27 @@ export function initQAUI({ container, api, auth, showToast, onDeepLink = () => {
     renderPendingAttachments('answer');
   }
 
-  function formatButtons() {
-    return `<div class="qa-editor-toolbar">
-      <button type="button" data-qa-format="bold" title="${t('formatBold')}"><b>B</b></button>
-      <button type="button" data-qa-format="italic" title="${t('formatItalic')}"><i>I</i></button>
-      <button type="button" data-qa-format="code" title="${t('formatCode')}"><code>code</code></button>
-      <button type="button" data-qa-format="list" title="${t('formatList')}">•</button>
-      <button type="button" data-qa-format="quote" title="${t('formatQuote')}">❝</button>
-      <button type="button" data-qa-format="latex" title="${t('formatLatex')}">∑</button>
+  function formatButtons(targetId, attachmentKind = '') {
+    const imageButton = attachmentKind
+      ? `<button type="button" data-qa-attachment-trigger="${attachmentKind}" title="${t('attachImage')}" aria-label="${t('attachImage')}">▧</button>`
+      : '';
+    return `<div class="qa-editor-toolbar" role="toolbar" aria-label="${t('formatting')}">
+      <button type="button" data-qa-format="bold" data-qa-format-target="${targetId}" title="${t('formatBold')}" aria-label="${t('formatBold')}"><b>B</b></button>
+      <button type="button" data-qa-format="italic" data-qa-format-target="${targetId}" title="${t('formatItalic')}" aria-label="${t('formatItalic')}"><i>I</i></button>
+      <span class="qa-toolbar-separator" aria-hidden="true"></span>
+      <button type="button" data-qa-format="link" data-qa-format-target="${targetId}" title="${t('formatLink')}" aria-label="${t('formatLink')}">🔗</button>
+      <button type="button" data-qa-format="quote" data-qa-format-target="${targetId}" title="${t('formatQuote')}" aria-label="${t('formatQuote')}">❝</button>
+      <button type="button" data-qa-format="code" data-qa-format-target="${targetId}" title="${t('formatCode')}" aria-label="${t('formatCode')}"><code>{ }</code></button>
+      ${imageButton}
+      <button type="button" data-qa-format="codeblock" data-qa-format-target="${targetId}" title="${t('formatCodeBlock')}" aria-label="${t('formatCodeBlock')}">&lt;/&gt;</button>
+      <button type="button" data-qa-format="latex" data-qa-format-target="${targetId}" title="${t('formatLatex')}" aria-label="${t('formatLatex')}">∑</button>
+      <span class="qa-toolbar-separator" aria-hidden="true"></span>
+      <button type="button" data-qa-format="numbered" data-qa-format-target="${targetId}" title="${t('formatNumbered')}" aria-label="${t('formatNumbered')}">1.</button>
+      <button type="button" data-qa-format="list" data-qa-format-target="${targetId}" title="${t('formatList')}" aria-label="${t('formatList')}">•</button>
+      <button type="button" data-qa-format="hr" data-qa-format-target="${targetId}" title="${t('formatHr')}" aria-label="${t('formatHr')}">—</button>
+      <span class="qa-toolbar-separator" aria-hidden="true"></span>
+      <button type="button" data-qa-undo data-qa-format-target="${targetId}" title="${t('formatUndo')}" aria-label="${t('formatUndo')}">↶</button>
+      <button type="button" data-qa-redo data-qa-format-target="${targetId}" title="${t('formatRedo')}" aria-label="${t('formatRedo')}">↷</button>
     </div>`;
   }
 
@@ -425,9 +438,8 @@ export function initQAUI({ container, api, auth, showToast, onDeepLink = () => {
         <p class="help-text">${t('bodyHint')}</p>
         <label class="qa-field"><span>${t('questionTitleLabel')} *</span><input id="qa-ask-title" maxlength="200" placeholder="${t('questionTitlePlaceholder')}"></label>
         <label class="qa-field"><span>${t('questionBodyLabel')} *</span></label>
-        ${formatButtons()}
+        ${formatButtons('qa-ask-body', 'question')}
         <textarea id="qa-ask-body" rows="12" maxlength="8000"></textarea>
-        <p class="help-text">${t('formattingHint')}</p>
         <label class="qa-field"><span>${t('attachments')}</span><input type="file" data-attachment-input="question" accept="${ATTACHMENT_ACCEPT}" multiple><small class="help-text">${t('attachmentsHint')}</small></label>
         <div class="qa-pending-list" data-attachment-list="question"></div>
         <label class="qa-field"><span>${t('questionTagsLabel')}</span><input id="qa-ask-tags" maxlength="200" placeholder="овр, растворы"></label>
@@ -450,7 +462,7 @@ export function initQAUI({ container, api, auth, showToast, onDeepLink = () => {
       <h2>${t('editQuestion')}</h2>
       <label class="qa-field"><span>${t('questionTitleLabel')}</span><input id="qa-edit-title" maxlength="200" value="${escapeHtml(question.title)}"></label>
       <label class="qa-field"><span>${t('questionBodyLabel')}</span></label>
-      ${formatButtons()}
+      ${formatButtons('qa-edit-body')}
       <textarea id="qa-edit-body" rows="10" maxlength="8000">${escapeHtml(question.body)}</textarea>
       <label class="qa-field"><span>${t('questionTagsLabel')}</span><input id="qa-edit-tags" maxlength="200" value="${escapeHtml((question.tags || []).join(', '))}"></label>
       <label class="qa-field"><span>${t('changeReason')}</span><input id="qa-edit-reason" maxlength="1000" placeholder="${t('changeReasonHint')}"></label>
@@ -463,7 +475,7 @@ export function initQAUI({ container, api, auth, showToast, onDeepLink = () => {
     $('#qa-content').innerHTML = `<section class="card qa-ask-main">
       <button type="button" class="text-button" data-qa-back>← ${t('backToQuestions')}</button>
       <h2>${t('editAnswer')}</h2>
-      ${formatButtons()}
+      ${formatButtons('qa-edit-answer-body')}
       <textarea id="qa-edit-answer-body" rows="10" maxlength="8000">${escapeHtml(answer.body)}</textarea>
       <label class="qa-field"><span>${t('changeReason')}</span><input id="qa-edit-answer-reason" maxlength="1000" placeholder="${t('changeReasonHint')}"></label>
       <div class="qa-form-actions"><button type="button" class="button ghost" data-qa-back>${t('cancel')}</button><button type="button" class="button primary" data-qa-save-answer="${answer.id}">${t('save')}</button></div>
@@ -768,17 +780,46 @@ export function initQAUI({ container, api, auth, showToast, onDeepLink = () => {
     });
   }
 
-  function applyFormat(format) {
-    const textarea = $('#qa-ask-body') || $('#qa-edit-body') || $('#qa-edit-answer-body');
+  function applyFormat(format, targetId = '') {
+    const textarea = (targetId && document.getElementById(targetId))
+      || $('#qa-ask-body') || $('#qa-answer-text') || $('#qa-edit-body') || $('#qa-edit-answer-body');
     if (!textarea) return;
-    const [before, after] = FORMATS[format] || ['', ''];
+    if (format === 'undo' || format === 'redo') {
+      textarea.focus();
+      try { document.execCommand(format); } catch { /* нативный undo недоступен */ }
+      return;
+    }
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
     const selected = textarea.value.slice(start, end);
-    textarea.value = textarea.value.slice(0, start) + before + selected + after + textarea.value.slice(end);
+    if (format === 'link') {
+      const label = selected || 'текст';
+      const insertion = `[${label}](https://)`;
+      textarea.setRangeText(insertion, start, end, 'end');
+      const urlStart = start + label.length + 3;
+      textarea.setSelectionRange(urlStart, urlStart + 8);
+    } else if (format === 'codeblock') {
+      const insertion = `\n\`\`\`\n${selected}\n\`\`\`\n`;
+      textarea.setRangeText(insertion, start, end, 'end');
+      textarea.setSelectionRange(start + 5, start + 5 + selected.length);
+    } else if (format === 'hr') {
+      textarea.setRangeText('\n---\n', start, end, 'end');
+    } else if (['quote', 'list', 'numbered'].includes(format)) {
+      const lineStart = textarea.value.lastIndexOf('\n', Math.max(0, start - 1)) + 1;
+      const lineEnd = textarea.value.indexOf('\n', end);
+      const endIndex = lineEnd < 0 ? textarea.value.length : lineEnd;
+      const block = textarea.value.slice(lineStart, endIndex) || '';
+      const prefix = format === 'quote' ? '> ' : format === 'numbered' ? '1. ' : '- ';
+      const lines = block.split('\n').map((line) => `${prefix}${line}`).join('\n');
+      textarea.setRangeText(lines, lineStart, endIndex, 'end');
+      textarea.setSelectionRange(lineStart, lineStart + lines.length);
+    } else {
+      const [before, after] = FORMATS[format] || ['', ''];
+      textarea.setRangeText(`${before}${selected}${after}`, start, end, 'end');
+      textarea.setSelectionRange(start + before.length, start + before.length + selected.length);
+    }
     textarea.focus();
-    textarea.selectionStart = start + before.length;
-    textarea.selectionEnd = start + before.length + selected.length;
+    textarea.dispatchEvent(new Event('input', { bubbles: true }));
   }
 
   function addSuggestedTag(tag) {
@@ -930,7 +971,17 @@ export function initQAUI({ container, api, auth, showToast, onDeepLink = () => {
     const deleteAnswerButton = event.target.closest('[data-qa-delete-answer]');
     if (deleteAnswerButton) { deleteAnswer(deleteAnswerButton.dataset.qaDeleteAnswer); return; }
     const formatButton = event.target.closest('[data-qa-format]');
-    if (formatButton) { applyFormat(formatButton.dataset.qaFormat); return; }
+    if (formatButton) { applyFormat(formatButton.dataset.qaFormat, formatButton.dataset.qaFormatTarget); return; }
+    const attachmentTrigger = event.target.closest('[data-qa-attachment-trigger]');
+    if (attachmentTrigger) {
+      const input = container.querySelector(`[data-attachment-input="${attachmentTrigger.dataset.qaAttachmentTrigger}"]`);
+      input?.click();
+      return;
+    }
+    const undoButton = event.target.closest('[data-qa-undo]');
+    if (undoButton) { applyFormat('undo', undoButton.dataset.qaFormatTarget); return; }
+    const redoButton = event.target.closest('[data-qa-redo]');
+    if (redoButton) { applyFormat('redo', redoButton.dataset.qaFormatTarget); return; }
     const publish = event.target.closest('[data-qa-publish]');
     if (publish) { publishQuestion(); return; }
     const saveQuestion = event.target.closest('[data-qa-save-question]');

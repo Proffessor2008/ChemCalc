@@ -109,7 +109,7 @@ test('детальная карточка: кнопка «Назад», дейс
   const bodies = ['tagChips', 'authorCard', 'commentList', 'voteMarkup', 'renderDetail'].map(extractFunction).join('\n');
   const helpers = `${extractConst('countLabel')}\n${extractConst('unitLabel')}`;
   const container = { innerHTML: '' };
-  const factory = new Function('t', 'escapeHtml', 'formatDate', 'formatTime', 'user', 'moderator', 'state', 'renderMarkdown', 'attachmentsMarkup', 'ATTACHMENT_ACCEPT', 'renderPendingAttachments', 'editsMarkup', '$', `
+  const factory = new Function('t', 'escapeHtml', 'formatDate', 'formatTime', 'user', 'moderator', 'state', 'renderMarkdown', 'attachmentsMarkup', 'ATTACHMENT_ACCEPT', 'renderPendingAttachments', 'formatButtons', 'editsMarkup', '$', `
     ${helpers}
     ${bodies}
     return renderDetail;
@@ -143,6 +143,7 @@ test('детальная карточка: кнопка «Назад», дейс
     () => '',
     'image/png',
     () => {},
+    () => '',
     () => '',
     () => container
   );
