@@ -101,7 +101,16 @@ function metaParagraph(label, value) {
   return `<w:p><w:pPr><w:pStyle w:val="Meta"/></w:pPr><w:r><w:rPr><w:b/></w:rPr><w:t xml:space="preserve">${xml(label)}: </w:t></w:r><w:r><w:t xml:space="preserve">${xml(value)}</w:t></w:r></w:p>`;
 }
 
-function columnWidths(rows, columns, contentWidth) {
+function columnWidths(rows, columns, contentWidth, compact = false) {
+  if (compact && columns > 8) {
+    const widths = Array.from({ length: columns }, (_, index) => index === 0 ? 1000 : 360);
+    const total = widths.reduce((sum, width) => sum + width, 0);
+    if (total > contentWidth) {
+      const scale = contentWidth / total;
+      return widths.map((width) => Math.max(1, Math.round(width * scale)));
+    }
+    return widths;
+  }
   const weights = Array.from({ length: columns }, (_, column) => {
     const lengths = rows.map((row) => String(row[column] ?? '').length);
     return Math.max(6, Math.min(44, Math.max(...lengths, 1)));
@@ -113,19 +122,30 @@ function columnWidths(rows, columns, contentWidth) {
   return widths;
 }
 
+function solubilityColor(value) {
+  const normalized = String(value ?? '').trim().toUpperCase();
+  if (normalized === 'Р' || normalized === 'P') return '117A4B';
+  if (normalized === 'М' || normalized === 'M') return 'A86400';
+  if (normalized === 'Н' || normalized === 'H') return 'B83227';
+  if (normalized === '?' || normalized === '—' || normalized === '–' || normalized === '-') return '81918E';
+  return null;
+}
+
 function tableBlock(headers, rows, contentWidth, options = {}) {
   const columns = Math.max(headers.length, ...rows.map((row) => row.length));
   const normalizedHeaders = Array.from({ length: columns }, (_, index) => headers[index] ?? '');
   const normalizedRows = rows.map((row) => Array.from({ length: columns }, (_, index) => row[index] ?? ''));
   if (!normalizedRows.length) return '';
-  const widths = columnWidths([normalizedHeaders, ...normalizedRows], columns, contentWidth);
+  const widths = columnWidths([normalizedHeaders, ...normalizedRows], columns, contentWidth, options.ionMatrix);
+  const tableWidth = widths.reduce((sum, width) => sum + width, 0);
   const border = (side) => `<w:${side} w:val="single" w:sz="4" w:space="0" w:color="C9D6D3"/>`;
   const cellMargins = options.ionMatrix ? '<w:tblCellMar><w:top w:w="0" w:type="dxa"/><w:left w:w="30" w:type="dxa"/><w:bottom w:w="0" w:type="dxa"/><w:right w:w="30" w:type="dxa"/></w:tblCellMar>' : '<w:tblCellMar><w:top w:w="50" w:type="dxa"/><w:left w:w="80" w:type="dxa"/><w:bottom w:w="50" w:type="dxa"/><w:right w:w="80" w:type="dxa"/></w:tblCellMar>';
-  const tblPr = `<w:tblPr><w:tblW w:w="${contentWidth}" w:type="dxa"/><w:tblBorders>${border('top')}${border('left')}${border('bottom')}${border('right')}${border('insideH')}${border('insideV')}</w:tblBorders><w:tblLayout w:type="fixed"/>${cellMargins}</w:tblPr>`;
+  const tblPr = `<w:tblPr><w:tblW w:w="${tableWidth}" w:type="dxa"/>${options.ionMatrix ? '<w:jc w:val="center"/>' : ''}<w:tblBorders>${border('top')}${border('left')}${border('bottom')}${border('right')}${border('insideH')}${border('insideV')}</w:tblBorders><w:tblLayout w:type="fixed"/>${cellMargins}</w:tblPr>`;
   const grid = `<w:tblGrid>${widths.map((width) => `<w:gridCol w:w="${width}"/>`).join('')}</w:tblGrid>`;
   const row = (cells, header) => `<w:tr><w:trPr><w:cantSplit/>${header && options.ionMatrix ? '<w:trHeight w:val="900" w:hRule="atLeast"/>' : ''}${header ? '<w:tblHeader/>' : ''}</w:trPr>${cells.map((cell, index) => {
     const direction = header && options.ionMatrix && index > 0 ? '<w:textDirection w:val="btLr"/><w:vAlign w:val="bottom"/>' : '';
-    return `<w:tc><w:tcPr><w:tcW w:w="${widths[index]}" w:type="dxa"/>${direction}${header ? '<w:shd w:val="clear" w:color="auto" w:fill="E7F0EE"/>' : ''}</w:tcPr>${paragraph(cell, options.ionMatrix ? 'TableTextCompact' : 'TableText', { bold: header })}</w:tc>`;
+    const statusColor = !header && options.ionMatrix && index > 0 ? solubilityColor(cell) : null;
+    return `<w:tc><w:tcPr><w:tcW w:w="${widths[index]}" w:type="dxa"/>${direction}${header ? '<w:shd w:val="clear" w:color="auto" w:fill="E7F0EE"/>' : ''}</w:tcPr>${paragraph(cell, options.ionMatrix ? 'TableTextCompact' : 'TableText', { bold: header || Boolean(statusColor), color: statusColor })}</w:tc>`;
   }).join('')}</w:tr>`;
   return `<w:tbl>${tblPr}${grid}${row(normalizedHeaders, true)}${normalizedRows.map((cells) => row(cells, false)).join('')}</w:tbl>${options.ionMatrix ? '' : paragraph('', 'Normal')}`;
 }

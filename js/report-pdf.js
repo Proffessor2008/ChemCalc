@@ -25,12 +25,17 @@ const REPORT_CSS = `
 .report-page th, .report-page td { border: 1px solid #c9d6d3; padding: 4px 5px; text-align: left; vertical-align: top; overflow-wrap: anywhere; white-space: normal; position: static; font-size: 10px; line-height: 1.3; }
 .report-page th { background: #e7f0ee; color: #174f49; font-weight: 700; letter-spacing: 0; }
 .report-page .report-table-wide th, .report-page .report-table-wide td { font-size: 8px; padding: 2px 3px; }
-.report-page .report-ion-table { margin: 2px 0 4px; table-layout: fixed; }
+.report-page .report-ion-table { margin: 2px auto 4px; table-layout: fixed; }
 .report-page .report-ion-table caption { caption-side: top; padding: 0 0 4px; color: #0d6b62; font-size: 10px; font-weight: 700; text-align: left; }
 .report-page .report-ion-table th { height: auto; padding: 0 1px; vertical-align: bottom; white-space: nowrap; overflow-wrap: normal; word-break: keep-all; font-size: 7.5px; }
 .report-page .report-ion-table td { padding: 1px; text-align: center; white-space: nowrap; font-size: 7px; line-height: 1.1; }
 .report-page .report-ion-table td:first-child { text-align: left; }
 .report-page .report-ion-heading { display: inline-block; writing-mode: vertical-rl; transform: rotate(180deg); white-space: nowrap; font-size: 7.5px; line-height: 1; }
+.report-page .report-ion-table td.sol-p { color: #117a4b; font-weight: 700; }
+.report-page .report-ion-table td.sol-m { color: #a86400; font-weight: 700; }
+.report-page .report-ion-table td.sol-h { color: #b83227; font-weight: 700; }
+.report-page .report-ion-table td.sol-unknown { color: #81918e; }
+.report-page .report-ion-table td.sol-dash { color: #81918e; font-weight: 600; }
 .report-page .report-footer { position: absolute; left: 48px; right: 48px; bottom: 16px; display: flex; justify-content: space-between; gap: 12px; padding-top: 5px; border-top: 1px solid #d8e2e0; color: #6b7a78; font-size: 8px; }
 .report-page .report-footer span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 `;
@@ -122,11 +127,24 @@ function createPage(host, dims) {
   return { page, body, footer };
 }
 
+function solubilityClass(value) {
+  const normalized = String(value ?? '').trim().toUpperCase();
+  if (normalized === 'Р' || normalized === 'P') return 'sol-p';
+  if (normalized === 'М' || normalized === 'M') return 'sol-m';
+  if (normalized === 'Н' || normalized === 'H') return 'sol-h';
+  if (normalized === '?') return 'sol-unknown';
+  if (normalized === '—' || normalized === '–' || normalized === '-' || normalized === '') return 'sol-dash';
+  return '';
+}
+
 function createTable(headers, rows, options = {}) {
   const table = createElement('table');
   if (headers.length > 8) table.classList.add('report-table-wide');
   const ionTable = Boolean(options.ionMatrix) || String(headers[0] || '').includes('Катион');
-  if (ionTable) table.classList.add('report-ion-table', 'report-ion-compact');
+  if (ionTable) {
+    table.classList.add('report-ion-table', 'report-ion-compact');
+    table.style.width = `${Math.min(100, Math.max(55, headers.length * 3.1))}%`;
+  }
   if (options.caption) table.append(createElement('caption', 'report-table-caption', options.caption));
   const header = createElement('thead');
   const headerRow = createElement('tr');
@@ -228,7 +246,11 @@ export function paginateReport(report) {
         append(table.table);
         for (const row of block.rows || []) {
           const tr = createElement('tr');
-          for (const cell of row) tr.append(createElement('td', '', cell));
+          row.forEach((cell, index) => {
+            const td = createElement('td', '', cell);
+            if (block.ionMatrix && index > 0) td.classList.add(solubilityClass(cell));
+            tr.append(td);
+          });
           table.body.append(tr);
           if (current.body.scrollHeight > maxBodyHeight + 1 && table.body.rows.length > 1) {
             table.body.removeChild(tr);
