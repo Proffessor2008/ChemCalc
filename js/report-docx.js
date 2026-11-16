@@ -113,17 +113,21 @@ function columnWidths(rows, columns, contentWidth) {
   return widths;
 }
 
-function tableBlock(headers, rows, contentWidth) {
+function tableBlock(headers, rows, contentWidth, options = {}) {
   const columns = Math.max(headers.length, ...rows.map((row) => row.length));
   const normalizedHeaders = Array.from({ length: columns }, (_, index) => headers[index] ?? '');
   const normalizedRows = rows.map((row) => Array.from({ length: columns }, (_, index) => row[index] ?? ''));
   if (!normalizedRows.length) return '';
   const widths = columnWidths([normalizedHeaders, ...normalizedRows], columns, contentWidth);
   const border = (side) => `<w:${side} w:val="single" w:sz="4" w:space="0" w:color="C9D6D3"/>`;
-  const tblPr = `<w:tblPr><w:tblW w:w="${contentWidth}" w:type="dxa"/><w:tblBorders>${border('top')}${border('left')}${border('bottom')}${border('right')}${border('insideH')}${border('insideV')}</w:tblBorders><w:tblLayout w:type="fixed"/><w:tblCellMar><w:top w:w="50" w:type="dxa"/><w:left w:w="80" w:type="dxa"/><w:bottom w:w="50" w:type="dxa"/><w:right w:w="80" w:type="dxa"/></w:tblCellMar></w:tblPr>`;
+  const cellMargins = options.ionMatrix ? '<w:tblCellMar><w:top w:w="0" w:type="dxa"/><w:left w:w="30" w:type="dxa"/><w:bottom w:w="0" w:type="dxa"/><w:right w:w="30" w:type="dxa"/></w:tblCellMar>' : '<w:tblCellMar><w:top w:w="50" w:type="dxa"/><w:left w:w="80" w:type="dxa"/><w:bottom w:w="50" w:type="dxa"/><w:right w:w="80" w:type="dxa"/></w:tblCellMar>';
+  const tblPr = `<w:tblPr><w:tblW w:w="${contentWidth}" w:type="dxa"/><w:tblBorders>${border('top')}${border('left')}${border('bottom')}${border('right')}${border('insideH')}${border('insideV')}</w:tblBorders><w:tblLayout w:type="fixed"/>${cellMargins}</w:tblPr>`;
   const grid = `<w:tblGrid>${widths.map((width) => `<w:gridCol w:w="${width}"/>`).join('')}</w:tblGrid>`;
-  const row = (cells, header) => `<w:tr><w:trPr><w:cantSplit/>${header ? '<w:tblHeader/>' : ''}</w:trPr>${cells.map((cell, index) => `<w:tc><w:tcPr><w:tcW w:w="${widths[index]}" w:type="dxa"/>${header ? '<w:shd w:val="clear" w:color="auto" w:fill="E7F0EE"/>' : ''}</w:tcPr>${paragraph(cell, 'TableText', { bold: header })}</w:tc>`).join('')}</w:tr>`;
-  return `<w:tbl>${tblPr}${grid}${row(normalizedHeaders, true)}${normalizedRows.map((cells) => row(cells, false)).join('')}</w:tbl>${paragraph('', 'Normal')}`;
+  const row = (cells, header) => `<w:tr><w:trPr><w:cantSplit/>${header && options.ionMatrix ? '<w:trHeight w:val="900" w:hRule="atLeast"/>' : ''}${header ? '<w:tblHeader/>' : ''}</w:trPr>${cells.map((cell, index) => {
+    const direction = header && options.ionMatrix && index > 0 ? '<w:textDirection w:val="btLr"/><w:vAlign w:val="bottom"/>' : '';
+    return `<w:tc><w:tcPr><w:tcW w:w="${widths[index]}" w:type="dxa"/>${direction}${header ? '<w:shd w:val="clear" w:color="auto" w:fill="E7F0EE"/>' : ''}</w:tcPr>${paragraph(cell, options.ionMatrix ? 'TableTextCompact' : 'TableText', { bold: header })}</w:tc>`;
+  }).join('')}</w:tr>`;
+  return `<w:tbl>${tblPr}${grid}${row(normalizedHeaders, true)}${normalizedRows.map((cells) => row(cells, false)).join('')}</w:tbl>${options.ionMatrix ? '' : paragraph('', 'Normal')}`;
 }
 
 function stylesXml() {
@@ -139,6 +143,7 @@ ${style('Heading2', 'Heading 2', 'Normal', '<w:pPr><w:keepNext/><w:spacing w:bef
 ${style('Equation', 'Equation', 'Normal', '<w:pPr><w:spacing w:before="120" w:after="120"/><w:jc w:val="center"/></w:pPr><w:rPr><w:rFonts w:ascii="Cambria" w:hAnsi="Cambria" w:eastAsia="Cambria" w:cs="Cambria"/><w:color w:val="0A4A44"/><w:sz w:val="28"/><w:szCs w:val="28"/></w:rPr>')}
 ${style('Meta', 'Meta', 'Normal', '<w:pPr><w:spacing w:after="40"/></w:pPr><w:rPr><w:color w:val="5B6B69"/><w:sz w:val="18"/><w:szCs w:val="18"/></w:rPr>')}
 ${style('TableText', 'Table Text', 'Normal', '<w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/></w:pPr><w:rPr><w:sz w:val="18"/><w:szCs w:val="18"/></w:rPr>')}
+${style('TableTextCompact', 'Table Text Compact', 'Normal', '<w:pPr><w:spacing w:after="0" w:line="200" w:lineRule="auto"/></w:pPr><w:rPr><w:sz w:val="12"/><w:szCs w:val="12"/></w:rPr>')}
 ${style('ListParagraph', 'List Paragraph', 'Normal', '<w:pPr><w:ind w:left="420" w:hanging="220"/><w:spacing w:after="40"/></w:pPr><w:rPr><w:sz w:val="22"/><w:szCs w:val="22"/></w:rPr>')}
 </w:styles>`;
 }
@@ -158,7 +163,9 @@ function sectionXml(section, contentWidth) {
         blocks.push(paragraph(`${prefix}${item}`, 'ListParagraph'));
       });
     } else if (block.type === 'table') {
-      blocks.push(tableBlock(block.headers || [], block.rows || [], contentWidth));
+      if (block.forcePageBreak && blocks.length) blocks.push('<w:p><w:r><w:br w:type="page"/></w:r></w:p>');
+      if (block.caption) blocks.push(paragraph(block.caption, 'Heading2'));
+      blocks.push(tableBlock(block.headers || [], block.rows || [], contentWidth, { ionMatrix: block.ionMatrix }));
     }
   }
   return blocks.join('');

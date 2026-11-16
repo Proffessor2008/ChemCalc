@@ -172,7 +172,7 @@ export function splitWideTable(block, maxColumns = 6) {
   return chunks;
 }
 
-export function buildReferenceReport({ root, id, label, source = '', filter = '' }) {
+export function buildReferenceReport({ root, id, label, source = '', filter = '', format = 'pdf' }) {
   const cards = [...root.querySelectorAll(':scope > section.card')];
   const sections = [];
   const tableBlock = tableToReportBlock;
@@ -191,9 +191,15 @@ export function buildReferenceReport({ root, id, label, source = '', filter = ''
       const block = tableBlock(node);
       if (block) {
         if (id === 'solubility' && block.headers.length > 8) {
-          const chunks = splitWideTable(block, 6);
+          const twoPage = format === 'pdf' || format === 'docx';
+          const chunkSize = twoPage ? Math.ceil((block.headers.length - 1) / 2) : 6;
+          const chunks = splitWideTable(block, chunkSize).map((chunk) => ({
+            ...chunk,
+            ionMatrix: twoPage
+          }));
           chunks.forEach((chunk, index) => {
-            blocks.push({ type: 'paragraph', text: `Матрица растворимости · часть ${index + 1} из ${chunks.length}`, variant: 'subheading' });
+            chunk.caption = `Матрица растворимости · часть ${index + 1} из ${chunks.length}`;
+            if (twoPage) chunk.forcePageBreak = index > 0;
             blocks.push(chunk);
           });
         } else {

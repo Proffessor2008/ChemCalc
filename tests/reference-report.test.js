@@ -127,3 +127,13 @@ test('wide solubility matrix is split without losing columns', () => {
   assert.deepEqual(chunks[1].headers, ['Cation', 'A7', 'A8']);
   assert.deepEqual(chunks.map((chunk) => chunk.rows[0].slice(1)).flat(), rows[0].slice(1));
 });
+
+test('PDF solubility matrix uses two balanced pages', () => {
+  const headers = ['Катион', ...Array.from({ length: 46 }, (_, index) => `A${index + 1}`)];
+  const rows = [['Na', ...Array.from({ length: 46 }, (_, index) => `P${index + 1}`)]];
+  const chunks = splitWideTable({ type: 'table', headers, rows }, Math.ceil((headers.length - 1) / 2));
+  assert.equal(chunks.length, 2);
+  assert.equal(chunks[0].headers.length, 24);
+  assert.equal(chunks[1].headers.length, 24);
+  assert.deepEqual(chunks.map((chunk) => chunk.rows[0].slice(1)).flat(), rows[0].slice(1));
+});

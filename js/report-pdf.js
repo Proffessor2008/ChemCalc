@@ -25,8 +25,12 @@ const REPORT_CSS = `
 .report-page th, .report-page td { border: 1px solid #c9d6d3; padding: 4px 5px; text-align: left; vertical-align: top; overflow-wrap: anywhere; white-space: normal; position: static; font-size: 10px; line-height: 1.3; }
 .report-page th { background: #e7f0ee; color: #174f49; font-weight: 700; letter-spacing: 0; }
 .report-page .report-table-wide th, .report-page .report-table-wide td { font-size: 8px; padding: 2px 3px; }
-.report-page .report-ion-table th { white-space: nowrap; overflow-wrap: normal; word-break: keep-all; font-size: 8px; padding: 2px 2px; }
-.report-page .report-ion-table td:first-child { white-space: nowrap; }
+.report-page .report-ion-table { margin: 2px 0 4px; table-layout: fixed; }
+.report-page .report-ion-table caption { caption-side: top; padding: 0 0 4px; color: #0d6b62; font-size: 10px; font-weight: 700; text-align: left; }
+.report-page .report-ion-table th { height: auto; padding: 0 1px; vertical-align: bottom; white-space: nowrap; overflow-wrap: normal; word-break: keep-all; font-size: 7.5px; }
+.report-page .report-ion-table td { padding: 1px; text-align: center; white-space: nowrap; font-size: 7px; line-height: 1.1; }
+.report-page .report-ion-table td:first-child { text-align: left; }
+.report-page .report-ion-heading { display: inline-block; writing-mode: vertical-rl; transform: rotate(180deg); white-space: nowrap; font-size: 7.5px; line-height: 1; }
 .report-page .report-footer { position: absolute; left: 48px; right: 48px; bottom: 16px; display: flex; justify-content: space-between; gap: 12px; padding-top: 5px; border-top: 1px solid #d8e2e0; color: #6b7a78; font-size: 8px; }
 .report-page .report-footer span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 `;
@@ -118,10 +122,12 @@ function createPage(host, dims) {
   return { page, body, footer };
 }
 
-function createTable(headers, rows) {
+function createTable(headers, rows, options = {}) {
   const table = createElement('table');
   if (headers.length > 8) table.classList.add('report-table-wide');
-  if (String(headers[0] || '').includes('Катион')) table.classList.add('report-ion-table');
+  const ionTable = Boolean(options.ionMatrix) || String(headers[0] || '').includes('Катион');
+  if (ionTable) table.classList.add('report-ion-table', 'report-ion-compact');
+  if (options.caption) table.append(createElement('caption', 'report-table-caption', options.caption));
   const header = createElement('thead');
   const headerRow = createElement('tr');
   const weights = headers.map((item, column) => {
@@ -131,7 +137,12 @@ function createTable(headers, rows) {
   const total = weights.reduce((sum, value) => sum + value, 0) || 1;
   const percentages = weights.map((value) => value / total * 100);
   headers.forEach((text, index) => {
-    const cell = createElement('th', '', text);
+    const cell = createElement('th');
+    if (ionTable && index > 0) {
+      cell.append(createElement('span', 'report-ion-heading', text));
+    } else {
+      cell.textContent = text;
+    }
     cell.style.width = `${percentages[index].toFixed(2)}%`;
     headerRow.append(cell);
   });
@@ -212,7 +223,8 @@ export function paginateReport(report) {
           }
         }
       } else if (block.type === 'table') {
-        let table = createTable(block.headers || [], block.rows || []);
+        if (block.forcePageBreak && current.body.children.length) current = startPage();
+        let table = createTable(block.headers || [], block.rows || [], block);
         append(table.table);
         for (const row of block.rows || []) {
           const tr = createElement('tr');
@@ -221,7 +233,7 @@ export function paginateReport(report) {
           if (current.body.scrollHeight > maxBodyHeight + 1 && table.body.rows.length > 1) {
             table.body.removeChild(tr);
             current = startPage();
-            table = createTable(block.headers || [], block.rows || []);
+            table = createTable(block.headers || [], block.rows || [], block);
             current.body.append(table.table);
             table.body.append(tr);
           }

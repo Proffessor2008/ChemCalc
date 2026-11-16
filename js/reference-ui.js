@@ -320,7 +320,8 @@ export function initReferenceUI({ storage, onOpenFormula, onOpenEquation, getCur
         id: current,
         label: definition?.label || '',
         source: currentSource(current),
-        filter: $('#reference-search').value.trim()
+        filter: $('#reference-search').value.trim(),
+        format
       });
       await runReportExport(format, report, { button, showToast });
     } catch (error) {
