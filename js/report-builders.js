@@ -190,7 +190,7 @@ export function buildReferenceReport({ root, id, label, source = '', filter = ''
     if (tag === 'table') {
       const block = tableBlock(node);
       if (block) {
-        if (id === 'solubility' && String(block.headers[0] || '').includes('Катион')) {
+        if (id === 'solubility' && block.headers.length > 8) {
           const chunks = splitWideTable(block, 6);
           chunks.forEach((chunk, index) => {
             blocks.push({ type: 'paragraph', text: `Матрица растворимости · часть ${index + 1} из ${chunks.length}`, variant: 'subheading' });

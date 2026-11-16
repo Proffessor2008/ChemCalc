@@ -35,6 +35,7 @@ export function initOnboarding({ storage, navigate, setMode }) {
     let index = 0;
     let highlighted = null;
     let frame = 0;
+    document.querySelectorAll('.tour-target').forEach((element) => element.classList.remove('tour-target'));
     document.querySelectorAll('.tour-overlay, .tour-card').forEach((element) => element.remove());
     const stepEl = card.querySelector('.tour-step');
     const titleEl = card.querySelector('.tour-title');
