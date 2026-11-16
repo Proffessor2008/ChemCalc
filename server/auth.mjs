@@ -47,6 +47,7 @@ export async function createSession(db, userId, secure = process.env.NODE_ENV ==
   const expires = new Date(now.getTime() + SESSION_TTL_MS);
   await db.prepare('INSERT INTO sessions(token_hash,user_id,csrf_token,created_at,expires_at,last_seen_at) VALUES(?,?,?,?,?,?)')
     .run(digest(token), userId, csrf, now.toISOString(), expires.toISOString(), now.toISOString());
+  await db.prepare('DELETE FROM sessions WHERE expires_at <= ?').run(now.toISOString());
   return {
     cookie: sessionCookie(token, secure),
     csrfToken: csrf,

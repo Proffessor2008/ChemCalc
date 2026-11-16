@@ -12,6 +12,7 @@ import { telegramDisplayName, telegramLogin, verifyTelegramInitData } from './te
 
 const JSON_LIMIT = 250_000;
 const attempts = new Map();
+let attemptsLastPruned = 0;
 
 function error(status, code, message, details) {
   throw Object.assign(new Error(message), { status, code, details });
@@ -35,6 +36,12 @@ async function body(request, limit = JSON_LIMIT) {
 function rateLimit(request) {
   const key = request.socket.remoteAddress || 'local';
   const now = Date.now();
+  if (now - attemptsLastPruned > 300000) {
+    attemptsLastPruned = now;
+    for (const [address, times] of attempts) {
+      if (!times.some((time) => now - time < 900000)) attempts.delete(address);
+    }
+  }
   const recent = (attempts.get(key) || []).filter((time) => now - time < 900000);
   if (recent.length >= 60) error(429, 'rate_limit', 'Слишком много попыток входа. Повторите позже.');
   recent.push(now);
@@ -79,6 +86,7 @@ async function proposalView(db, row, viewerId, history = null, votes = null) {
 export async function createCommunityServer({ dbPath, god, staticHandler, dbBackend = 'sqlite', connectionString, pgClient, telegramBotToken = '', telegramWebhookSecret = '', publicUrl = '' }) {
   const db = dbBackend === 'postgres' ? await openPostgresDatabase(connectionString, { client: pgClient }) : openCommunityDatabase(dbPath);
   const events = new EventEmitter();
+  events.setMaxListeners(0);
   const clients = new Set();
   const tempFiles = new Map();
   let bootstrap = null;
@@ -326,11 +334,25 @@ export async function createCommunityServer({ dbPath, god, staticHandler, dbBack
         response.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' });
         response.write('retry: 3000\n\n');
         clients.add(response);
-        const timer = setInterval(() => response.write(': heartbeat\n\n'), 15000);
+        const timer = setInterval(() => {
+          if (!response.writableEnded) response.write(': heartbeat\n\n');
+        }, 15000);
         timer.unref();
-        const update = (event) => response.write(`event: community-update\ndata: ${JSON.stringify(event)}\n\n`);
+        const update = (event) => {
+          if (!response.writableEnded) response.write(`event: community-update\ndata: ${JSON.stringify(event)}\n\n`);
+        };
         events.on('update', update);
-        request.on('close', () => { clearInterval(timer); events.off('update', update); clients.delete(response); });
+        let closed = false;
+        const cleanup = () => {
+          if (closed) return;
+          closed = true;
+          clearInterval(timer);
+          events.off('update', update);
+          clients.delete(response);
+        };
+        request.once('close', cleanup);
+        response.once('close', cleanup);
+        response.once('error', cleanup);
         return;
       }
       if (path === '/api/health' && request.method === 'GET') return send(response, 200, { ok: true, database: db.kind || 'sqlite', schemaVersion: 6 });

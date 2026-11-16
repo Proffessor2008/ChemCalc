@@ -119,6 +119,7 @@ export function initCommunityUI({ storage, showToast, onNavigate, getAutoContext
 
   const AUTH_SNAPSHOT_KEY = 'chemcalc-auth-snapshot';
   const AUTH_SNAPSHOT_TTL = 30 * 24 * 60 * 60 * 1000;
+  let lastSnapshotUser = '';
 
   function readAuthSnapshot() {
     try {
@@ -134,11 +135,15 @@ export function initCommunityUI({ storage, showToast, onNavigate, getAutoContext
   function saveAuthSnapshot(account) {
     if (!account?.id) return;
     try {
+      const serialized = JSON.stringify(account);
+      if (serialized === lastSnapshotUser) return;
+      lastSnapshotUser = serialized;
       storage.setItem(AUTH_SNAPSHOT_KEY, JSON.stringify({ user: account, savedAt: Date.now() }));
     } catch { /* локальное хранилище может быть недоступно */ }
   }
 
   function clearAuthSnapshot() {
+    lastSnapshotUser = '';
     try { storage.setItem(AUTH_SNAPSHOT_KEY, ''); } catch { /* игнорируем */ }
   }
 
@@ -308,7 +313,8 @@ export function initCommunityUI({ storage, showToast, onNavigate, getAutoContext
       $('#cabinet-status').textContent = restoring ? t('restoringSession') : t('sessionOffline');
       return;
     }
-    const authSignature = user ? `${user.id}:${user.nickname || user.login}:${user.login}:${user.avatar || ''}:${user.privileges}:${user.privacy || ''}:${user.telegram_linked}:${user.telegram_username}` : '';
+    const avatarSignature = user?.avatar ? `${user.avatar.length}:${user.avatar.slice(-32)}` : '';
+    const authSignature = user ? `${user.id}:${user.nickname || user.login}:${user.login}:${avatarSignature}:${user.privileges}:${user.privacy || ''}:${user.telegram_linked}:${user.telegram_username}` : '';
     if (authSignature !== lastAuthSignature) {
       lastAuthSignature = authSignature;
       qaController?.onAuthChange({ reload: true });
@@ -1343,8 +1349,9 @@ export function initCommunityUI({ storage, showToast, onNavigate, getAutoContext
     return restorePromise;
   }
 
+  let events = null;
   if (typeof EventSource === 'function') {
-    const events = new EventSource('/api/events');
+    events = new EventSource('/api/events');
     events.addEventListener('community-update', (event) => {
       let data = {};
       try { data = JSON.parse(event.data); } catch { /* ignore malformed heartbeat */ }
@@ -1353,7 +1360,13 @@ export function initCommunityUI({ storage, showToast, onNavigate, getAutoContext
     events.onopen = () => { $('#community-status').textContent = ''; };
     events.onerror = () => { $('#community-status').textContent = t('pollingFallback'); };
   }
-  setInterval(() => { if (!document.hidden) refresh(); }, 30000);
+  const refreshInterval = setInterval(() => { if (!document.hidden) refresh(); }, 30000);
+  window.addEventListener('pagehide', (event) => {
+    if (event.persisted) return;
+    clearInterval(refreshInterval);
+    events?.close();
+    clearTimeout(refreshTimer);
+  });
 
   function renderCommunityView() {
     $('#community-proposals-view').hidden = communityView !== 'proposals';

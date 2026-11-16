@@ -1,12 +1,17 @@
 export async function copyText(text) {
   if (navigator.clipboard?.writeText) {
+    let timer;
     try {
       await Promise.race([
         navigator.clipboard.writeText(text),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Таймаут Clipboard API')), 1200))
+        new Promise((_, reject) => {
+          timer = setTimeout(() => reject(new Error('Таймаут Clipboard API')), 1200);
+        })
       ]);
       return;
     } catch {
+    } finally {
+      clearTimeout(timer);
     }
   }
   const textarea = document.createElement('textarea');

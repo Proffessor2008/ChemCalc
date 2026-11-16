@@ -1,15 +1,23 @@
 import { randomUUID } from 'node:crypto';
 
+async function pruneNotifications(db, userId) {
+  await db.prepare(`DELETE FROM notifications WHERE user_id = ? AND id NOT IN (
+    SELECT id FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT 200
+  )`).run(userId, userId);
+}
+
 export async function notifyProposalAuthor(db, proposal, actor, kind, message) {
   if (!proposal?.author_id || proposal.author_id === actor.id) return;
   await db.prepare('INSERT INTO notifications(id,user_id,proposal_id,kind,message,created_at) VALUES(?,?,?,?,?,?)')
     .run(randomUUID(), proposal.author_id, proposal.id, kind, String(message || '').slice(0, 2000), new Date().toISOString());
+  await pruneNotifications(db, proposal.author_id);
 }
 
 export async function notifyUser(db, userId, actorId, kind, message) {
   if (!userId || userId === actorId) return;
   await db.prepare('INSERT INTO notifications(id,user_id,proposal_id,kind,message,created_at) VALUES(?,?,?,?,?,?)')
     .run(randomUUID(), userId, null, kind, String(message || '').slice(0, 2000), new Date().toISOString());
+  await pruneNotifications(db, userId);
 }
 
 export async function notificationsForUser(db, userId) {

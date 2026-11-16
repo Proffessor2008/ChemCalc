@@ -170,8 +170,6 @@ Object.assign(dictionaries.ru, {
 Object.assign(dictionaries.en, {
   elementSearch: 'Search by symbol, name or number', colorMode: 'Colour mode', byCategory: 'By category', byPhase: 'By physical state', byElectronegativity: 'By electronegativity', byRadius: 'By atomic radius', byDensity: 'By density', byDiscovery: 'By discovery year', referenceMode: 'Reference', insertMode: 'Insert', clickHint: 'Select an element to open its reference card.', filters: 'Filters', elementType: 'Type', all: 'All', metals: 'Metals', nonmetals: 'Nonmetals', metalloids: 'Metalloids', group: 'Group', period: 'Period', radioactiveOnly: 'Radioactive only', temperature: 'Temperature'
 });
-Object.assign(dictionaries.ru, { documentation: 'Документация' });
-Object.assign(dictionaries.en, { documentation: 'Documentation' });
 
 Object.assign(dictionaries.ru, {
   latex: 'Копировать LaTeX', copiedLatex: 'LaTeX скопирован', copying: 'Копирование…', predicted: 'Типовое предсказание', ruleSource: 'Источник правила: {source}', reactionType: 'Тип: {type}',
@@ -207,8 +205,6 @@ Object.assign(dictionaries.en, {
   missingThermo: 'No thermodynamic data for the required standard state: {formulas}. Calculation cancelled.', ionicThermoUnavailable: 'Cannot calculate using the net ionic equation: {message}'
 });
 
-Object.assign(dictionaries.ru, { docsSubtitle: 'Руководство, логика вычислений и возможности программы.', openReadme: 'Открыть README' });
-Object.assign(dictionaries.en, { docsSubtitle: 'Guide, calculation logic and application features.', openReadme: 'Open README' });
 
 Object.assign(dictionaries.ru, { nonAqueousIonic: 'Ионные уравнения не составляются для безводных сред.' });
 Object.assign(dictionaries.en, { nonAqueousIonic: 'Ionic equations are not available for non-aqueous media.' });

@@ -479,30 +479,6 @@ select.reference-select-mobile { width: 100%; min-height: 46px; padding: 8px 10p
 .mobile-nav { grid-template-columns: repeat(6, minmax(0, 1fr)); }
 .mobile-nav button { font-size: .52rem; }
 .mobile-nav button > span:last-child { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.documentation-layout { display: grid; gap: 14px; }
-.docs-nav { display: flex; gap: 5px; padding: 10px; overflow-x: auto; box-shadow: none; }
-.docs-nav a { flex: 0 0 auto; min-height: 44px; padding: 10px 12px; border-radius: 8px; color: var(--accent); text-decoration: none; font-size: .75rem; }
-.docs-nav a:hover, .docs-nav a:focus-visible { background: var(--accent-soft); }
-.docs-content { display: grid; gap: 14px; min-width: 0; }
-.docs-section { box-shadow: none; scroll-margin-top: 90px; }
-.docs-section h2 { margin-bottom: 14px; color: var(--accent-strong); }
-.docs-section h3 { color: var(--accent-strong); }
-.docs-section p, .docs-section li { font-size: .86rem; }
-.docs-section a { color: var(--accent); }
-.docs-steps { padding-left: 22px; }
-.docs-steps li { margin: 10px 0; }
-.docs-two-columns { display: grid; gap: 16px; }
-.docs-table th, .docs-table td { white-space: normal; vertical-align: top; min-width: 130px; }
-.docs-table th:first-child { min-width: 110px; }
-.docs-section code { padding: 2px 5px; border-radius: 5px; background: var(--surface-muted); overflow-wrap: anywhere; }
-.docs-section kbd { padding: 2px 6px; border: 1px solid var(--line); border-radius: 5px; background: var(--surface-muted); }
-@media (min-width: 768px) {
-  .docs-two-columns { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-@media (min-width: 1200px) {
-  .documentation-layout { grid-template-columns: 220px minmax(0, 1fr); align-items: start; }
-  .docs-nav { position: sticky; top: 96px; flex-direction: column; overflow: visible; }
-}
 
 @media print {
   body:has(#panel-references:not([hidden])) .app-header, body:has(#panel-references:not([hidden])) .mobile-nav, body:has(#panel-references:not([hidden])) .periodic-fab, .reference-nav, .reference-select-mobile, #reference-print, .reference-toolbar, .tool-card, .periodic-dialog { display: none !important; }

@@ -270,8 +270,14 @@ async function renderPageToJpeg(page, scale = 2) {
     }
   }
   if (!hasInk) throw new Error('PDF page rendered blank');
+  const width = canvas.width;
+  const height = canvas.height;
   const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
-  return { jpeg: base64ToBytes(dataUrl.split(',')[1]), width: canvas.width, height: canvas.height };
+  const jpeg = base64ToBytes(dataUrl.split(',')[1]);
+  canvas.width = 0;
+  canvas.height = 0;
+  image.src = '';
+  return { jpeg, width, height };
 }
 
 export async function buildReportPdf(report, { onProgress } = {}) {

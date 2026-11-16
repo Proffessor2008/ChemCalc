@@ -34,6 +34,8 @@ export function initOnboarding({ storage, navigate, setMode }) {
 
     let index = 0;
     let highlighted = null;
+    let frame = 0;
+    document.querySelectorAll('.tour-overlay, .tour-card').forEach((element) => element.remove());
     const stepEl = card.querySelector('.tour-step');
     const titleEl = card.querySelector('.tour-title');
     const textEl = card.querySelector('.tour-text');
@@ -58,7 +60,9 @@ export function initOnboarding({ storage, navigate, setMode }) {
       if (step.tab) navigate(step.tab);
       if (step.mode) setMode(step.mode);
       clearHighlight();
-      requestAnimationFrame(() => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        if (!card.isConnected) return;
         if (!step.target) return;
         const target = document.querySelector(step.target);
         if (!target) return;
@@ -69,6 +73,7 @@ export function initOnboarding({ storage, navigate, setMode }) {
     };
 
     const finish = () => {
+      cancelAnimationFrame(frame);
       clearHighlight();
       overlay.remove();
       card.remove();

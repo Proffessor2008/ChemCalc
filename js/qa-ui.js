@@ -63,6 +63,10 @@ export function initQAUI({ container, api, auth, showToast, onDeepLink = () => {
   const moderator = () => isModerator(user());
   const $ = (selector) => container.querySelector(selector);
   const messageFor = (error) => (error && error.status === 404 ? t('serverOutdated') : error?.message || '');
+  const MAX_DRAFT_ENTRIES = 100;
+  const trimDrafts = (map) => {
+    while (map.size > MAX_DRAFT_ENTRIES) map.delete(map.keys().next().value);
+  };
   let toolbar = null;
 
   function voteMarkup(type, id, score, viewerVote) {
@@ -81,7 +85,7 @@ export function initQAUI({ container, api, auth, showToast, onDeepLink = () => {
 
   function authorCard(login, reputation, avatar = '') {
     const face = avatar
-      ? `<img src="${escapeHtml(avatar)}" alt="">`
+      ? `<img src="${escapeHtml(avatar)}" alt="" loading="lazy" decoding="async">`
       : escapeHtml(String(login || '?').slice(0, 1).toUpperCase());
     return `<div class="qa-author"><span class="qa-avatar">${face}</span><div><strong>${escapeHtml(login || '')}</strong><small>${t('qaReputation')}: ${Number(reputation) || 0}</small></div></div>`;
   }
@@ -689,6 +693,7 @@ export function initQAUI({ container, api, auth, showToast, onDeepLink = () => {
     if (comment) {
       const target = comment.dataset.qaComment;
       state.openComments.add(target);
+      trimDrafts(state.openComments);
       const form = container.querySelector(`[data-comment-form="${target}"]`);
       if (form) {
         form.hidden = false;
@@ -754,11 +759,13 @@ export function initQAUI({ container, api, auth, showToast, onDeepLink = () => {
     const input = event.target.closest('[data-comment-input]');
     if (input) {
       state.commentDrafts.set(input.dataset.commentInput, input.value);
+    trimDrafts(state.commentDrafts);
       updateCommentHint(input.dataset.commentInput);
       return;
     }
     if (event.target.id === 'qa-answer-text' && state.detail?.question?.id) {
       state.answerDrafts.set(state.detail.question.id, event.target.value);
+    trimDrafts(state.answerDrafts);
     }
   });
 

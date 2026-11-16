@@ -22,14 +22,20 @@ export async function ensureTelegramSdk({ timeout = 2500 } = {}) {
   if (!likelyTelegram) return null;
   sdkPromise = new Promise((resolve) => {
     let settled = false;
-    const finish = () => { if (!settled) { settled = true; resolve(getTelegramWebApp()); } };
+    let timer = null;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      if (timer) clearTimeout(timer);
+      resolve(getTelegramWebApp());
+    };
     const script = document.createElement('script');
     script.src = 'https://telegram.org/js/telegram-web-app.js';
     script.async = true;
     script.onload = finish;
     script.onerror = finish;
     document.head.append(script);
-    setTimeout(finish, timeout);
+    timer = setTimeout(finish, timeout);
   });
   return sdkPromise;
 }
@@ -93,10 +99,16 @@ export function initTelegramApp({ getThemePreference = () => 'system', onBack = 
       }
       return new Promise((resolve) => {
         let settled = false;
-        const finish = (value) => { if (!settled) { settled = true; resolve(Boolean(value)); } };
+        let timer = null;
+        const finish = (value) => {
+          if (settled) return;
+          settled = true;
+          if (timer) clearTimeout(timer);
+          resolve(Boolean(value));
+        };
         try { webApp.downloadFile({ url, file_name: fileName }, (accepted) => finish(accepted)); }
         catch { finish(false); }
-        setTimeout(() => finish(true), 4000);
+        timer = setTimeout(() => finish(true), 4000);
       });
     },
     close() {

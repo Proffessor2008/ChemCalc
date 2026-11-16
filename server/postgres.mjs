@@ -52,6 +52,7 @@ const SCHEMA = `
     key TEXT PRIMARY KEY,
     used_at TEXT NOT NULL
   );
+  CREATE INDEX IF NOT EXISTS sessions_expires ON sessions(expires_at);
   CREATE TABLE IF NOT EXISTS proposals (
     id TEXT PRIMARY KEY,
     author_id BIGINT NOT NULL REFERENCES users(id),
