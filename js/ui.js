@@ -646,6 +646,12 @@ $('#close-settings').addEventListener('click', () => $('#settings-dialog').close
 $$('[data-theme-option]').forEach((button) => button.addEventListener('click', () => setTheme(button.dataset.themeOption)));
 $$('[data-size-option]').forEach((button) => button.addEventListener('click', () => applyUiSize(button.dataset.sizeOption)));
 $('#settings-periodic')?.addEventListener('click', () => $('#settings-dialog').close());
+$('#legal-open')?.addEventListener('click', () => $('#legal-dialog')?.showModal());
+$('#legal-close')?.addEventListener('click', () => $('#legal-dialog')?.close());
+$('#legal-close-bottom')?.addEventListener('click', () => $('#legal-dialog')?.close());
+$('#legal-dialog')?.addEventListener('click', (event) => {
+  if (event.target === event.currentTarget) event.currentTarget.close();
+});
 
 function insertElement(symbol) {
   const target = state.mode === 'auto' ? autoInput : input;
