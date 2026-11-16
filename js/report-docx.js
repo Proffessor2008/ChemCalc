@@ -103,13 +103,7 @@ function metaParagraph(label, value) {
 
 function columnWidths(rows, columns, contentWidth, compact = false) {
   if (compact && columns > 8) {
-    const widths = Array.from({ length: columns }, (_, index) => index === 0 ? 1000 : 360);
-    const total = widths.reduce((sum, width) => sum + width, 0);
-    if (total > contentWidth) {
-      const scale = contentWidth / total;
-      return widths.map((width) => Math.max(1, Math.round(width * scale)));
-    }
-    return widths;
+    return Array.from({ length: columns }, (_, index) => index === 0 ? 1617 : 582);
   }
   const weights = Array.from({ length: columns }, (_, column) => {
     const lengths = rows.map((row) => String(row[column] ?? '').length);
@@ -140,9 +134,9 @@ function tableBlock(headers, rows, contentWidth, options = {}) {
   const tableWidth = widths.reduce((sum, width) => sum + width, 0);
   const border = (side) => `<w:${side} w:val="single" w:sz="4" w:space="0" w:color="C9D6D3"/>`;
   const cellMargins = options.ionMatrix ? '<w:tblCellMar><w:top w:w="0" w:type="dxa"/><w:left w:w="30" w:type="dxa"/><w:bottom w:w="0" w:type="dxa"/><w:right w:w="30" w:type="dxa"/></w:tblCellMar>' : '<w:tblCellMar><w:top w:w="50" w:type="dxa"/><w:left w:w="80" w:type="dxa"/><w:bottom w:w="50" w:type="dxa"/><w:right w:w="80" w:type="dxa"/></w:tblCellMar>';
-  const tblPr = `<w:tblPr><w:tblW w:w="${tableWidth}" w:type="dxa"/>${options.ionMatrix ? '<w:jc w:val="center"/>' : ''}<w:tblBorders>${border('top')}${border('left')}${border('bottom')}${border('right')}${border('insideH')}${border('insideV')}</w:tblBorders><w:tblLayout w:type="fixed"/>${cellMargins}</w:tblPr>`;
+  const tblPr = `<w:tblPr><w:tblW w:w="${tableWidth}" w:type="dxa"/><w:tblBorders>${border('top')}${border('left')}${border('bottom')}${border('right')}${border('insideH')}${border('insideV')}</w:tblBorders><w:tblLayout w:type="fixed"/>${cellMargins}</w:tblPr>`;
   const grid = `<w:tblGrid>${widths.map((width) => `<w:gridCol w:w="${width}"/>`).join('')}</w:tblGrid>`;
-  const row = (cells, header) => `<w:tr><w:trPr><w:cantSplit/>${header && options.ionMatrix ? '<w:trHeight w:val="900" w:hRule="atLeast"/>' : ''}${header ? '<w:tblHeader/>' : ''}</w:trPr>${cells.map((cell, index) => {
+  const row = (cells, header) => `<w:tr><w:trPr><w:cantSplit/>${header && options.ionMatrix ? '<w:trHeight w:val="840"/>' : options.ionMatrix ? '<w:trHeight w:val="180"/>' : ''}${header ? '<w:tblHeader/>' : ''}</w:trPr>${cells.map((cell, index) => {
     const direction = header && options.ionMatrix && index > 0 ? '<w:textDirection w:val="btLr"/><w:vAlign w:val="bottom"/>' : '';
     const statusColor = !header && options.ionMatrix && index > 0 ? solubilityColor(cell) : null;
     return `<w:tc><w:tcPr><w:tcW w:w="${widths[index]}" w:type="dxa"/>${direction}${header ? '<w:shd w:val="clear" w:color="auto" w:fill="E7F0EE"/>' : ''}</w:tcPr>${paragraph(cell, options.ionMatrix ? 'TableTextCompact' : 'TableText', { bold: header || Boolean(statusColor), color: statusColor })}</w:tc>`;
@@ -150,20 +144,25 @@ function tableBlock(headers, rows, contentWidth, options = {}) {
   return `<w:tbl>${tblPr}${grid}${row(normalizedHeaders, true)}${normalizedRows.map((cells) => row(cells, false)).join('')}</w:tbl>${options.ionMatrix ? '' : paragraph('', 'Normal')}`;
 }
 
-function stylesXml() {
+function stylesXml(compact = false) {
   const style = (id, name, basedOn, options) => `<w:style w:type="paragraph" w:styleId="${id}"><w:name w:val="${name}"/>${basedOn ? `<w:basedOn w:val="${basedOn}"/>` : ''}<w:next w:val="Normal"/><w:qFormat/>${options}</w:style>`;
+  const titleAfter = compact ? 40 : 80;
+  const h1Before = compact ? 80 : 240;
+  const h1After = compact ? 40 : 100;
+  const h2Before = compact ? 100 : 180;
+  const h2After = compact ? 40 : 80;
   return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-<w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:eastAsia="Calibri" w:cs="Calibri"/><w:sz w:val="22"/><w:szCs w:val="22"/><w:lang w:val="ru-RU"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after="120" w:line="276" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults>
+<w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:eastAsia="Calibri" w:cs="Calibri"/><w:sz w:val="22"/><w:szCs w:val="22"/><w:lang w:val="ru-RU"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after="${compact ? 40 : 120}" w:line="240" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults>
 ${style('Normal', 'Normal', null, '')}
-${style('Title', 'Title', 'Normal', '<w:pPr><w:spacing w:before="0" w:after="80"/></w:pPr><w:rPr><w:b/><w:color w:val="0D6B62"/><w:sz w:val="40"/><w:szCs w:val="40"/></w:rPr>')}
+${style('Title', 'Title', 'Normal', `<w:pPr><w:spacing w:before="0" w:after="${titleAfter}"/></w:pPr><w:rPr><w:b/><w:color w:val="0D6B62"/><w:sz w:val="40"/><w:szCs w:val="40"/></w:rPr>`)}
 ${style('Subtitle', 'Subtitle', 'Normal', '<w:pPr><w:spacing w:after="220"/></w:pPr><w:rPr><w:color w:val="5B6B69"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr>')}
-${style('Heading1', 'Heading 1', 'Normal', '<w:pPr><w:keepNext/><w:spacing w:before="240" w:after="100"/></w:pPr><w:rPr><w:b/><w:color w:val="0D6B62"/><w:sz w:val="30"/><w:szCs w:val="30"/></w:rPr>')}
-${style('Heading2', 'Heading 2', 'Normal', '<w:pPr><w:keepNext/><w:spacing w:before="180" w:after="80"/></w:pPr><w:rPr><w:b/><w:color w:val="174F49"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr>')}
+${style('Heading1', 'Heading 1', 'Normal', `<w:pPr><w:keepNext/><w:spacing w:before="${h1Before}" w:after="${h1After}"/></w:pPr><w:rPr><w:b/><w:color w:val="0D6B62"/><w:sz w:val="30"/><w:szCs w:val="30"/></w:rPr>`)}
+${style('Heading2', 'Heading 2', 'Normal', `<w:pPr><w:keepNext/><w:spacing w:before="${h2Before}" w:after="${h2After}"/></w:pPr><w:rPr><w:b/><w:color w:val="174F49"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr>`)}
 ${style('Equation', 'Equation', 'Normal', '<w:pPr><w:spacing w:before="120" w:after="120"/><w:jc w:val="center"/></w:pPr><w:rPr><w:rFonts w:ascii="Cambria" w:hAnsi="Cambria" w:eastAsia="Cambria" w:cs="Cambria"/><w:color w:val="0A4A44"/><w:sz w:val="28"/><w:szCs w:val="28"/></w:rPr>')}
 ${style('Meta', 'Meta', 'Normal', '<w:pPr><w:spacing w:after="40"/></w:pPr><w:rPr><w:color w:val="5B6B69"/><w:sz w:val="18"/><w:szCs w:val="18"/></w:rPr>')}
 ${style('TableText', 'Table Text', 'Normal', '<w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/></w:pPr><w:rPr><w:sz w:val="18"/><w:szCs w:val="18"/></w:rPr>')}
-${style('TableTextCompact', 'Table Text Compact', 'Normal', '<w:pPr><w:spacing w:after="0" w:line="200" w:lineRule="auto"/></w:pPr><w:rPr><w:sz w:val="12"/><w:szCs w:val="12"/></w:rPr>')}
+${style('TableTextCompact', 'Table Text Compact', 'Normal', '<w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/></w:pPr><w:rPr><w:sz w:val="18"/><w:szCs w:val="18"/></w:rPr>')}
 ${style('ListParagraph', 'List Paragraph', 'Normal', '<w:pPr><w:ind w:left="420" w:hanging="220"/><w:spacing w:after="40"/></w:pPr><w:rPr><w:sz w:val="22"/><w:szCs w:val="22"/></w:rPr>')}
 </w:styles>`;
 }
@@ -196,13 +195,15 @@ export function buildDocx(report) {
   const pageWidth = landscape ? 16838 : 11906;
   const pageHeight = landscape ? 11906 : 16838;
   const margin = 1134;
+  const hasIonMatrix = report.sections.some((section) => (section.blocks || []).some((block) => block.ionMatrix));
+  const topMargin = hasIonMatrix ? 142 : margin;
   const contentWidth = pageWidth - margin * 2;
   const body = [];
   body.push(paragraph(report.title, 'Title'));
-  if (report.subtitle) body.push(paragraph(report.subtitle, 'Subtitle'));
-  for (const entry of report.meta) body.push(metaParagraph(entry.label, entry.value));
+  if (report.subtitle && !hasIonMatrix) body.push(paragraph(report.subtitle, 'Subtitle'));
+  if (!hasIonMatrix) for (const entry of report.meta) body.push(metaParagraph(entry.label, entry.value));
   for (const section of report.sections) body.push(sectionXml(section, contentWidth));
-  const sectPr = `<w:sectPr><w:pgSz w:w="${pageWidth}" w:h="${pageHeight}"${landscape ? ' w:orient="landscape"' : ''}/><w:pgMar w:top="${margin}" w:right="${margin}" w:bottom="${margin}" w:left="${margin}" w:header="708" w:footer="708" w:gutter="0"/></w:sectPr>`;
+  const sectPr = `<w:sectPr><w:pgSz w:w="${pageWidth}" w:h="${pageHeight}"${landscape ? ' w:orient="landscape"' : ''}/><w:pgMar w:top="${topMargin}" w:right="${margin}" w:bottom="${margin}" w:left="${margin}" w:header="708" w:footer="708" w:gutter="0"/></w:sectPr>`;
   const document = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body>${body.join('')}${sectPr}</w:body></w:document>`;
   const now = new Date().toISOString();
@@ -218,7 +219,7 @@ export function buildDocx(report) {
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/></Relationships>`)
     },
     { name: 'word/document.xml', data: utf8(document) },
-    { name: 'word/styles.xml', data: utf8(stylesXml()) },
+    { name: 'word/styles.xml', data: utf8(stylesXml(hasIonMatrix)) },
     {
       name: 'word/_rels/document.xml.rels',
       data: utf8(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>

@@ -26,11 +26,11 @@ const REPORT_CSS = `
 .report-page th { background: #e7f0ee; color: #174f49; font-weight: 700; letter-spacing: 0; }
 .report-page .report-table-wide th, .report-page .report-table-wide td { font-size: 8px; padding: 2px 3px; }
 .report-page .report-ion-table { margin: 2px auto 4px; table-layout: fixed; }
-.report-page .report-ion-table caption { caption-side: top; padding: 0 0 4px; color: #0d6b62; font-size: 10px; font-weight: 700; text-align: left; }
-.report-page .report-ion-table th { height: auto; padding: 0 1px; vertical-align: bottom; white-space: nowrap; overflow-wrap: normal; word-break: keep-all; font-size: 7.5px; }
-.report-page .report-ion-table td { padding: 1px; text-align: center; white-space: nowrap; font-size: 7px; line-height: 1.1; }
+.report-page .report-ion-table caption { caption-side: top; padding: 0 0 4px; color: #0d6b62; font-size: 11px; font-weight: 700; text-align: left; }
+.report-page .report-ion-table th { height: auto; padding: 0 1px; vertical-align: bottom; white-space: nowrap; overflow-wrap: normal; word-break: keep-all; font-size: 8.5px; }
+.report-page .report-ion-table td { padding: 1px; text-align: center; white-space: nowrap; font-size: 8.5px; line-height: 1.2; }
 .report-page .report-ion-table td:first-child { text-align: left; }
-.report-page .report-ion-heading { display: inline-block; writing-mode: vertical-rl; transform: rotate(180deg); white-space: nowrap; font-size: 7.5px; line-height: 1; }
+.report-page .report-ion-heading { display: inline-block; writing-mode: vertical-rl; transform: rotate(180deg); white-space: nowrap; font-size: 8.5px; line-height: 1; }
 .report-page .report-ion-table td.sol-p { color: #117a4b; font-weight: 700; }
 .report-page .report-ion-table td.sol-m { color: #a86400; font-weight: 700; }
 .report-page .report-ion-table td.sol-h { color: #b83227; font-weight: 700; }
@@ -143,7 +143,7 @@ function createTable(headers, rows, options = {}) {
   const ionTable = Boolean(options.ionMatrix) || String(headers[0] || '').includes('Катион');
   if (ionTable) {
     table.classList.add('report-ion-table', 'report-ion-compact');
-    table.style.width = `${Math.min(100, Math.max(55, headers.length * 3.1))}%`;
+    table.style.width = `${Math.min(100, Math.max(84, headers.length * 4.1))}%`;
   }
   if (options.caption) table.append(createElement('caption', 'report-table-caption', options.caption));
   const header = createElement('thead');
@@ -200,10 +200,11 @@ export function paginateReport(report) {
     }
   };
 
+  const ionMatrix = report.sections.some((section) => (section.blocks || []).some((block) => block.ionMatrix));
   const title = createElement('h1', '', report.title);
   current.body.append(title);
-  if (report.subtitle) current.body.append(createElement('p', 'report-subtitle', report.subtitle));
-  if (report.meta.length) {
+  if (report.subtitle && !ionMatrix) current.body.append(createElement('p', 'report-subtitle', report.subtitle));
+  if (report.meta.length && !ionMatrix) {
     const meta = createElement('div', 'report-meta');
     for (const entry of report.meta) {
       const row = createElement('div', 'report-meta-row');
