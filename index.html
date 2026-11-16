@@ -280,11 +280,23 @@
               <p class="help-text login-note"><span data-i18n="loginForAuth">Логин для входа</span>: <strong id="profile-login-readonly"></strong>. <span data-i18n="loginImmutable">Логин не меняется при смене никнейма.</span></p>
               <p id="profile-telegram-status" class="help-text" role="status" hidden></p>
               <button id="profile-link-telegram" class="button secondary" type="button" data-i18n="linkTelegram" hidden>Привязать Telegram</button>
+              <div id="profile-telegram-merge" class="profile-telegram-merge" hidden>
+                <p class="help-text" data-i18n="mergeTelegramHelp">Введите логин и пароль аккаунта, созданного в браузере. Данные Telegram-аккаунта будут перенесены в него.</p>
+                <label class="profile-field"><span data-i18n="existingLogin">Логин существующего аккаунта</span><input id="profile-merge-login" autocomplete="username"></label>
+                <label class="profile-field"><span data-i18n="password">Пароль</span><input id="profile-merge-password" type="password" autocomplete="current-password"></label>
+                <button id="profile-merge-submit" class="button primary" type="button" data-i18n="mergeAccount">Привязать и перейти</button>
+                <p id="profile-merge-status" class="help-text" role="status"></p>
+              </div>
               <label class="profile-field"><span data-i18n="profilePrivacy">Приватность аккаунта</span><select id="profile-privacy"><option value="public" data-i18n="privacyPublic">Публичный профиль</option><option value="private" data-i18n="privacyPrivate">Только для меня</option></select></label>
               <p class="help-text" data-i18n="privacyHelp">Публичный профиль виден всем. «Только для меня» скрывает профиль и историю заявок от других пользователей.</p>
               <p id="profile-status" class="help-text" role="status" aria-live="polite"></p>
               <div class="qa-form-actions"><button id="profile-cancel" class="button ghost" type="button" data-i18n="cancel">Отмена</button><button id="profile-save" class="button primary" type="button" data-i18n="save">Сохранить</button></div>
             </div>
+          </div>
+          <div id="profile-danger-zone" class="profile-danger-zone" hidden>
+            <h3 data-i18n="dangerZone">Удаление аккаунта</h3>
+            <p class="help-text" data-i18n="deleteAccountHelp">Аккаунт и личные данные будут удалены. Ваши голоса, комментарии и ответы останутся в сообществе.</p>
+            <button id="profile-delete" class="button danger" type="button" data-i18n="deleteAccount">Удалить аккаунт</button>
           </div>
         </section>
         <section class="card"><h2 data-i18n="account">Аккаунт</h2><div id="cabinet-summary"></div></section>
@@ -305,6 +317,15 @@
     <button type="button" data-tab="community"><span aria-hidden="true">+</span><span class="nav-full" data-i18n="community">Сообщество</span><span class="nav-short" data-i18n="communityShort">Сообщ.</span></button>
     <button type="button" data-tab="account"><span aria-hidden="true">◔</span><span class="nav-full" data-i18n="personalCabinet">Личный кабинет</span><span class="nav-short" data-i18n="accountShort">Кабинет</span></button>
   </nav>
+
+  <dialog id="delete-account-dialog" class="dialog" aria-labelledby="delete-account-title">
+    <div class="dialog-heading"><h2 id="delete-account-title" data-i18n="deleteAccountTitle">Удалить аккаунт?</h2><button id="close-delete-account" class="icon-button" type="button" aria-label="Закрыть" data-i18n-aria="close">×</button></div>
+    <p data-i18n="deleteAccountWarning">Это действие необратимо. Профиль и личные данные удаляются. Голоса за других пользователей, комментарии и ответы сохраняются.</p>
+    <label id="delete-account-password-row" class="profile-field"><span data-i18n="password">Пароль</span><input id="delete-account-password" type="password" autocomplete="current-password"></label>
+    <label class="profile-field"><span data-i18n="typeToConfirm">Введите УДАЛИТЬ</span><input id="delete-account-confirm" autocomplete="off"></label>
+    <p id="delete-account-status" class="help-text" role="status"></p>
+    <div class="dialog-actions"><button id="cancel-delete-account" class="button ghost" type="button" data-i18n="cancel">Отмена</button><button id="confirm-delete-account" class="button danger" type="button" data-i18n="deleteAccount">Удалить аккаунт</button></div>
+  </dialog>
 
   <dialog id="settings-dialog" class="dialog settings-dialog" aria-labelledby="settings-title">
     <div class="dialog-heading"><h2 id="settings-title" data-i18n="settings">Настройки</h2><button id="close-settings" class="icon-button" type="button" data-i18n-aria="close" aria-label="Закрыть">×</button></div>

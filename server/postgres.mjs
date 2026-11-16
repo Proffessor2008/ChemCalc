@@ -21,9 +21,11 @@ const SCHEMA = `
     telegram_username TEXT,
     telegram_photo_url TEXT,
     password_hash TEXT NOT NULL,
+    password_set INTEGER NOT NULL DEFAULT 1,
     privileges TEXT NOT NULL CHECK(privileges IN ('basic', 'admin', 'admin+', 'GOD')),
     avatar TEXT NOT NULL DEFAULT '',
     privacy TEXT NOT NULL DEFAULT 'public',
+    deleted_at TEXT,
     created_at TEXT NOT NULL,
     last_login_at TEXT
   );
@@ -34,6 +36,9 @@ const SCHEMA = `
   CREATE UNIQUE INDEX IF NOT EXISTS users_telegram_id_unique ON users(telegram_id);
   ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar TEXT NOT NULL DEFAULT '';
   ALTER TABLE users ADD COLUMN IF NOT EXISTS privacy TEXT NOT NULL DEFAULT 'public';
+  ALTER TABLE users ADD COLUMN IF NOT EXISTS deleted_at TEXT;
+  ALTER TABLE users ADD COLUMN IF NOT EXISTS password_set INTEGER NOT NULL DEFAULT 1;
+  UPDATE users SET password_set = 0 WHERE telegram_id IS NOT NULL AND login LIKE 'tg\_%' ESCAPE '\';
   UPDATE users SET nickname = login WHERE nickname = '' OR nickname IS NULL;
   CREATE TABLE IF NOT EXISTS sessions (
     token_hash TEXT PRIMARY KEY,

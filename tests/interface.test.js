@@ -43,6 +43,9 @@ test('вход и профиль находятся в личном кабине
   assert.ok(account.includes('id="profile-nickname"'));
   assert.ok(account.includes('id="profile-login-readonly"'));
   assert.ok(account.includes('id="profile-login-view"'));
+  assert.ok(account.includes('id="profile-telegram-merge"'));
+  assert.ok(account.includes('id="profile-danger-zone"'));
+  assert.ok(html.includes('id="delete-account-dialog"'));
   assert.ok(!account.includes('id="profile-save-login"'));
   const communityUi = readFileSync('js/community-ui.js', 'utf8');
   assert.ok(communityUi.includes('profileEditing'));

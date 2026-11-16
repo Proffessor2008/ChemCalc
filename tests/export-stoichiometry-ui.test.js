@@ -146,4 +146,5 @@ test('интерфейс показывает практический объё�
   const reference = readFileSync('js/reference-ui.js', 'utf8');
   assert.ok(reference.includes('scope="col" class="chem"'));
   assert.ok(reference.includes('scope="row" class="chem"'));
+  assert.ok(reference.includes('Катион ↓ / Анион →'));
 });

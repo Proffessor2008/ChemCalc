@@ -285,6 +285,6 @@ export async function buildReportPdf(report, { onProgress } = {}) {
 export async function downloadReportPdf(report, options = {}) {
   const bytes = await buildReportPdf(report, options);
   if (typeof document === 'undefined') return bytes;
-  downloadBlob(new Blob([bytes], { type: 'application/pdf' }), safeFilename(report.filename || report.documentTitle, 'pdf'));
+  await downloadBlob(new Blob([bytes], { type: 'application/pdf' }), safeFilename(report.filename || report.documentTitle, 'pdf'));
   return bytes;
 }

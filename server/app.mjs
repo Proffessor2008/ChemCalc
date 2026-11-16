@@ -23,11 +23,11 @@ function send(response, status, value, headers = {}) {
   response.end(body);
 }
 
-async function body(request) {
+async function body(request, limit = JSON_LIMIT) {
   let text = '';
   for await (const chunk of request) {
     text += chunk;
-    if (Buffer.byteLength(text) > JSON_LIMIT) error(413, 'too_large', 'Слишком большой запрос');
+    if (Buffer.byteLength(text) > limit) error(413, 'too_large', 'Слишком большой запрос');
   }
   try { return text ? JSON.parse(text) : {}; } catch { error(400, 'invalid_json', 'Некорректный JSON'); }
 }
@@ -80,6 +80,7 @@ export async function createCommunityServer({ dbPath, god, staticHandler, dbBack
   const db = dbBackend === 'postgres' ? await openPostgresDatabase(connectionString, { client: pgClient }) : openCommunityDatabase(dbPath);
   const events = new EventEmitter();
   const clients = new Set();
+  const tempFiles = new Map();
   let bootstrap = null;
   if (Number((await db.prepare('SELECT COUNT(*) AS count FROM users').get()).count) === 0) {
     const canonical = validateCredentials({ ...god, requireConfirmation: false });
@@ -333,6 +334,56 @@ export async function createCommunityServer({ dbPath, god, staticHandler, dbBack
         return;
       }
       if (path === '/api/health' && request.method === 'GET') return send(response, 200, { ok: true, database: db.kind || 'sqlite', schemaVersion: 6 });
+      if (path === '/api/files/temp' && request.method === 'POST') {
+        rateLimit(request);
+        const input = await body(request, 8_000_000);
+        const allowed = {
+          'application/pdf': 'pdf',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx'
+        };
+        const extension = allowed[input.type];
+        if (!extension) error(422, 'invalid_type', 'Поддерживаются только PDF и DOCX');
+        const data = String(input.data || '');
+        if (!/^[A-Za-z0-9+/]+={0,2}$/.test(data) || !data) error(422, 'invalid_file', 'Некорректный файл');
+        const buffer = Buffer.from(data, 'base64');
+        if (!buffer.length || buffer.length > 6_000_000) error(413, 'too_large', 'Файл слишком большой');
+        const now = Date.now();
+        for (const [key, file] of tempFiles) if (file.expiresAt <= now) tempFiles.delete(key);
+        let totalSize = 0;
+        for (const file of tempFiles.values()) totalSize += file.buffer.length;
+        while (tempFiles.size && (tempFiles.size >= 20 || totalSize + buffer.length > 40_000_000)) {
+          const [oldKey, oldFile] = tempFiles.entries().next().value;
+          tempFiles.delete(oldKey);
+          totalSize -= oldFile.buffer.length;
+        }
+        const token = randomUUID();
+        const filename = String(input.filename || `report.${extension}`)
+          .replace(/[^\p{L}\p{N}._ -]/gu, '_')
+          .slice(0, 120) || `report.${extension}`;
+        tempFiles.set(token, { buffer, filename, type: input.type, expiresAt: now + 10 * 60 * 1000 });
+        const forwardedProto = String(request.headers['x-forwarded-proto'] || '').split(',')[0].trim();
+        const localHost = /^(127\.|localhost|\[::1\])/.test(String(request.headers.host || ''));
+        const origin = String(publicUrl || '').replace(/\/+$/, '')
+          || `${forwardedProto || (localHost ? 'http' : 'https')}://${request.headers.host}`;
+        return send(response, 201, { url: `${origin}/api/files/temp/${token}`, expiresAt: new Date(now + 10 * 60 * 1000).toISOString() });
+      }
+      const tempFileMatch = path.match(/^\/api\/files\/temp\/([0-9a-f-]{36})$/);
+      if (tempFileMatch && request.method === 'GET') {
+        const file = tempFiles.get(tempFileMatch[1]);
+        if (!file || file.expiresAt <= Date.now()) {
+          tempFiles.delete(tempFileMatch[1]);
+          error(404, 'not_found', 'Файл не найден или устарел');
+        }
+        const safeName = file.filename.replace(/["\\\r\n]/g, '_');
+        response.writeHead(200, {
+          'Content-Type': file.type,
+          'Content-Length': file.buffer.length,
+          'Content-Disposition': `attachment; filename="report.${file.filename.split('.').pop() || 'file'}"; filename*=UTF-8''${encodeURIComponent(safeName)}`,
+          'Cache-Control': 'no-store',
+          'X-Content-Type-Options': 'nosniff'
+        });
+        return response.end(file.buffer);
+      }
       if (path === '/api/rules' && request.method === 'GET') return send(response, 200, await communityPackage(db));
       if (path === '/api/auth/register' && request.method === 'POST') {
         rateLimit(request);
@@ -350,7 +401,7 @@ export async function createCommunityServer({ dbPath, god, staticHandler, dbBack
         rateLimit(request);
         const input = await body(request);
         const canonical = normalizeLogin(input.login);
-        const user = await db.prepare('SELECT * FROM users WHERE login_canonical = ?').get(canonical);
+        const user = await db.prepare('SELECT * FROM users WHERE login_canonical = ? AND deleted_at IS NULL').get(canonical);
         if (!user || !verifyPassword(input.password || '', user.password_hash)) error(401, 'invalid_credentials', 'Неверный логин или пароль');
         user.last_login_at = new Date().toISOString();
         user.reputation = await reputationForUser(db, user.id);
@@ -359,6 +410,27 @@ export async function createCommunityServer({ dbPath, god, staticHandler, dbBack
       }
       if (path === '/api/auth/logout' && request.method === 'POST') {
         await requireUser(db, request, ['basic', 'admin', 'admin+', 'GOD'], true);
+        updated('user');
+        return send(response, 200, { ok: true }, { 'Set-Cookie': await destroySession(db, request) });
+      }
+      if (path === '/api/auth/account' && request.method === 'DELETE') {
+        const current = await requireUser(db, request, ['basic', 'admin', 'admin+', 'GOD'], true);
+        const input = await body(request);
+        const confirmation = String(input.confirm || '').trim().toUpperCase();
+        if (!['УДАЛИТЬ', 'DELETE'].includes(confirmation)) error(422, 'confirmation_required', 'Введите УДАЛИТЬ для подтверждения');
+        if (Number(current.password_set) !== 0 && !verifyPassword(input.password || '', current.password_hash)) {
+          error(401, 'invalid_password', 'Неверный пароль');
+        }
+        const timestamp = new Date().toISOString();
+        await transaction(db, async () => {
+          await db.prepare('DELETE FROM notifications WHERE user_id = ?').run(current.id);
+          await db.prepare('DELETE FROM question_flags WHERE user_id = ?').run(current.id);
+          await db.prepare('DELETE FROM sessions WHERE user_id = ?').run(current.id);
+          await db.prepare(`UPDATE users SET login = ?, login_canonical = ?, nickname = ?, avatar = '', privacy = 'private',
+            telegram_id = NULL, telegram_username = NULL, telegram_photo_url = NULL, password_hash = ?, password_set = 0,
+            deleted_at = ?, privileges = 'basic' WHERE id = ?`)
+            .run(`deleted_${current.id}`, normalizeLogin(`deleted_${current.id}`), 'Удалённый пользователь', hashPassword(randomBytes(32).toString('hex')), timestamp, current.id);
+        });
         updated('user');
         return send(response, 200, { ok: true }, { 'Set-Cookie': await destroySession(db, request) });
       }
@@ -379,9 +451,9 @@ export async function createCommunityServer({ dbPath, god, staticHandler, dbBack
         if (!user) {
           const login = await uniqueTelegramLogin(telegramId);
           const nickname = telegramDisplayName(verified.user);
-          const userId = (await db.prepare(`INSERT INTO users(login, login_canonical, nickname, telegram_id, telegram_username, telegram_photo_url, password_hash, privileges, created_at, last_login_at)
-            VALUES(?,?,?,?,?,?,?,?,?,?)`)
-            .run(login, normalizeLogin(login), nickname, telegramId, telegramUsername, telegramPhoto, hashPassword(randomBytes(32).toString('hex')), 'basic', timestamp, timestamp)).lastInsertRowid;
+          const userId = (await db.prepare(`INSERT INTO users(login, login_canonical, nickname, telegram_id, telegram_username, telegram_photo_url, password_hash, password_set, privileges, created_at, last_login_at)
+            VALUES(?,?,?,?,?,?,?,?,?,?,?)`)
+            .run(login, normalizeLogin(login), nickname, telegramId, telegramUsername, telegramPhoto, hashPassword(randomBytes(32).toString('hex')), 0, 'basic', timestamp, timestamp)).lastInsertRowid;
           user = await db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
           updated('user');
         } else {
@@ -426,8 +498,67 @@ export async function createCommunityServer({ dbPath, god, staticHandler, dbBack
         updated('user');
         return send(response, 200, { user: publicUser(user) });
       }
-      if (path === '/api/telegram/webhook' && request.method === 'POST') {
-        if (!telegramBotToken) error(503, 'telegram_disabled', 'Telegram-бот не настроен на сервере');
+      if (path === '/api/auth/telegram/merge' && request.method === 'POST') {
+        rateLimit(request);
+        const current = await requireUser(db, request, ['basic', 'admin', 'admin+', 'GOD'], true);
+        if (!current.telegram_id || !String(current.login).startsWith('tg_')) {
+          error(409, 'not_telegram_account', 'Объединение доступно только для аккаунта, созданного через Telegram');
+        }
+        const input = await body(request);
+        const targetLogin = normalizeLogin(input.login);
+        const target = await db.prepare('SELECT * FROM users WHERE login_canonical = ?').get(targetLogin);
+        if (!target || !verifyPassword(input.password || '', target.password_hash)) {
+          error(401, 'invalid_credentials', 'Неверный логин или пароль существующего аккаунта');
+        }
+        if (Number(target.id) === Number(current.id)) error(422, 'same_account', 'Это тот же аккаунт');
+        if (target.deleted_at) error(401, 'invalid_credentials', 'Неверный логин или пароль существующего аккаунта');
+        if (target.telegram_id && Number(target.telegram_id) !== Number(current.telegram_id)) {
+          error(409, 'telegram_already_linked', 'К этому аккаунту уже привязан другой Telegram');
+        }
+        const now = new Date().toISOString();
+        await transaction(db, async () => {
+          await db.prepare('UPDATE proposals SET author_id = ? WHERE author_id = ?').run(target.id, current.id);
+          await db.prepare('UPDATE proposals SET reviewed_by = ? WHERE reviewed_by = ?').run(target.id, current.id);
+          await db.prepare('UPDATE production_rules SET published_by = ? WHERE published_by = ?').run(target.id, current.id);
+          await db.prepare('UPDATE questions SET author_id = ? WHERE author_id = ?').run(target.id, current.id);
+          await db.prepare('UPDATE answers SET author_id = ? WHERE author_id = ?').run(target.id, current.id);
+          await db.prepare('UPDATE comments SET author_id = ? WHERE author_id = ?').run(target.id, current.id);
+          await db.prepare('UPDATE post_edits SET editor_id = ? WHERE editor_id = ?').run(target.id, current.id);
+          await db.prepare('UPDATE review_events SET actor_id = ? WHERE actor_id = ?').run(target.id, current.id);
+          await db.prepare('UPDATE rule_versions SET published_by = ? WHERE published_by = ?').run(target.id, current.id);
+          for (const vote of await db.prepare('SELECT id, proposal_id FROM votes WHERE user_id = ?').all(current.id)) {
+            if (await db.prepare('SELECT id FROM votes WHERE proposal_id = ? AND user_id = ?').get(vote.proposal_id, target.id)) {
+              await db.prepare('DELETE FROM votes WHERE id = ?').run(vote.id);
+            } else {
+              await db.prepare('UPDATE votes SET user_id = ? WHERE id = ?').run(target.id, vote.id);
+            }
+          }
+          for (const vote of await db.prepare('SELECT id, target_type, target_id FROM post_votes WHERE user_id = ?').all(current.id)) {
+            if (await db.prepare('SELECT id FROM post_votes WHERE target_type = ? AND target_id = ? AND user_id = ?').get(vote.target_type, vote.target_id, target.id)) {
+              await db.prepare('DELETE FROM post_votes WHERE id = ?').run(vote.id);
+            } else {
+              await db.prepare('UPDATE post_votes SET user_id = ? WHERE id = ?').run(target.id, vote.id);
+            }
+          }
+          for (const flag of await db.prepare('SELECT id, question_id FROM question_flags WHERE user_id = ?').all(current.id)) {
+            if (await db.prepare('SELECT id FROM question_flags WHERE question_id = ? AND user_id = ?').get(flag.question_id, target.id)) {
+              await db.prepare('DELETE FROM question_flags WHERE id = ?').run(flag.id);
+            } else {
+              await db.prepare('UPDATE question_flags SET user_id = ? WHERE id = ?').run(target.id, flag.id);
+            }
+          }
+          await db.prepare('DELETE FROM notifications WHERE user_id = ?').run(current.id);
+          await db.prepare('DELETE FROM sessions WHERE user_id = ?').run(current.id);
+          await db.prepare('DELETE FROM users WHERE id = ?').run(current.id);
+          await db.prepare('UPDATE users SET telegram_id = ?, telegram_username = ?, telegram_photo_url = ?, last_login_at = ? WHERE id = ?')
+            .run(current.telegram_id, current.telegram_username || '', current.telegram_photo_url || '', now, target.id);
+        });
+        updated('user');
+        const user = await db.prepare('SELECT * FROM users WHERE id = ?').get(target.id);
+        user.reputation = await reputationForUser(db, target.id);
+        return authResponse(response, 200, user, await createSession(db, target.id));
+      }
+      if (path === '/api/telegram/webhook' && request.method === 'POST') {        if (!telegramBotToken) error(503, 'telegram_disabled', 'Telegram-бот не настроен на сервере');
         if (telegramWebhookSecret && request.headers['x-telegram-bot-api-secret-token'] !== telegramWebhookSecret) {
           error(403, 'invalid_webhook_secret', 'Неверный секрет вебхука');
         }
@@ -496,11 +627,11 @@ export async function createCommunityServer({ dbPath, god, staticHandler, dbBack
       if (path === '/api/users' && request.method === 'GET') {
         await requireUser(db, request, ['GOD']);
         const page = pagination(url);
-        const total = (await db.prepare('SELECT COUNT(*) AS count FROM users').get()).count;
+        const total = (await db.prepare('SELECT COUNT(*) AS count FROM users WHERE deleted_at IS NULL').get()).count;
         const users = (await db.prepare(`SELECT users.*,
           (SELECT COUNT(*) FROM proposals WHERE author_id = users.id AND status = 'pending') AS pending_count,
           ${REPUTATION_SQL} AS reputation
-          FROM users ORDER BY id LIMIT ? OFFSET ?`).all(page.limit, page.offset)).map(publicUser);
+          FROM users WHERE deleted_at IS NULL ORDER BY id LIMIT ? OFFSET ?`).all(page.limit, page.offset)).map(publicUser);
         return send(response, 200, { users, pagination: paginationResult(page, total) });
       }
       if (path === '/api/proposals' && request.method === 'GET') {
@@ -688,6 +819,18 @@ export async function createCommunityServer({ dbPath, god, staticHandler, dbBack
           .run(id, user.id, valid.title, valid.body, JSON.stringify(valid.tags), timestamp, timestamp);
         updated('question');
         return send(response, 201, { question: await getQuestion(id, user.id) });
+      }
+      const commentDeleteMatch = path.match(/^\/api\/comments\/([^/]+)$/);
+      if (commentDeleteMatch && request.method === 'DELETE') {
+        const user = await requireUser(db, request, ['basic', 'admin', 'admin+', 'GOD'], true);
+        const comment = await db.prepare('SELECT * FROM comments WHERE id = ?').get(commentDeleteMatch[1]);
+        if (!comment) error(404, 'not_found', 'Комментарий не найден');
+        if (Number(comment.author_id) !== Number(user.id) && !isModerator(user)) {
+          error(403, 'forbidden', 'Удалять комментарий может только автор или модератор');
+        }
+        await db.prepare('DELETE FROM comments WHERE id = ?').run(comment.id);
+        updated('comment');
+        return send(response, 200, { ok: true });
       }
       const questionMatch = path.match(/^\/api\/questions\/([^/]+)(?:\/(vote|comment|close|reopen|flag))?$/);
       if (questionMatch) {

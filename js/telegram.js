@@ -86,6 +86,19 @@ export function initTelegramApp({ getThemePreference = () => 'system', onBack = 
       try { webApp.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(url)}`); }
       catch { window.open(url, '_blank', 'noopener'); }
     },
+    downloadFile(url, fileName) {
+      if (typeof webApp.downloadFile !== 'function') {
+        try { webApp.openLink(url); return Promise.resolve(true); }
+        catch { return Promise.resolve(false); }
+      }
+      return new Promise((resolve) => {
+        let settled = false;
+        const finish = (value) => { if (!settled) { settled = true; resolve(Boolean(value)); } };
+        try { webApp.downloadFile({ url, file_name: fileName }, (accepted) => finish(accepted)); }
+        catch { finish(false); }
+        setTimeout(() => finish(true), 4000);
+      });
+    },
     close() {
       try { webApp.close(); } catch { /* необязательный API */ }
     },

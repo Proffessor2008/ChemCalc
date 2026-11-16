@@ -132,6 +132,44 @@ test('Telegram API: вход, привязка и сохранение акка�
   assert.equal(afterTransfer.status, 200);
   assert.equal(afterTransfer.data.user.login, 'transfer_user');
 
+  // Объединение Telegram-аккаунта с существующим веб-аккаунтом по логину и паролю.
+  const mergeAuto = await request(port, '/api/auth/telegram', {
+    method: 'POST', body: { initData: signInitData({ id: 444444444, first_name: 'Мердж', username: 'merge_tg' }, { queryId: 'merge-login' }) }
+  });
+  assert.equal(mergeAuto.status, 200);
+  const mergeTarget = await request(port, '/api/auth/register', { method: 'POST', body: { login: 'merge_target', password: 'password123', confirmPassword: 'password123' } });
+  const merged = await request(port, '/api/auth/telegram/merge', {
+    method: 'POST', cookie: mergeAuto.cookie, csrfToken: mergeAuto.data.csrfToken,
+    body: { login: 'merge_target', password: 'password123' }
+  });
+  assert.equal(merged.status, 200, JSON.stringify(merged.data));
+  assert.equal(merged.data.user.login, 'merge_target');
+  assert.equal(merged.data.user.telegram_linked, true);
+  const mergedSession = await request(port, '/api/auth/me', { cookie: mergeAuto.cookie });
+  assert.equal(mergedSession.status, 401);
+  const mergedTelegramLogin = await request(port, '/api/auth/telegram', {
+    method: 'POST', body: { initData: signInitData({ id: 444444444, first_name: 'Мердж', username: 'merge_tg' }, { queryId: 'after-merge' }) }
+  });
+  assert.equal(mergedTelegramLogin.status, 200);
+  assert.equal(mergedTelegramLogin.data.user.login, 'merge_target');
+
+  // Временная ссылка для нативного скачивания PDF/DOCX в Telegram WebView.
+  const pdfBytes = Buffer.from('%PDF-1.4 test', 'utf8');
+  const upload = await request(port, '/api/files/temp', {
+    method: 'POST',
+    body: { filename: 'report.pdf', type: 'application/pdf', data: pdfBytes.toString('base64') }
+  });
+  assert.equal(upload.status, 201, JSON.stringify(upload.data));
+  const downloadPath = new URL(upload.data.url).pathname;
+  const download = await fetch(`http://127.0.0.1:${port}${downloadPath}`);
+  assert.equal(download.status, 200);
+  assert.equal(download.headers.get('content-type'), 'application/pdf');
+  assert.equal(Buffer.from(await download.arrayBuffer()).toString('utf8'), pdfBytes.toString('utf8'));
+  const badUpload = await request(port, '/api/files/temp', {
+    method: 'POST', body: { filename: 'bad.txt', type: 'text/plain', data: 'aGVsbG8=' }
+  });
+  assert.equal(badUpload.status, 422);
+
   // Другой пользователь не может занять тот же Telegram.
   const other = await request(port, '/api/auth/register', { method: 'POST', body: { login: 'other_user', password: 'password123', confirmPassword: 'password123' } });
   const conflict = await request(port, '/api/auth/telegram/link', {

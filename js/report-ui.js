@@ -9,7 +9,7 @@ export async function runReportExport(format, report, { button = null, showToast
   try {
     if (format === 'docx') {
       const { downloadReportDocx } = await import('./report-docx.js');
-      downloadReportDocx(report);
+      await downloadReportDocx(report);
     } else {
       const { downloadReportPdf } = await import('./report-pdf.js');
       await downloadReportPdf(report, {

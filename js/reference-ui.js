@@ -106,7 +106,7 @@ export function initReferenceUI({ storage, onOpenFormula, onOpenEquation, getCur
       }).join('');
       return `<tr><th scope="row" class="chem">${chemical(cation)}</th>${cells}</tr>`;
     });
-    $('#reference-content').innerHTML = `<section class="card"><h2>Матрица растворимости</h2><p class="help-text">Р — растворимо, М — малорастворимо, Н — нерастворимо, ? — нет данных. Буква видна независимо от цвета.</p><label class="check-control"><input id="solubility-insoluble" type="checkbox"><span>Подсветить только нерастворимые</span></label>${table(anions.map((anion) => chemical(anion)), matrixRows)}</section>
+    $('#reference-content').innerHTML = `<section class="card"><h2>Матрица растворимости</h2><p class="help-text">Р — растворимо, М — малорастворимо, Н — нерастворимо, ? — нет данных. Буква видна независимо от цвета.</p><label class="check-control"><input id="solubility-insoluble" type="checkbox"><span>Подсветить только нерастворимые</span></label>${table(['Катион ↓ / Анион →', ...anions.map((anion) => chemical(anion))], matrixRows)}</section>
       <form id="ion-pair-form" class="card tool-card"><h2>Проверить пару ионов</h2><div class="tool-grid"><label>Катион<select id="ion-cation">${options(cations)}</select></label><label>Анион<select id="ion-anion">${options(anions)}</select></label><button class="button primary" type="submit">Проверить</button></form><div id="ion-pair-result" class="tool-result" aria-live="polite"></div>`;
     $('#ion-pair-form').addEventListener('submit', (event) => {
       event.preventDefault();

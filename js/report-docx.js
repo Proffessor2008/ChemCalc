@@ -211,9 +211,9 @@ export function buildDocx(report) {
   return zipStore(files);
 }
 
-export function downloadReportDocx(report) {
+export async function downloadReportDocx(report) {
   const bytes = buildDocx(report);
   if (typeof document === 'undefined') return bytes;
-  downloadBlob(new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }), safeFilename(report.filename || report.documentTitle, 'docx'));
+  await downloadBlob(new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }), safeFilename(report.filename || report.documentTitle, 'docx'));
   return bytes;
 }

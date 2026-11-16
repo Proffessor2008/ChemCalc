@@ -98,7 +98,10 @@ export function initQAUI({ container, api, auth, showToast, onDeepLink = () => {
 
   function commentList(comments, type, id) {
     const target = `${type}:${id}`;
-    const rows = (comments || []).map((comment) => `<li class="qa-comment"><span class="qa-comment-author">${escapeHtml(comment.author_login)}</span> <span class="qa-comment-body">${escapeHtml(comment.body)}</span> <span class="qa-time">${formatTime(comment.created_at)}</span></li>`).join('');
+    const rows = (comments || []).map((comment) => {
+      const canDelete = Boolean(user() && (Number(comment.author_id) === Number(user().id) || ['admin', 'admin+', 'GOD'].includes(user().privileges)));
+      return `<li class="qa-comment"><span class="qa-comment-author">${escapeHtml(comment.author_login)}</span> <span class="qa-comment-body">${escapeHtml(comment.body)}</span> <span class="qa-time">${formatTime(comment.created_at)}</span>${canDelete ? ` <button type="button" class="text-button danger-text qa-comment-delete" data-qa-delete-comment="${escapeHtml(comment.id)}">${t('delete')}</button>` : ''}</li>`;
+    }).join('');
     const canComment = Boolean(user());
     if (!canComment) return `<div class="qa-comments">${rows ? `<ul>${rows}</ul>` : ''}</div>`;
     const draft = state.commentDrafts.get(target) || '';
@@ -420,6 +423,17 @@ export function initQAUI({ container, api, auth, showToast, onDeepLink = () => {
     }
   }
 
+  async function deleteComment(id) {
+    if (!id || !window.confirm(t('deleteCommentConfirm'))) return;
+    try {
+      await api(`/api/comments/${encodeURIComponent(id)}`, { method: 'DELETE' });
+      showToast(t('commentDeleted'));
+      if (state.detail?.question?.id) await openQuestion(state.detail.question.id, { count: false });
+    } catch (error) {
+      showToast(error.message);
+    }
+  }
+
   async function submitComment(target, textarea) {
     const [type, id] = target.split(':');
     const body = textarea.value.trim();
@@ -684,8 +698,12 @@ export function initQAUI({ container, api, auth, showToast, onDeepLink = () => {
       }
       return;
     }
-    const cancelComment = event.target.closest('[data-qa-comment-cancel]');
-    if (cancelComment) {
+    const deleteCommentButton = event.target.closest('[data-qa-delete-comment]');
+    if (deleteCommentButton) {
+      deleteComment(deleteCommentButton.dataset.qaDeleteComment);
+      return;
+    }
+    const cancelComment = event.target.closest('[data-qa-comment-cancel]');    if (cancelComment) {
       const target = cancelComment.dataset.qaCommentCancel;
       state.openComments.delete(target);
       const form = container.querySelector(`[data-comment-form="${target}"]`);

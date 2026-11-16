@@ -793,3 +793,13 @@ body { min-height: 100dvh; }
 :root[data-platform="telegram"] body { min-height: var(--tg-viewport-height, 100dvh); }
 :root[data-platform="telegram"] .app-header { padding-top: max(14px, env(safe-area-inset-top), var(--tg-safe-top, 0px)); }
 :root[data-platform="telegram"] .mobile-nav { padding-bottom: max(6px, env(safe-area-inset-bottom), var(--tg-safe-bottom, 0px)); }
+
+.profile-telegram-merge { display: grid; gap: 10px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; }
+.profile-telegram-merge[hidden] { display: none; }
+
+
+.profile-danger-zone { display: grid; gap: 10px; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line); }
+.profile-danger-zone[hidden] { display: none; }
+.button.danger { border-color: var(--danger); background: var(--danger); color: #fff; }
+.button.danger:hover, .button.danger:focus-visible { filter: brightness(1.08); }
+

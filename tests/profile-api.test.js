@@ -95,4 +95,24 @@ test('профиль: никнейм, аватар и приватность а�
   });
   const publicProfile = await request(port, '/api/users/alice_profile/public', { cookie: bob.cookie });
   assert.equal(publicProfile.status, 200);
+
+  // Удаление аккаунта владельцем: профиль и сессии удаляются, логин перестаёт работать.
+  const wrongConfirm = await request(port, '/api/auth/account', {
+    method: 'DELETE', cookie: bob.cookie, csrfToken: bob.csrfToken, body: { password: 'password123', confirm: 'нет' }
+  });
+  assert.equal(wrongConfirm.status, 422);
+  const wrongPassword = await request(port, '/api/auth/account', {
+    method: 'DELETE', cookie: bob.cookie, csrfToken: bob.csrfToken, body: { password: 'wrong-password', confirm: 'УДАЛИТЬ' }
+  });
+  assert.equal(wrongPassword.status, 401);
+  const deleted = await request(port, '/api/auth/account', {
+    method: 'DELETE', cookie: bob.cookie, csrfToken: bob.csrfToken, body: { password: 'password123', confirm: 'УДАЛИТЬ' }
+  });
+  assert.equal(deleted.status, 200);
+  const deletedMe = await request(port, '/api/auth/me', { cookie: bob.cookie });
+  assert.equal(deletedMe.status, 401);
+  const deletedLogin = await request(port, '/api/auth/login', { method: 'POST', body: { login: 'bob_profile', password: 'password123' } });
+  assert.equal(deletedLogin.status, 401);
+  const deletedProfile = await request(port, '/api/users/bob_profile/public');
+  assert.equal(deletedProfile.status, 404);
 });

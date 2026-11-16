@@ -272,6 +272,7 @@ export function initCommunityUI({ storage, showToast, onNavigate, getAutoContext
     $('#community-sidebar').hidden = user?.privileges !== 'GOD';
     $('#community-moderation-note').hidden = !MODERATORS.includes(user?.privileges);
     $('#cabinet-private').hidden = !user || Boolean(publicProfile);
+    $('#profile-danger-zone').hidden = !user || Boolean(publicProfile);
     $('#cabinet-public').hidden = !publicProfile;
     if (!publicProfile) $('#cabinet-status').textContent = user ? '' : t('authRequired');
     const account = $('#cabinet-summary');
@@ -346,6 +347,8 @@ export function initCommunityUI({ storage, showToast, onNavigate, getAutoContext
       if (loginReadonly) loginReadonly.textContent = user.login;
       const telegramStatus = $('#profile-telegram-status');
       const linkTelegram = $('#profile-link-telegram');
+      const mergeTelegram = $('#profile-telegram-merge');
+      if (mergeTelegram) mergeTelegram.hidden = !(user.telegram_linked && String(user.login).startsWith('tg_'));
       if (telegramStatus && linkTelegram) {
         if (user.telegram_linked) {
           telegramStatus.hidden = false;
@@ -430,6 +433,57 @@ export function initCommunityUI({ storage, showToast, onNavigate, getAutoContext
       showToast(t('telegramLinked'));
     } catch (error) {
       notifyError(error);
+    }
+  });
+
+  $('#profile-merge-submit')?.addEventListener('click', async () => {
+    const login = $('#profile-merge-login')?.value.trim();
+    const password = $('#profile-merge-password')?.value || '';
+    const status = $('#profile-merge-status');
+    if (!login || !password) {
+      if (status) status.textContent = t('invalidCredentials');
+      return;
+    }
+    try {
+      const data = await api('/api/auth/telegram/merge', { method: 'POST', body: { login, password } });
+      user = data.user;
+      csrfToken = data.csrfToken;
+      setDraftUser(user);
+      profileEditing = false;
+      renderAccount();
+      showToast(t('accountMerged'));
+    } catch (error) {
+      if (status) status.textContent = error.message;
+      notifyError(error);
+    }
+  });
+
+  $('#profile-delete')?.addEventListener('click', () => {
+    if (!user) return;
+    $('#delete-account-password-row').hidden = !user.password_set;
+    $('#delete-account-password').value = '';
+    $('#delete-account-confirm').value = '';
+    $('#delete-account-status').textContent = '';
+    $('#delete-account-dialog').showModal();
+  });
+  $('#close-delete-account')?.addEventListener('click', () => $('#delete-account-dialog').close());
+  $('#cancel-delete-account')?.addEventListener('click', () => $('#delete-account-dialog').close());
+  $('#confirm-delete-account')?.addEventListener('click', async () => {
+    const status = $('#delete-account-status');
+    try {
+      await api('/api/auth/account', {
+        method: 'DELETE',
+        body: { password: $('#delete-account-password')?.value || '', confirm: $('#delete-account-confirm')?.value || '' }
+      });
+      user = null;
+      csrfToken = '';
+      setDraftUser(null);
+      profileEditing = false;
+      $('#delete-account-dialog').close();
+      renderAccount();
+      showToast(t('accountDeleted'));
+    } catch (error) {
+      if (status) status.textContent = error.message;
     }
   });
 

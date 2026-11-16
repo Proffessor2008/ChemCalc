@@ -83,6 +83,10 @@ function migrateProfileFeatures(db) {
   if (!columns.has('telegram_id')) db.exec('ALTER TABLE users ADD COLUMN telegram_id INTEGER');
   if (!columns.has('telegram_username')) db.exec('ALTER TABLE users ADD COLUMN telegram_username TEXT');
   if (!columns.has('telegram_photo_url')) db.exec('ALTER TABLE users ADD COLUMN telegram_photo_url TEXT');
+  if (!columns.has('deleted_at')) db.exec('ALTER TABLE users ADD COLUMN deleted_at TEXT');
+  if (!columns.has('password_set')) db.exec('ALTER TABLE users ADD COLUMN password_set INTEGER NOT NULL DEFAULT 1');
+  db.prepare("UPDATE users SET password_set = 1 WHERE password_set IS NULL").run();
+  db.prepare("UPDATE users SET password_set = 0 WHERE telegram_id IS NOT NULL AND login LIKE 'tg\\_%' ESCAPE '\\'").run();
   db.exec('CREATE UNIQUE INDEX IF NOT EXISTS users_telegram_id_unique ON users(telegram_id)');
   db.prepare("UPDATE users SET nickname = login WHERE nickname = '' OR nickname IS NULL").run();
 }
@@ -101,9 +105,11 @@ export function openCommunityDatabase(path) {
       telegram_username TEXT,
       telegram_photo_url TEXT,
       password_hash TEXT NOT NULL,
+      password_set INTEGER NOT NULL DEFAULT 1,
       privileges TEXT NOT NULL CHECK(privileges IN ('basic', 'admin', 'admin+', 'GOD')),
       avatar TEXT NOT NULL DEFAULT '',
       privacy TEXT NOT NULL DEFAULT 'public',
+      deleted_at TEXT,
       created_at TEXT NOT NULL,
       last_login_at TEXT
     );
@@ -284,6 +290,7 @@ export function publicUser(row) {
     nickname: row.nickname || row.login,
     telegram_linked: Boolean(row.telegram_id),
     telegram_username: row.telegram_username || '',
+    password_set: row.password_set !== 0,
     privileges: row.privileges,
     avatar: row.avatar || '',
     privacy: row.privacy || 'public',

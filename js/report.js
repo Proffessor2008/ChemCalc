@@ -1,4 +1,5 @@
 import { getLocale } from './i18n.js';
+import { getTelegramController } from './telegram.js';
 
 export function formatReportDate(date = new Date()) {
   try {
@@ -33,7 +34,37 @@ export function safeFilename(name, extension) {
   return `${base}.${extension}`;
 }
 
-export function downloadBlob(blob, filename) {
+function readBase64(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Не удалось прочитать файл'));
+    reader.onload = () => resolve(String(reader.result).split(',')[1] || '');
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function uploadTemporaryFile(blob, filename) {
+  const data = await readBase64(blob);
+  const response = await fetch('/api/files/temp', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ filename, type: blob.type, data })
+  });
+  if (!response.ok) throw new Error('Не удалось подготовить файл');
+  const result = await response.json();
+  return result.url;
+}
+
+export async function downloadBlob(blob, filename) {
+  const telegram = getTelegramController();
+  if (telegram) {
+    try {
+      const url = await uploadTemporaryFile(blob, filename);
+      if (await telegram.downloadFile(url, filename)) return;
+    } catch (error) {
+      console.error('ChemCalc Telegram download failed', error);
+    }
+  }
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;

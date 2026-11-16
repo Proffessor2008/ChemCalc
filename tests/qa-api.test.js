@@ -85,6 +85,24 @@ test('вопросы сообщества: вопрос, теги, ответы,
   });
   assert.equal(comment.status, 201);
   assert.equal(comment.data.comments.length, 1);
+  const commentId = comment.data.comments[0].id;
+
+  // Чужой комментарий удалить нельзя, автор — может, модератор — тоже.
+  const charlie = await register(port, 'charlie_comments');
+  const foreignDelete = await request(port, `/api/comments/${commentId}`, { method: 'DELETE', cookie: charlie.cookie, csrfToken: charlie.csrfToken });
+  assert.equal(foreignDelete.status, 403);
+  const authorDelete = await request(port, `/api/comments/${commentId}`, { method: 'DELETE', cookie: bob.cookie, csrfToken: bob.csrfToken });
+  assert.equal(authorDelete.status, 200);
+  const afterDelete = await request(port, `/api/questions/${questionId}`);
+  assert.equal(afterDelete.data.question.comments.length, 0);
+  const secondComment = await request(port, `/api/questions/${questionId}/comment`, {
+    method: 'POST', cookie: bob.cookie, csrfToken: bob.csrfToken, body: { body: 'Комментарий для модератора' }
+  });
+  const creator = await login(port, credentials.login, credentials.password);
+  const moderatorDelete = await request(port, `/api/comments/${secondComment.data.comments[0].id}`, {
+    method: 'DELETE', cookie: creator.cookie, csrfToken: creator.csrfToken
+  });
+  assert.equal(moderatorDelete.status, 200);
 
   // Алиса голосует за ответ Боба и отмечает его полезным.
   const vote = await request(port, `/api/answers/${answerId}/vote`, { method: 'POST', cookie: alice.cookie, csrfToken: alice.csrfToken, body: { value: 1 } });
