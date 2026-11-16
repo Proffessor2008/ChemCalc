@@ -177,10 +177,11 @@ test('модерация вопросов: мультитеги, без отве
   const unanswered = await request(port, '/api/questions?sort=unanswered');
   assert.equal(unanswered.data.questions.length, 2);
 
-  // Просмотры растут при открытии детальной страницы.
-  await request(port, `/api/questions/${firstId}`);
-  const viewed = await request(port, `/api/questions/${firstId}`);
-  assert.ok(viewed.data.question.views >= 2);
+  // Просмотры считаются один раз на уникального пользователя.
+  const beforeViews = await request(port, `/api/questions/${firstId}?view=0`, { cookie: alice.cookie });
+  await request(port, `/api/questions/${firstId}`, { cookie: alice.cookie });
+  const viewed = await request(port, `/api/questions/${firstId}`, { cookie: alice.cookie });
+  assert.equal(viewed.data.question.views, beforeViews.data.question.views + 1);
   assert.equal(viewed.data.question.closed, false);
 
   // Ответ на первый вопрос.

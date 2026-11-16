@@ -1,6 +1,6 @@
 import { createServer } from 'node:http';
 import { EventEmitter } from 'node:events';
-import { randomBytes, randomUUID } from 'node:crypto';
+import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { openCommunityDatabase, publicUser, jsonRecord, transaction } from './db.mjs';
 import { openPostgresDatabase } from './postgres.mjs';
 import { createSession, destroySession, getSession, hashPassword, normalizeLogin, requireUser, sessionCookie, validateCredentials, verifyPassword } from './auth.mjs';
@@ -98,6 +98,75 @@ export async function createCommunityServer({ dbPath, god, staticHandler, dbBack
   }
 
   function updated(type) { events.emit('update', { type, at: new Date().toISOString() }); }
+
+  function requestCookie(request, name) {
+    for (const part of String(request.headers.cookie || '').split(';')) {
+      const index = part.indexOf('=');
+      if (index < 0) continue;
+      if (part.slice(0, index).trim() === name) return decodeURIComponent(part.slice(index + 1));
+    }
+    return '';
+  }
+
+  async function recordQuestionView(request, question, userId) {
+    if (/bot|crawler|spider|preview/i.test(String(request.headers['user-agent'] || ''))) return null;
+    let viewerToken = requestCookie(request, 'chemcalc_viewer');
+    let setCookie = null;
+    if (!viewerToken) {
+      viewerToken = randomBytes(18).toString('base64url');
+      const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
+      setCookie = `chemcalc_viewer=${encodeURIComponent(viewerToken)}; HttpOnly; SameSite=Lax; Path=/; Max-Age=31536000${secure}`;
+    }
+    const viewerKey = userId
+      ? `u:${userId}`
+      : `a:${createHash('sha256').update(viewerToken).digest('hex')}`;
+    const existing = await db.prepare('SELECT 1 AS found FROM question_views WHERE question_id = ? AND viewer_key = ?').get(question.id, viewerKey);
+    if (!existing) {
+      try {
+        await transaction(db, async () => {
+          await db.prepare('INSERT INTO question_views(question_id, viewer_key, viewed_at) VALUES(?,?,?)')
+            .run(question.id, viewerKey, new Date().toISOString());
+          await db.prepare('UPDATE questions SET views = views + 1 WHERE id = ?').run(question.id);
+        });
+        question.views = Number(question.views || 0) + 1;
+      } catch (error) {
+        if (!/UNIQUE|constraint|23505/i.test(String(error.code || error.message || ''))) throw error;
+      }
+    }
+    return setCookie;
+  }
+
+  const UPLOAD_TYPES = {
+    'image/png': 'png',
+    'image/jpeg': 'jpg',
+    'image/webp': 'webp',
+    'image/gif': 'gif',
+    'application/pdf': 'pdf',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+    'text/plain': 'txt',
+    'text/csv': 'csv',
+    'text/markdown': 'md',
+    'application/json': 'json'
+  };
+
+  async function uploadsFor(type, id) {
+    const column = type === 'answer' ? 'answer_id' : 'question_id';
+    return db.prepare(`SELECT id, filename, mime, size, created_at FROM uploads WHERE ${column} = ? ORDER BY created_at ASC`).all(id);
+  }
+
+  async function attachUploads(type, id, ownerId, uploadIds) {
+    if (!Array.isArray(uploadIds) || !uploadIds.length) return;
+    const ids = [...new Set(uploadIds.filter((value) => typeof value === 'string'))].slice(0, 5);
+    if (!ids.length) return;
+    const column = type === 'answer' ? 'answer_id' : 'question_id';
+    for (const uploadId of ids) {
+      const upload = await db.prepare('SELECT owner_id, question_id, answer_id FROM uploads WHERE id = ?').get(uploadId);
+      if (!upload || Number(upload.owner_id) !== Number(ownerId) || upload.question_id || upload.answer_id) {
+        error(422, 'invalid_attachment', 'Вложение не найдено или уже прикреплено');
+      }
+      await db.prepare(`UPDATE uploads SET ${column} = ? WHERE id = ?`).run(id, uploadId);
+    }
+  }
 
   async function consumeTelegramAuth(key) {
     const now = Date.now();
@@ -240,6 +309,7 @@ export async function createCommunityServer({ dbPath, god, staticHandler, dbBack
     answer.accepted = Number(answer.accepted) > 0;
     answer.author_reputation = Number(answer.author_reputation ?? 0);
     answer.viewer_vote = viewerId ? (await db.prepare("SELECT value FROM post_votes WHERE target_type = 'answer' AND target_id = ? AND user_id = ?").get(answer.id, viewerId))?.value ?? 0 : null;
+    answer.attachments = await uploadsFor('answer', answer.id);
     return answer;
   }
 
@@ -252,7 +322,9 @@ export async function createCommunityServer({ dbPath, god, staticHandler, dbBack
   async function getQuestion(id, viewerId) {
     const row = await db.prepare(QUESTION_SELECT + ' WHERE questions.id = ?').get(id);
     if (!row) error(404, 'not_found', 'Вопрос не найден');
-    return questionView(db, row, viewerId);
+    const question = await questionView(db, row, viewerId);
+    question.attachments = await uploadsFor('question', id);
+    return question;
   }
 
   async function getAnswer(id, viewerId) {
@@ -355,7 +427,7 @@ export async function createCommunityServer({ dbPath, god, staticHandler, dbBack
         response.once('error', cleanup);
         return;
       }
-      if (path === '/api/health' && request.method === 'GET') return send(response, 200, { ok: true, database: db.kind || 'sqlite', schemaVersion: 6 });
+      if (path === '/api/health' && request.method === 'GET') return send(response, 200, { ok: true, database: db.kind || 'sqlite', schemaVersion: 7 });
       if (path === '/api/files/temp' && request.method === 'POST') {
         rateLimit(request);
         const input = await body(request, 8_000_000);
@@ -405,6 +477,40 @@ export async function createCommunityServer({ dbPath, god, staticHandler, dbBack
           'X-Content-Type-Options': 'nosniff'
         });
         return response.end(file.buffer);
+      }
+      if (path === '/api/uploads' && request.method === 'POST') {
+        const user = await requireUser(db, request, ['basic', 'admin', 'admin+', 'GOD'], true);
+        const input = await body(request, 7_500_000);
+        const mime = String(input.type || '');
+        if (!UPLOAD_TYPES[mime]) error(422, 'invalid_upload_type', 'Этот формат файла не поддерживается');
+        const data = String(input.data || '');
+        if (!/^[A-Za-z0-9+/]+={0,2}$/.test(data) || !data) error(422, 'invalid_upload', 'Некорректный файл');
+        const buffer = Buffer.from(data, 'base64');
+        if (!buffer.length || buffer.length > 5_000_000) error(413, 'too_large', 'Файл больше 5 МБ');
+        const filename = String(input.filename || `file.${UPLOAD_TYPES[mime]}`)
+          .replace(/[^\p{L}\p{N}._ -]/gu, '_')
+          .slice(0, 120) || `file.${UPLOAD_TYPES[mime]}`;
+        const id = randomUUID();
+        await db.prepare('INSERT INTO uploads(id, owner_id, filename, mime, size, data, created_at) VALUES(?,?,?,?,?,?,?)')
+          .run(id, user.id, filename, mime, buffer.length, buffer, new Date().toISOString());
+        await db.prepare('DELETE FROM uploads WHERE question_id IS NULL AND answer_id IS NULL AND created_at < ?')
+          .run(new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString());
+        return send(response, 201, { upload: { id, filename, mime, size: buffer.length } });
+      }
+      const uploadMatch = path.match(/^\/api\/uploads\/([0-9a-f-]{36})$/);
+      if (uploadMatch && request.method === 'GET') {
+        const upload = await db.prepare('SELECT * FROM uploads WHERE id = ?').get(uploadMatch[1]);
+        if (!upload) error(404, 'not_found', 'Файл не найден');
+        const inline = upload.mime.startsWith('image/');
+        const safeName = String(upload.filename).replace(/["\\\r\n]/g, '_');
+        response.writeHead(200, {
+          'Content-Type': upload.mime,
+          'Content-Length': upload.data.length,
+          'Content-Disposition': `${inline ? 'inline' : 'attachment'}; filename="file.${UPLOAD_TYPES[upload.mime] || 'bin'}"; filename*=UTF-8''${encodeURIComponent(safeName)}`,
+          'Cache-Control': 'public, max-age=31536000, immutable',
+          'X-Content-Type-Options': 'nosniff'
+        });
+        return response.end(upload.data);
       }
       if (path === '/api/rules' && request.method === 'GET') return send(response, 200, await communityPackage(db));
       if (path === '/api/auth/register' && request.method === 'POST') {
@@ -837,8 +943,11 @@ export async function createCommunityServer({ dbPath, god, staticHandler, dbBack
         const valid = validateQuestionBody(input);
         const id = randomUUID();
         const timestamp = new Date().toISOString();
-        await db.prepare('INSERT INTO questions(id,author_id,title,body,tags,created_at,updated_at) VALUES(?,?,?,?,?,?,?)')
-          .run(id, user.id, valid.title, valid.body, JSON.stringify(valid.tags), timestamp, timestamp);
+        await transaction(db, async () => {
+          await db.prepare('INSERT INTO questions(id,author_id,title,body,tags,created_at,updated_at) VALUES(?,?,?,?,?,?,?)')
+            .run(id, user.id, valid.title, valid.body, JSON.stringify(valid.tags), timestamp, timestamp);
+          await attachUploads('question', id, user.id, input.attachments);
+        });
         updated('question');
         return send(response, 201, { question: await getQuestion(id, user.id) });
       }
@@ -859,8 +968,10 @@ export async function createCommunityServer({ dbPath, god, staticHandler, dbBack
         const [, id, action] = questionMatch;
         const viewer = await getSession(db, request);
         if (request.method === 'GET' && !action) {
-          if (url.searchParams.get('view') !== '0') await db.prepare('UPDATE questions SET views = views + 1 WHERE id = ?').run(id);
           const question = await getQuestion(id, viewer?.user_id);
+          const viewCookie = url.searchParams.get('view') !== '0'
+            ? await recordQuestionView(request, question, viewer?.user_id)
+            : null;
           question.comments = await commentsFor(db, 'question', id, viewer?.user_id);
           question.edits = await postEditsFor(db, 'question', id);
           if (question.duplicate_of) {
@@ -873,7 +984,7 @@ export async function createCommunityServer({ dbPath, god, staticHandler, dbBack
             answer.comments = await commentsFor(db, 'answer', answer.id, viewer?.user_id);
             answer.edits = await postEditsFor(db, 'answer', answer.id);
           }
-          return send(response, 200, { question, answers });
+          return send(response, 200, { question, answers }, viewCookie ? { 'Set-Cookie': viewCookie } : {});
         }
         if (request.method === 'POST' && action === 'vote') {
           const user = await requireUser(db, request, ['basic', 'admin', 'admin+', 'GOD'], true);
@@ -975,8 +1086,11 @@ export async function createCommunityServer({ dbPath, god, staticHandler, dbBack
         const text = validatePostBody(input, 'body', 8000);
         const id = randomUUID();
         const timestamp = new Date().toISOString();
-        await db.prepare('INSERT INTO answers(id,question_id,author_id,body,created_at,updated_at) VALUES(?,?,?,?,?,?)')
-          .run(id, questionId, user.id, text, timestamp, timestamp);
+        await transaction(db, async () => {
+          await db.prepare('INSERT INTO answers(id,question_id,author_id,body,created_at,updated_at) VALUES(?,?,?,?,?,?)')
+            .run(id, questionId, user.id, text, timestamp, timestamp);
+          await attachUploads('answer', id, user.id, input.attachments);
+        });
         await notifyUser(db, question.author_id, user.id, 'question_answer', `${displayName(user)} ответил на ваш вопрос: «${question.title}»`);
         updated('answer');
         return send(response, 201, { answer: await getAnswer(id, user.id) });

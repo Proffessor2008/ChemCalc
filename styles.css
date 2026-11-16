@@ -779,3 +779,13 @@ body { min-height: 100dvh; }
 .button.danger { border-color: var(--danger); background: var(--danger); color: #fff; }
 .button.danger:hover, .button.danger:focus-visible { filter: brightness(1.08); }
 
+
+/* Q&A attachments, LaTeX and links */
+.qa-attachments { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+.qa-attachment-image { display: grid; gap: 4px; max-width: min(100%, 320px); color: var(--muted); font-size: .72rem; text-decoration: none; }
+.qa-attachment-image img { display: block; max-width: 100%; max-height: 260px; border: 1px solid var(--line); border-radius: 10px; object-fit: contain; }
+.qa-attachment-file { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; padding: 7px 10px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface-muted); color: var(--accent); font-size: .78rem; text-decoration: none; overflow-wrap: anywhere; }
+.qa-pending-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.qa-pending-file { display: inline-flex; align-items: center; gap: 4px; padding: 4px 7px; border-radius: 7px; background: var(--surface-muted); color: var(--muted); font-size: .72rem; }
+.qa-latex-source { white-space: pre-wrap; }
+.qa-post-body .katex-display { overflow-x: auto; overflow-y: hidden; padding: 4px 0; }

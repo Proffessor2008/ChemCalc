@@ -207,6 +207,26 @@ const SCHEMA = `
     UNIQUE(question_id, user_id)
   );
   CREATE INDEX IF NOT EXISTS question_flags_question ON question_flags(question_id, created_at DESC);
+  CREATE TABLE IF NOT EXISTS question_views (
+    question_id TEXT NOT NULL REFERENCES questions(id) ON DELETE CASCADE,
+    viewer_key TEXT NOT NULL,
+    viewed_at TEXT NOT NULL,
+    PRIMARY KEY(question_id, viewer_key)
+  );
+  CREATE TABLE IF NOT EXISTS uploads (
+    id TEXT PRIMARY KEY,
+    owner_id BIGINT NOT NULL REFERENCES users(id),
+    question_id TEXT REFERENCES questions(id) ON DELETE CASCADE,
+    answer_id TEXT REFERENCES answers(id) ON DELETE CASCADE,
+    filename TEXT NOT NULL,
+    mime TEXT NOT NULL,
+    size INTEGER NOT NULL,
+    data BYTEA NOT NULL,
+    created_at TEXT NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS uploads_question ON uploads(question_id);
+  CREATE INDEX IF NOT EXISTS uploads_answer ON uploads(answer_id);
+  CREATE INDEX IF NOT EXISTS uploads_created ON uploads(created_at);
   ALTER TABLE users DROP CONSTRAINT IF EXISTS users_privileges_check;
   ALTER TABLE users ADD CONSTRAINT users_privileges_check CHECK(privileges IN ('basic', 'admin', 'admin+', 'GOD'));
   ALTER TABLE proposals ALTER COLUMN score TYPE DOUBLE PRECISION;

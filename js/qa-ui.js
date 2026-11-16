@@ -16,14 +16,89 @@ const formatDate = (iso) => { try { return new Intl.DateTimeFormat(getLocale(), 
 const isModerator = (user) => Boolean(user && ['admin', 'admin+', 'GOD'].includes(user.privileges));
 const countLabel = (count, singularKey, pluralKey) => `${count} ${Math.abs(Number(count)) === 1 ? t(singularKey) : t(pluralKey)}`;
 const unitLabel = (count, singularKey, pluralKey) => (Math.abs(Number(count)) === 1 ? t(singularKey) : t(pluralKey));
-const FORMATS = { bold: ['**', '**'], italic: ['*', '*'], code: ['`', '`'], list: ['\n- ', ''], quote: ['\n> ', ''] };
+const FORMATS = { bold: ['**', '**'], italic: ['*', '*'], code: ['`', '`'], list: ['\n- ', ''], quote: ['\n> ', ''], latex: ['$', '$'] };
+const ATTACHMENT_ACCEPT = [
+  'image/png', 'image/jpeg', 'image/webp', 'image/gif',
+  'application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'text/plain', 'text/csv', 'text/markdown', 'application/json'
+].join(',');
+const MAX_ATTACHMENTS = 5;
+const EXTENSION_TYPES = {
+  png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', gif: 'image/gif',
+  pdf: 'application/pdf', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  txt: 'text/plain', csv: 'text/csv', md: 'text/markdown', json: 'application/json'
+};
+
+function fileMime(file) {
+  if (file.type) return file.type;
+  const extension = String(file.name || '').split('.').pop().toLowerCase();
+  return EXTENSION_TYPES[extension] || '';
+}
+
+function formatFileSize(bytes) {
+  const size = Number(bytes) || 0;
+  if (size < 1024) return `${size} Б`;
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} КБ`;
+  return `${(size / (1024 * 1024)).toFixed(1)} МБ`;
+}
+
+function attachmentsMarkup(attachments = []) {
+  if (!attachments.length) return '';
+  const items = attachments.map((attachment) => {
+    const id = encodeURIComponent(attachment.id);
+    const href = `/api/uploads/${id}`;
+    const name = escapeHtml(attachment.filename || 'file');
+    if (String(attachment.mime || '').startsWith('image/')) {
+      return `<a class="qa-attachment-image" href="${href}" target="_blank" rel="noopener noreferrer"><img src="${href}" alt="${name}" loading="lazy" decoding="async"><span>${name}</span></a>`;
+    }
+    return `<a class="qa-attachment-file" href="${href}" target="_blank" rel="noopener noreferrer" download><span aria-hidden="true">📄</span> ${name} <small>${formatFileSize(attachment.size)}</small></a>`;
+  }).join('');
+  return `<div class="qa-attachments">${items}</div>`;
+}
 
 function renderMarkdown(text) {
-  const source = escapeHtml(text);
-  const inline = (line) => line
-    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+  const tokens = [];
+  const stash = (html) => {
+    tokens.push(html);
+    return `\u0000${tokens.length - 1}\u0000`;
+  };
+  const safeUrl = (value) => {
+    try {
+      const url = new URL(value);
+      return ['http:', 'https:'].includes(url.protocol) ? url.href : '';
+    } catch {
+      return '';
+    }
+  };
+  const latex = (source, displayMode) => {
+    if (globalThis.katex?.renderToString) {
+      try {
+        return globalThis.katex.renderToString(String(source).trim(), {
+          displayMode,
+          throwOnError: false,
+          trust: false,
+          strict: 'ignore',
+          output: 'html'
+        });
+      } catch { /* показываем исходник формулы */ }
+    }
+    return `<code class="qa-latex-source">${escapeHtml(source)}</code>`;
+  };
+  let source = String(text ?? '');
+  source = source.replace(/`([^`\n]+)`/g, (_, code) => stash(`<code>${escapeHtml(code)}</code>`));
+  source = source.replace(/\$\$([\s\S]+?)\$\$|\$([^$\n]+?)\$/g, (_, block, inline) => stash(latex(block ?? inline, Boolean(block))));
+  source = source.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, (match, label, url) => {
+    const target = safeUrl(url);
+    return target ? stash(`<a href="${escapeHtml(target)}" target="_blank" rel="noopener noreferrer">${escapeHtml(label)}</a>`) : match;
+  });
+  source = escapeHtml(source);
+  source = source.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
     .replace(/(^|[^*])\*([^*\n]+)\*/g, '$1<em>$2</em>')
-    .replace(/`([^`\n]+)`/g, '<code>$1</code>');
+    .replace(/(https?:\/\/[^\s<]+)/g, (url) => {
+      const target = safeUrl(url.replace(/&amp;/g, '&'));
+      return target ? `<a href="${escapeHtml(target)}" target="_blank" rel="noopener noreferrer">${url}</a>` : url;
+    });
+  const inline = (line) => line;
   const lines = source.split(/\r?\n/);
   const html = [];
   let list = null;
@@ -38,7 +113,7 @@ function renderMarkdown(text) {
     html.push(`<p>${inline(line)}</p>`);
   }
   if (list) html.push(`<ul>${list.join('')}</ul>`);
-  return html.join('') || '<p></p>';
+  return (html.join('') || '<p></p>').replace(/\u0000(\d+)\u0000/g, (_, index) => tokens[Number(index)] || '');
 }
 
 export function initQAUI({ container, api, auth, showToast, onDeepLink = () => {}, onLoginRequired = () => {} }) {
@@ -56,7 +131,9 @@ export function initQAUI({ container, api, auth, showToast, onDeepLink = () => {
     view: 'list',
     commentDrafts: new Map(),
     answerDrafts: new Map(),
-    openComments: new Set()
+    openComments: new Set(),
+    pendingQuestionFiles: [],
+    pendingAnswerFiles: []
   };
 
   const user = () => auth().user;
@@ -67,6 +144,102 @@ export function initQAUI({ container, api, auth, showToast, onDeepLink = () => {
   const trimDrafts = (map) => {
     while (map.size > MAX_DRAFT_ENTRIES) map.delete(map.keys().next().value);
   };
+
+  function pendingKey(kind) {
+    return kind === 'answer' ? 'pendingAnswerFiles' : 'pendingQuestionFiles';
+  }
+
+  function renderPendingAttachments(kind) {
+    const list = state[pendingKey(kind)];
+    const host = container.querySelector(`[data-attachment-list="${kind}"]`);
+    if (!host) return;
+    host.innerHTML = list.length
+      ? list.map((file, index) => `<span class="qa-pending-file">${escapeHtml(file.name)} <small>${formatFileSize(file.size)}</small><button type="button" class="text-button danger-text" data-remove-attachment="${kind}" data-attachment-index="${index}" aria-label="${escapeHtml(t('delete'))}">×</button></span>`).join('')
+      : '';
+  }
+
+  function readFileBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error(t('attachmentReadError')));
+      reader.onload = () => resolve(String(reader.result).split(',')[1] || '');
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function compressImage(file) {
+    if (fileMime(file) === 'image/gif') return Promise.resolve(file);
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error(t('attachmentReadError')));
+      reader.onload = () => {
+        const image = new Image();
+        image.onerror = () => reject(new Error(t('invalidAttachment')));
+        image.onload = () => {
+          const max = 1600;
+          const scale = Math.min(1, max / Math.max(image.width, image.height));
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.max(1, Math.round(image.width * scale));
+          canvas.height = Math.max(1, Math.round(image.height * scale));
+          const context = canvas.getContext('2d');
+          if (!context) return reject(new Error(t('invalidAttachment')));
+          context.drawImage(image, 0, 0, canvas.width, canvas.height);
+          canvas.toBlob((blob) => {
+            canvas.width = 0;
+            canvas.height = 0;
+            if (!blob) return reject(new Error(t('invalidAttachment')));
+            resolve(new File([blob], file.name.replace(/\.[^.]+$/, '') + '.jpg', { type: 'image/jpeg' }));
+          }, 'image/jpeg', 0.82);
+        };
+        image.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function uploadPendingAttachments(kind) {
+    const files = state[pendingKey(kind)];
+    if (!files.length) return [];
+    const ids = [];
+    for (const original of files) {
+      const originalType = fileMime(original);
+      if (original.size > 5_000_000 && !originalType.startsWith('image/')) {
+        throw new Error(t('attachmentTooLarge'));
+      }
+      const file = originalType.startsWith('image/') ? await compressImage(original) : original;
+      if (file.size > 5_000_000) throw new Error(t('attachmentTooLarge'));
+      const data = await readFileBase64(file);
+      const result = await api('/api/uploads', {
+        method: 'POST',
+        body: { filename: file.name, type: fileMime(file), data }
+      });
+      ids.push(result.upload.id);
+    }
+    return ids;
+  }
+
+  container.addEventListener('change', (event) => {
+    const input = event.target.closest('[data-attachment-input]');
+    if (!input) return;
+    const kind = input.dataset.attachmentInput;
+    const list = state[pendingKey(kind)];
+    for (const file of input.files || []) {
+      if (list.length >= MAX_ATTACHMENTS) { showToast(t('attachmentLimit')); break; }
+      if (!ATTACHMENT_ACCEPT.split(',').includes(fileMime(file))) { showToast(t('invalidAttachment')); continue; }
+      list.push(file);
+    }
+    input.value = '';
+    renderPendingAttachments(kind);
+  });
+
+  container.addEventListener('click', (event) => {
+    const remove = event.target.closest('[data-remove-attachment]');
+    if (!remove) return;
+    const kind = remove.dataset.removeAttachment;
+    const index = Number(remove.dataset.attachmentIndex);
+    state[pendingKey(kind)].splice(index, 1);
+    renderPendingAttachments(kind);
+  });
   let toolbar = null;
 
   function voteMarkup(type, id, score, viewerVote) {
@@ -182,6 +355,7 @@ export function initQAUI({ container, api, auth, showToast, onDeepLink = () => {
         <div class="qa-answer-body">
           ${answer.accepted ? `<span class="qa-accepted-badge">${t('acceptedBadge')}</span>` : ''}
           <div class="qa-post-body">${renderMarkdown(answer.body)}</div>
+          ${attachmentsMarkup(answer.attachments)}
           <div class="qa-actions">
             ${isAuthor ? `<button type="button" class="text-button" data-qa-accept="${answer.id}">${answer.accepted ? t('unmarkUseful') : t('markUseful')}</button>` : ''}
             ${canEdit ? `<button type="button" class="text-button" data-qa-edit-answer="${answer.id}">${t('edit')}</button>` : ''}
@@ -196,7 +370,7 @@ export function initQAUI({ container, api, auth, showToast, onDeepLink = () => {
     const answerForm = question.closed
       ? `<p class="notice">${t('questionClosed')}${question.closed_reason ? `: ${escapeHtml(question.closed_reason)}` : ''}</p>`
       : user()
-        ? `<section class="card qa-answer-form"><h3>${t('writeAnswer')}</h3><textarea id="qa-answer-text" rows="5" maxlength="8000">${escapeHtml(answerDraft)}</textarea><div class="qa-form-actions"><button type="button" class="button primary" data-qa-submit-answer>${t('postAnswer')}</button></div></section>`
+        ? `<section class="card qa-answer-form"><h3>${t('writeAnswer')}</h3><p class="help-text">${t('formattingHint')}</p><textarea id="qa-answer-text" rows="5" maxlength="8000">${escapeHtml(answerDraft)}</textarea><label class="qa-field"><span>${t('attachments')}</span><input type="file" data-attachment-input="answer" accept="${ATTACHMENT_ACCEPT}" multiple><small class="help-text">${t('attachmentsHint')}</small></label><div class="qa-pending-list" data-attachment-list="answer"></div><div class="qa-form-actions"><button type="button" class="button primary" data-qa-submit-answer>${t('postAnswer')}</button></div></section>`
         : `<p class="notice">${t('loginToParticipate')}</p>`;
 
     $('#qa-content').innerHTML = `<article class="card qa-detail">
@@ -211,6 +385,7 @@ export function initQAUI({ container, api, auth, showToast, onDeepLink = () => {
         <div class="qa-detail-body">
           ${tagChips(question.tags)}
           <div class="qa-post-body">${renderMarkdown(question.body)}</div>
+          ${attachmentsMarkup(question.attachments)}
           ${actions}
           <div class="qa-detail-footer">
             ${authorCard(question.author_login, question.author_reputation, question.author_avatar)}
@@ -222,6 +397,7 @@ export function initQAUI({ container, api, auth, showToast, onDeepLink = () => {
     </article>
     <section class="qa-answers"><h3>${countLabel(answers.length, 'answerSingular', 'answersLabel')}</h3>${answerBlocks || `<p class="help-text">${t('noAnswers')}</p>`}</section>
     ${answerForm}`;
+    renderPendingAttachments('answer');
   }
 
   function formatButtons() {
@@ -231,6 +407,7 @@ export function initQAUI({ container, api, auth, showToast, onDeepLink = () => {
       <button type="button" data-qa-format="code" title="${t('formatCode')}"><code>code</code></button>
       <button type="button" data-qa-format="list" title="${t('formatList')}">•</button>
       <button type="button" data-qa-format="quote" title="${t('formatQuote')}">❝</button>
+      <button type="button" data-qa-format="latex" title="${t('formatLatex')}">∑</button>
     </div>`;
   }
 
@@ -250,6 +427,9 @@ export function initQAUI({ container, api, auth, showToast, onDeepLink = () => {
         <label class="qa-field"><span>${t('questionBodyLabel')} *</span></label>
         ${formatButtons()}
         <textarea id="qa-ask-body" rows="12" maxlength="8000"></textarea>
+        <p class="help-text">${t('formattingHint')}</p>
+        <label class="qa-field"><span>${t('attachments')}</span><input type="file" data-attachment-input="question" accept="${ATTACHMENT_ACCEPT}" multiple><small class="help-text">${t('attachmentsHint')}</small></label>
+        <div class="qa-pending-list" data-attachment-list="question"></div>
         <label class="qa-field"><span>${t('questionTagsLabel')}</span><input id="qa-ask-tags" maxlength="200" placeholder="овр, растворы"></label>
         ${suggestionsMarkup()}
         <div class="qa-form-actions"><button type="button" class="button ghost" data-qa-list>${t('cancel')}</button><button type="button" class="button primary" data-qa-publish>${t('askSubmit')}</button></div>
@@ -259,6 +439,7 @@ export function initQAUI({ container, api, auth, showToast, onDeepLink = () => {
         <ul><li>${t('askTip1')}</li><li>${t('askTip2')}</li><li>${t('askTip3')}</li></ul>
       </aside>
     </section>`;
+    renderPendingAttachments('question');
   }
 
   function renderEditQuestion() {
@@ -325,6 +506,7 @@ export function initQAUI({ container, api, auth, showToast, onDeepLink = () => {
   }
 
   async function openQuestion(id, { count = true } = {}) {
+    if (state.detail?.question?.id !== id) state.pendingAnswerFiles = [];
     try {
       const data = await api(`/api/questions/${id}${count ? '' : '?view=0'}`);
       state.detail = data;
@@ -363,7 +545,9 @@ export function initQAUI({ container, api, auth, showToast, onDeepLink = () => {
     const tags = $('#qa-ask-tags')?.value || '';
     if (!title || !body) { showToast(`${t('questionTitleLabel')} / ${t('questionBodyLabel')}`); return; }
     try {
-      const data = await api('/api/questions', { method: 'POST', body: { title, body, tags } });
+      const attachments = await uploadPendingAttachments('question');
+      const data = await api('/api/questions', { method: 'POST', body: { title, body, tags, attachments } });
+      state.pendingQuestionFiles = [];
       await openQuestion(data.question.id);
       loadTags();
     } catch (error) { showToast(messageFor(error)); }
@@ -402,8 +586,10 @@ export function initQAUI({ container, api, auth, showToast, onDeepLink = () => {
     const text = $('#qa-answer-text');
     if (!text) return;
     try {
-      await api('/api/answers', { method: 'POST', body: { questionId, body: text.value } });
+      const attachments = await uploadPendingAttachments('answer');
+      await api('/api/answers', { method: 'POST', body: { questionId, body: text.value, attachments } });
       state.answerDrafts.delete(questionId);
+      state.pendingAnswerFiles = [];
       text.value = '';
       await openQuestion(questionId, { count: false });
     } catch (error) { showToast(messageFor(error)); }

@@ -56,7 +56,7 @@ test('community API: регистрация, заявки, голосовани�
   });
 
   const health = await request(port, '/api/health');
-  assert.deepEqual(health.data, { ok: true, database: 'sqlite', schemaVersion: 6 });
+  assert.deepEqual(health.data, { ok: true, database: 'sqlite', schemaVersion: 7 });
   const mismatch = await request(port, '/api/auth/register', { method: 'POST', body: { login: 'baduser', password: 'password123', confirmPassword: 'otherPassword' } });
   assert.equal(mismatch.status, 422);
   const alice = await register(port, 'alice');
