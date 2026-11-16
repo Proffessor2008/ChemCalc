@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
   <meta name="theme-color" content="#0d6b62">
   <meta name="description" content="Офлайн-калькулятор химических уравнений с точным уравниванием и проверкой электронного баланса.">
   <title>ChemCalc — химический калькулятор</title>
@@ -266,6 +266,7 @@
               <div><dt data-i18n="nickname">Никнейм</dt><dd id="profile-nickname-view"></dd></div>
               <div><dt data-i18n="loginForAuth">Логин для входа</dt><dd id="profile-login-view"></dd></div>
               <div><dt data-i18n="profilePrivacy">Приватность аккаунта</dt><dd id="profile-privacy-view"></dd></div>
+              <div id="profile-telegram-row" hidden><dt data-i18n="telegram">Telegram</dt><dd id="profile-telegram-view"></dd></div>
             </dl>
           </div>
           <div id="profile-editor" class="profile-settings-grid" hidden>
@@ -277,6 +278,8 @@
             <div class="profile-fields">
               <label class="profile-field"><span data-i18n="nickname">Никнейм</span><input id="profile-nickname" maxlength="40" minlength="2" autocomplete="nickname"></label>
               <p class="help-text login-note"><span data-i18n="loginForAuth">Логин для входа</span>: <strong id="profile-login-readonly"></strong>. <span data-i18n="loginImmutable">Логин не меняется при смене никнейма.</span></p>
+              <p id="profile-telegram-status" class="help-text" role="status" hidden></p>
+              <button id="profile-link-telegram" class="button secondary" type="button" data-i18n="linkTelegram" hidden>Привязать Telegram</button>
               <label class="profile-field"><span data-i18n="profilePrivacy">Приватность аккаунта</span><select id="profile-privacy"><option value="public" data-i18n="privacyPublic">Публичный профиль</option><option value="private" data-i18n="privacyPrivate">Только для меня</option></select></label>
               <p class="help-text" data-i18n="privacyHelp">Публичный профиль виден всем. «Только для меня» скрывает профиль и историю заявок от других пользователей.</p>
               <p id="profile-status" class="help-text" role="status" aria-live="polite"></p>
@@ -293,14 +296,14 @@
     </section>
   </main>
 
-  <button class="periodic-fab" type="button" data-open-periodic><span aria-hidden="true">⊞</span><span data-i18n="periodic">Таблица Менделеева</span><kbd>T</kbd></button>
+  <button class="periodic-fab" type="button" data-open-periodic data-i18n-aria="periodic" aria-label="Таблица Менделеева"><span aria-hidden="true">⊞</span><span data-i18n="periodic">Таблица Менделеева</span><kbd>T</kbd></button>
   <nav class="mobile-nav" data-i18n-aria="navigation" aria-label="Основная навигация">
-    <button type="button" data-tab="calculator"><span aria-hidden="true">ƒ</span><span data-i18n="calculator">Калькулятор</span></button>
-    <button type="button" data-tab="stoichiometry"><span aria-hidden="true">∑</span><span data-i18n="stoichiometry">Стехиометрия</span></button>
-    <button type="button" data-tab="references"><span aria-hidden="true">▤</span><span data-i18n="references">Справочники</span></button>
-    <button type="button" data-tab="history"><span aria-hidden="true">↺</span><span data-i18n="history">История</span></button>
-    <button type="button" data-tab="community"><span aria-hidden="true">+</span><span data-i18n="community">Сообщество</span></button>
-    <button type="button" data-tab="account"><span aria-hidden="true">◔</span><span data-i18n="personalCabinet">Кабинет</span></button>
+    <button type="button" data-tab="calculator"><span aria-hidden="true">ƒ</span><span class="nav-full" data-i18n="calculator">Калькулятор</span><span class="nav-short" data-i18n="calculatorShort">Кальк.</span></button>
+    <button type="button" data-tab="stoichiometry"><span aria-hidden="true">∑</span><span class="nav-full" data-i18n="stoichiometry">Стехиометрия</span><span class="nav-short" data-i18n="stoichiometryShort">Стех.</span></button>
+    <button type="button" data-tab="references"><span aria-hidden="true">▤</span><span class="nav-full" data-i18n="references">Справочники</span><span class="nav-short" data-i18n="referencesShort">Справ.</span></button>
+    <button type="button" data-tab="history"><span aria-hidden="true">↺</span><span class="nav-full" data-i18n="history">История</span><span class="nav-short" data-i18n="historyShort">Истор.</span></button>
+    <button type="button" data-tab="community"><span aria-hidden="true">+</span><span class="nav-full" data-i18n="community">Сообщество</span><span class="nav-short" data-i18n="communityShort">Сообщ.</span></button>
+    <button type="button" data-tab="account"><span aria-hidden="true">◔</span><span class="nav-full" data-i18n="personalCabinet">Личный кабинет</span><span class="nav-short" data-i18n="accountShort">Кабинет</span></button>
   </nav>
 
   <dialog id="settings-dialog" class="dialog settings-dialog" aria-labelledby="settings-title">
@@ -320,6 +323,10 @@
         <button type="button" data-size-option="normal" data-i18n="sizeNormal">Обычный</button>
         <button type="button" data-size-option="large" data-i18n="sizeLarge">Крупный</button>
       </div>
+    </section>
+    <section class="settings-section">
+      <h3 data-i18n="tools">Инструменты</h3>
+      <button id="settings-periodic" class="button secondary" type="button" data-i18n="periodic" data-open-periodic>Таблица Менделеева</button>
     </section>
     <section class="settings-section">
       <h3 data-i18n="training">Обучение</h3>

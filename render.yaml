@@ -20,3 +20,9 @@ services:
         value: creator
       - key: COMMUNITY_GOD_PASSWORD
         sync: false
+      - key: APP_URL
+        value: https://chemcalc-a5y5.onrender.com
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_WEBHOOK_SECRET
+        sync: false

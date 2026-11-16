@@ -80,6 +80,10 @@ function migrateProfileFeatures(db) {
   if (!columns.has('avatar')) db.exec("ALTER TABLE users ADD COLUMN avatar TEXT NOT NULL DEFAULT ''");
   if (!columns.has('privacy')) db.exec("ALTER TABLE users ADD COLUMN privacy TEXT NOT NULL DEFAULT 'public'");
   if (!columns.has('nickname')) db.exec("ALTER TABLE users ADD COLUMN nickname TEXT NOT NULL DEFAULT ''");
+  if (!columns.has('telegram_id')) db.exec('ALTER TABLE users ADD COLUMN telegram_id INTEGER');
+  if (!columns.has('telegram_username')) db.exec('ALTER TABLE users ADD COLUMN telegram_username TEXT');
+  if (!columns.has('telegram_photo_url')) db.exec('ALTER TABLE users ADD COLUMN telegram_photo_url TEXT');
+  db.exec('CREATE UNIQUE INDEX IF NOT EXISTS users_telegram_id_unique ON users(telegram_id)');
   db.prepare("UPDATE users SET nickname = login WHERE nickname = '' OR nickname IS NULL").run();
 }
 
@@ -93,6 +97,9 @@ export function openCommunityDatabase(path) {
       login TEXT NOT NULL,
       login_canonical TEXT NOT NULL UNIQUE,
       nickname TEXT NOT NULL DEFAULT '',
+      telegram_id INTEGER,
+      telegram_username TEXT,
+      telegram_photo_url TEXT,
       password_hash TEXT NOT NULL,
       privileges TEXT NOT NULL CHECK(privileges IN ('basic', 'admin', 'admin+', 'GOD')),
       avatar TEXT NOT NULL DEFAULT '',
@@ -107,6 +114,10 @@ export function openCommunityDatabase(path) {
       created_at TEXT NOT NULL,
       expires_at TEXT NOT NULL,
       last_seen_at TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS telegram_auth (
+      key TEXT PRIMARY KEY,
+      used_at TEXT NOT NULL
     );
     CREATE TABLE IF NOT EXISTS proposals (
       id TEXT PRIMARY KEY,
@@ -271,6 +282,8 @@ export function publicUser(row) {
     id: row.id,
     login: row.login,
     nickname: row.nickname || row.login,
+    telegram_linked: Boolean(row.telegram_id),
+    telegram_username: row.telegram_username || '',
     privileges: row.privileges,
     avatar: row.avatar || '',
     privacy: row.privacy || 'public',

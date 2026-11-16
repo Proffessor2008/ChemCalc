@@ -17,6 +17,9 @@ const SCHEMA = `
     login TEXT NOT NULL,
     login_canonical TEXT NOT NULL UNIQUE,
     nickname TEXT NOT NULL DEFAULT '',
+    telegram_id BIGINT,
+    telegram_username TEXT,
+    telegram_photo_url TEXT,
     password_hash TEXT NOT NULL,
     privileges TEXT NOT NULL CHECK(privileges IN ('basic', 'admin', 'admin+', 'GOD')),
     avatar TEXT NOT NULL DEFAULT '',
@@ -25,6 +28,10 @@ const SCHEMA = `
     last_login_at TEXT
   );
   ALTER TABLE users ADD COLUMN IF NOT EXISTS nickname TEXT NOT NULL DEFAULT '';
+  ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_id BIGINT;
+  ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_username TEXT;
+  ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_photo_url TEXT;
+  CREATE UNIQUE INDEX IF NOT EXISTS users_telegram_id_unique ON users(telegram_id);
   ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar TEXT NOT NULL DEFAULT '';
   ALTER TABLE users ADD COLUMN IF NOT EXISTS privacy TEXT NOT NULL DEFAULT 'public';
   UPDATE users SET nickname = login WHERE nickname = '' OR nickname IS NULL;
@@ -35,6 +42,10 @@ const SCHEMA = `
     created_at TEXT NOT NULL,
     expires_at TEXT NOT NULL,
     last_seen_at TEXT NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS telegram_auth (
+    key TEXT PRIMARY KEY,
+    used_at TEXT NOT NULL
   );
   CREATE TABLE IF NOT EXISTS proposals (
     id TEXT PRIMARY KEY,

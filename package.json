@@ -11,7 +11,8 @@
     "test": "node scripts/validate-data.mjs && node --test tests/*.test.js",
     "validate:data": "node scripts/validate-data.mjs",
     "start": "node server.mjs",
-    "start:static": "python -m http.server 8080"
+    "start:static": "python -m http.server 8080",
+    "telegram:setup": "node scripts/setup-telegram.mjs"
   },
   "dependencies": {
     "pg": "8.23.1"

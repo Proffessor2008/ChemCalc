@@ -1,6 +1,6 @@
 import { createServer } from 'node:http';
 import { EventEmitter } from 'node:events';
-import { randomUUID } from 'node:crypto';
+import { randomBytes, randomUUID } from 'node:crypto';
 import { openCommunityDatabase, publicUser, jsonRecord, transaction } from './db.mjs';
 import { openPostgresDatabase } from './postgres.mjs';
 import { createSession, destroySession, getSession, hashPassword, normalizeLogin, requireUser, validateCredentials, verifyPassword } from './auth.mjs';
@@ -8,6 +8,7 @@ import { validateProposal } from './validation.mjs';
 import { communityPackage, publishProposal, rollbackRule } from './production.mjs';
 import { MAX_VOTES_PER_HOUR, REPUTATION_SQL, recordReview, reputationForUser, reviewHistory, reviewHistoryMap, voteWeight } from './review.mjs';
 import { notificationsForUser, notifyProposalAuthor, notifyUser } from './notifications.mjs';
+import { telegramDisplayName, telegramLogin, verifyTelegramInitData } from './telegram.mjs';
 
 const JSON_LIMIT = 250_000;
 const attempts = new Map();
@@ -75,7 +76,7 @@ async function proposalView(db, row, viewerId, history = null, votes = null) {
   return proposal;
 }
 
-export async function createCommunityServer({ dbPath, god, staticHandler, dbBackend = 'sqlite', connectionString, pgClient }) {
+export async function createCommunityServer({ dbPath, god, staticHandler, dbBackend = 'sqlite', connectionString, pgClient, telegramBotToken = '', telegramWebhookSecret = '', publicUrl = '' }) {
   const db = dbBackend === 'postgres' ? await openPostgresDatabase(connectionString, { client: pgClient }) : openCommunityDatabase(dbPath);
   const events = new EventEmitter();
   const clients = new Set();
@@ -88,6 +89,55 @@ export async function createCommunityServer({ dbPath, god, staticHandler, dbBack
   }
 
   function updated(type) { events.emit('update', { type, at: new Date().toISOString() }); }
+
+  async function consumeTelegramAuth(key) {
+    const now = Date.now();
+    const existing = await db.prepare('SELECT used_at FROM telegram_auth WHERE key = ?').get(key);
+    if (existing) {
+      const usedAt = Date.parse(existing.used_at);
+      if (Number.isFinite(usedAt) && now - usedAt < 120000) return;
+      error(401, 'telegram_replay', 'Повторный вход по данным Telegram');
+    }
+    try {
+      await db.prepare('DELETE FROM telegram_auth WHERE used_at < ?').run(new Date(now - 86400000).toISOString());
+      await db.prepare('INSERT INTO telegram_auth(key, used_at) VALUES(?, ?)').run(key, new Date(now).toISOString());
+    } catch (cause) {
+      if (['23505', 'SQLITE_CONSTRAINT_PRIMARYKEY', 'SQLITE_CONSTRAINT_UNIQUE'].includes(cause.code) || /UNIQUE|constraint/i.test(cause.message || '')) {
+        const used = await db.prepare('SELECT used_at FROM telegram_auth WHERE key = ?').get(key);
+        if (used && now - Date.parse(used.used_at) < 120000) return;
+        error(401, 'telegram_replay', 'Повторный вход по данным Telegram');
+      }
+      throw cause;
+    }
+  }
+
+  async function uniqueTelegramLogin(telegramId) {
+    const base = telegramLogin(telegramId);
+    let candidate = base;
+    let suffix = 1;
+    while (await db.prepare('SELECT id FROM users WHERE login_canonical = ?').get(normalizeLogin(candidate))) {
+      candidate = `${base}_${suffix++}`;
+    }
+    return candidate;
+  }
+
+  async function sendTelegramMessage(chatId, text, buttonUrl) {
+    if (!telegramBotToken) return;
+    const keyboard = buttonUrl
+      ? { inline_keyboard: [[{ text: 'Открыть ChemCalc', web_app: { url: buttonUrl } }]] }
+      : undefined;
+    await fetch(`https://api.telegram.org/bot${telegramBotToken}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text,
+        ...(keyboard ? { reply_markup: keyboard } : {})
+      }),
+      signal: AbortSignal.timeout(5000)
+    }).catch((cause) => console.error('Telegram sendMessage failed', cause.message));
+  }
+
 
   async function getProposal(id, viewerId, raw = false) {
     const row = await db.prepare(`SELECT proposals.*, COALESCE(NULLIF(users.nickname, ''), users.login) AS author_login,
@@ -264,7 +314,7 @@ export async function createCommunityServer({ dbPath, god, staticHandler, dbBack
         request.on('close', () => { clearInterval(timer); events.off('update', update); clients.delete(response); });
         return;
       }
-      if (path === '/api/health' && request.method === 'GET') return send(response, 200, { ok: true, database: db.kind || 'sqlite', schemaVersion: 5 });
+      if (path === '/api/health' && request.method === 'GET') return send(response, 200, { ok: true, database: db.kind || 'sqlite', schemaVersion: 6 });
       if (path === '/api/rules' && request.method === 'GET') return send(response, 200, await communityPackage(db));
       if (path === '/api/auth/register' && request.method === 'POST') {
         rateLimit(request);
@@ -293,6 +343,78 @@ export async function createCommunityServer({ dbPath, god, staticHandler, dbBack
         await requireUser(db, request, ['basic', 'admin', 'admin+', 'GOD'], true);
         updated('user');
         return send(response, 200, { ok: true }, { 'Set-Cookie': await destroySession(db, request) });
+      }
+      if (path === '/api/auth/telegram' && request.method === 'POST') {
+        rateLimit(request);
+        if (!telegramBotToken) error(503, 'telegram_disabled', 'Telegram-вход не настроен на сервере');
+        const input = await body(request);
+        const verified = verifyTelegramInitData(input.initData, telegramBotToken);
+        if (!verified) error(401, 'invalid_telegram_data', 'Не удалось проверить данные Telegram');
+        await consumeTelegramAuth(verified.queryId || verified.hash);
+        const telegramId = Number(verified.user.id);
+        const telegramUsername = /^[A-Za-z0-9_]{1,64}$/.test(String(verified.user.username || '')) ? String(verified.user.username) : '';
+        const telegramPhoto = typeof verified.user.photo_url === 'string' && /^https:\/\//.test(verified.user.photo_url)
+          ? verified.user.photo_url.slice(0, 2048)
+          : '';
+        const timestamp = new Date().toISOString();
+        let user = await db.prepare('SELECT * FROM users WHERE telegram_id = ?').get(telegramId);
+        if (!user) {
+          const login = await uniqueTelegramLogin(telegramId);
+          const nickname = telegramDisplayName(verified.user);
+          const userId = (await db.prepare(`INSERT INTO users(login, login_canonical, nickname, telegram_id, telegram_username, telegram_photo_url, password_hash, privileges, created_at, last_login_at)
+            VALUES(?,?,?,?,?,?,?,?,?,?)`)
+            .run(login, normalizeLogin(login), nickname, telegramId, telegramUsername, telegramPhoto, hashPassword(randomBytes(32).toString('hex')), 'basic', timestamp, timestamp)).lastInsertRowid;
+          user = await db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
+          updated('user');
+        } else {
+          await db.prepare('UPDATE users SET telegram_username = ?, telegram_photo_url = ?, last_login_at = ? WHERE id = ?')
+            .run(telegramUsername, telegramPhoto, timestamp, user.id);
+          user = await db.prepare('SELECT * FROM users WHERE id = ?').get(user.id);
+        }
+        user.reputation = await reputationForUser(db, user.id);
+        return authResponse(response, 200, user, await createSession(db, user.id));
+      }
+      if (path === '/api/auth/telegram/link' && request.method === 'POST') {
+        const current = await requireUser(db, request, ['basic', 'admin', 'admin+', 'GOD'], true);
+        if (!telegramBotToken) error(503, 'telegram_disabled', 'Telegram-вход не настроен на сервере');
+        const input = await body(request);
+        const verified = verifyTelegramInitData(input.initData, telegramBotToken);
+        if (!verified) error(401, 'invalid_telegram_data', 'Не удалось проверить данные Telegram');
+        await consumeTelegramAuth(verified.queryId || verified.hash);
+        const telegramId = Number(verified.user.id);
+        const existing = await db.prepare('SELECT id FROM users WHERE telegram_id = ?').get(telegramId);
+        if (existing && Number(existing.id) !== Number(current.id)) error(409, 'telegram_already_linked', 'Этот Telegram уже привязан к другому аккаунту');
+        const telegramUsername = /^[A-Za-z0-9_]{1,64}$/.test(String(verified.user.username || '')) ? String(verified.user.username) : '';
+        const telegramPhoto = typeof verified.user.photo_url === 'string' && /^https:\/\//.test(verified.user.photo_url)
+          ? verified.user.photo_url.slice(0, 2048)
+          : '';
+        try {
+          await db.prepare('UPDATE users SET telegram_id = ?, telegram_username = ?, telegram_photo_url = ? WHERE id = ?')
+            .run(telegramId, telegramUsername, telegramPhoto, current.id);
+        } catch (cause) {
+          if (['23505', 'SQLITE_CONSTRAINT_UNIQUE', 'SQLITE_CONSTRAINT_PRIMARYKEY'].includes(cause.code) || /UNIQUE|constraint/i.test(cause.message || '')) {
+            error(409, 'telegram_already_linked', 'Этот Telegram уже привязан к другому аккаунту');
+          }
+          throw cause;
+        }
+        const user = await db.prepare('SELECT * FROM users WHERE id = ?').get(current.id);
+        user.reputation = await reputationForUser(db, current.id);
+        updated('user');
+        return send(response, 200, { user: publicUser(user) });
+      }
+      if (path === '/api/telegram/webhook' && request.method === 'POST') {
+        if (!telegramBotToken) error(503, 'telegram_disabled', 'Telegram-бот не настроен на сервере');
+        if (telegramWebhookSecret && request.headers['x-telegram-bot-api-secret-token'] !== telegramWebhookSecret) {
+          error(403, 'invalid_webhook_secret', 'Неверный секрет вебхука');
+        }
+        const update = await body(request);
+        const message = update.message;
+        if (message?.chat?.id && typeof message.text === 'string' && /^\/(start|app)(@\w+)?(\s|$)/.test(message.text)) {
+          const url = String(publicUrl || '').replace(/\/+$/, '') || 'https://chemcalc-a5y5.onrender.com';
+          const webAppUrl = `${url}${url.includes('?') ? '&' : '?'}tg=1`;
+          await sendTelegramMessage(message.chat.id, 'ChemCalc — химический калькулятор. Откройте приложение:', webAppUrl);
+        }
+        return send(response, 200, { ok: true });
       }
       if (path === '/api/auth/profile' && request.method === 'PATCH') {
         const current = await requireUser(db, request, ['basic', 'admin', 'admin+', 'GOD'], true);
