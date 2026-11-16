@@ -7,6 +7,7 @@ import { updateCommunityData } from './predictor.js';
 import { getLocale, t } from './i18n.js';
 import { createDraftStore } from './drafts.js';
 import { SUBSTANCE_CLASSES, classLabel } from './classes.js';
+import { ensureTelegramSdk, getTelegramInitData } from './telegram.js';
 
 const $ = (selector) => document.querySelector(selector);
 const SOURCES = ['glinka', 'lidine', 'textbook', 'lab', 'personal'];
@@ -258,7 +259,7 @@ export function initCommunityUI({ storage, showToast, onNavigate, getAutoContext
   }
 
   function renderAccount() {
-    const authSignature = user ? `${user.id}:${user.nickname || user.login}:${user.login}:${user.avatar || ''}:${user.privileges}:${user.privacy || ''}` : '';
+    const authSignature = user ? `${user.id}:${user.nickname || user.login}:${user.login}:${user.avatar || ''}:${user.privileges}:${user.privacy || ''}:${user.telegram_linked}:${user.telegram_username}` : '';
     if (authSignature !== lastAuthSignature) {
       lastAuthSignature = authSignature;
       qaController?.onAuthChange({ reload: true });
@@ -272,7 +273,7 @@ export function initCommunityUI({ storage, showToast, onNavigate, getAutoContext
     $('#community-moderation-note').hidden = !MODERATORS.includes(user?.privileges);
     $('#cabinet-private').hidden = !user || Boolean(publicProfile);
     $('#cabinet-public').hidden = !publicProfile;
-    if (!publicProfile) $('#cabinet-status').textContent = user ? '' : t('loginToPropose');
+    if (!publicProfile) $('#cabinet-status').textContent = user ? '' : t('authRequired');
     const account = $('#cabinet-summary');
     account.replaceChildren();
     if (!user) {
@@ -290,6 +291,7 @@ export function initCommunityUI({ storage, showToast, onNavigate, getAutoContext
     account.append(
       element('h3', 'community-login', user.nickname || user.login),
       element('p', 'help-text', `${t('loginForAuth')}: ${user.login}`),
+      ...(user.telegram_linked ? [element('p', 'help-text', `Telegram: ${user.telegram_username ? `@${user.telegram_username}` : t('telegramLinked')}`)] : []),
       element('p', `role-badge role-${user.privileges.toLowerCase()}`, `${t('role')}: ${user.privileges}`),
       element('p', 'help-text', `${t('registered')}: ${formatDate(user.created_at)}`),
       element('p', 'help-text', `${t('lastSession')}: ${formatDate(user.last_login_at)}`),
@@ -341,6 +343,22 @@ export function initCommunityUI({ storage, showToast, onNavigate, getAutoContext
       if (nickname) nickname.value = profileDraft.nickname;
       const loginReadonly = $('#profile-login-readonly');
       if (loginReadonly) loginReadonly.textContent = user.login;
+      const telegramStatus = $('#profile-telegram-status');
+      const linkTelegram = $('#profile-link-telegram');
+      if (telegramStatus && linkTelegram) {
+        if (user.telegram_linked) {
+          telegramStatus.hidden = false;
+          telegramStatus.textContent = `${t('telegramLinked')}${user.telegram_username ? `: @${user.telegram_username}` : ''}`;
+          linkTelegram.hidden = true;
+        } else if (getTelegramInitData()) {
+          telegramStatus.hidden = false;
+          telegramStatus.textContent = t('telegramLinkHint');
+          linkTelegram.hidden = false;
+        } else {
+          telegramStatus.hidden = true;
+          linkTelegram.hidden = true;
+        }
+      }
       const privacy = $('#profile-privacy');
       if (privacy) privacy.value = profileDraft.privacy;
       const remove = $('#profile-avatar-remove');
@@ -353,6 +371,11 @@ export function initCommunityUI({ storage, showToast, onNavigate, getAutoContext
     renderProfileAvatar($('#profile-avatar-view'), user.avatar, user.nickname || user.login);
     $('#profile-nickname-view').textContent = user.nickname || user.login;
     $('#profile-login-view').textContent = user.login;
+    const telegramRow = $('#profile-telegram-row');
+    if (telegramRow) {
+      telegramRow.hidden = !user.telegram_linked;
+      if (user.telegram_linked) $('#profile-telegram-view').textContent = user.telegram_username ? `@${user.telegram_username}` : t('telegramLinked');
+    }
     $('#profile-privacy-view').textContent = privacyLabel(user.privacy || 'public');
     $('#profile-status').textContent = '';
   }
@@ -393,6 +416,20 @@ export function initCommunityUI({ storage, showToast, onNavigate, getAutoContext
     $('#profile-status').textContent = '';
     renderProfileSettings();
     $('#profile-nickname')?.focus();
+  });
+
+  $('#profile-link-telegram')?.addEventListener('click', async () => {
+    const initData = getTelegramInitData();
+    if (!initData) return;
+    try {
+      const data = await api('/api/auth/telegram/link', { method: 'POST', body: { initData } });
+      user = data.user;
+      profileEditing = false;
+      renderAccount();
+      showToast(t('telegramLinked'));
+    } catch (error) {
+      notifyError(error);
+    }
   });
 
   $('#profile-nickname')?.addEventListener('input', (event) => {
@@ -1135,8 +1172,22 @@ export function initCommunityUI({ storage, showToast, onNavigate, getAutoContext
       if (draftStore?.userId !== user.id) setDraftUser(user);
     } catch (error) {
       if (error.status !== 401) $('#community-status').textContent = t('communityOffline');
+      if (error.status === 401) {
+        try {
+          const webApp = await ensureTelegramSdk();
+          const initData = webApp?.initData || getTelegramInitData();
+          if (initData) {
+            const session = await api('/api/auth/telegram', { method: 'POST', body: { initData } });
+            user = session.user;
+            csrfToken = session.csrfToken;
+            setDraftUser(user);
+          }
+        } catch (telegramError) {
+          if (telegramError.status === 401) showToast(t('telegramAuthError'));
+        }
+      }
     }
-    if (!user && !publicProfile) $('#cabinet-status').textContent = t('loginToPropose');
+    if (!user && !publicProfile) $('#cabinet-status').textContent = t('authRequired');
     renderAccount();
     await Promise.all([refresh(), refreshRules()]);
   }
@@ -1190,6 +1241,9 @@ export function initCommunityUI({ storage, showToast, onNavigate, getAutoContext
 
   const profileMatch = location.pathname.match(/^\/([^/]+)\/?$/);
   const initialWork = restore();
+  ensureTelegramSdk().then(() => {
+    if (user && !profileEditing) renderProfileSettings();
+  });
   if (profileMatch && !location.pathname.includes('.')) {
     initialWork.then(() => {
       try { showPublicProfile(decodeURIComponent(profileMatch[1])); } catch { $('#cabinet-status').textContent = t('serverUnavailable'); }

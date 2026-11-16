@@ -1,5 +1,6 @@
 import { initAutoUI } from './auto-ui.js';
 import { initCommunityUI } from './community-ui.js';
+import { ensureTelegramSdk, initTelegramApp } from './telegram.js';
 import { balanceEquation, inspectBalance } from './balancer.js';
 import { checkEquation, findSubstance, getHint, revealAnswer } from './checker.js';
 import { createHistoryStore } from './history.js';
@@ -57,6 +58,7 @@ let autoController;
 let stoichController;
 let historyController;
 let communityController;
+let telegramController;
 let periodicController;
 let referenceController;
 let referencePromise;
@@ -242,6 +244,7 @@ function setTheme(theme) {
   if (value === 'system') document.documentElement.removeAttribute('data-theme');
   else document.documentElement.dataset.theme = value;
   storage.setItem('chemcalc-theme', value);
+  telegramController?.refreshTheme?.();
   updateSettingsControls();
 }
 
@@ -642,6 +645,7 @@ $('#settings-toggle').addEventListener('click', () => {
 $('#close-settings').addEventListener('click', () => $('#settings-dialog').close());
 $$('[data-theme-option]').forEach((button) => button.addEventListener('click', () => setTheme(button.dataset.themeOption)));
 $$('[data-size-option]').forEach((button) => button.addEventListener('click', () => applyUiSize(button.dataset.sizeOption)));
+$('#settings-periodic')?.addEventListener('click', () => $('#settings-dialog').close());
 
 function insertElement(symbol) {
   const target = state.mode === 'auto' ? autoInput : input;
@@ -665,6 +669,27 @@ function insertElement(symbol) {
 const savedTheme = storage.getItem('chemcalc-theme');
 setTheme(['light', 'dark', 'system'].includes(savedTheme) ? savedTheme : 'system');
 applyUiSize(storage.getItem('chemcalc-ui-size') || 'normal');
+ensureTelegramSdk().then(() => {
+  telegramController = initTelegramApp({
+    getThemePreference: () => storage.getItem('chemcalc-theme') || 'system',
+    onBack() {
+      const openDialog = [...document.querySelectorAll('dialog[open]')].pop();
+      if (openDialog) {
+        openDialog.close();
+        return;
+      }
+      if (state.tab !== 'calculator') {
+        setTab('calculator');
+        return;
+      }
+      telegramController?.close();
+    }
+  });
+  if (telegramController) {
+    telegramController.refreshTheme();
+    telegramController.setBackVisible(true);
+  }
+});
 const initialLocale = saved.locale === 'en' ? 'en' : 'ru';
 $('#language-select').value = initialLocale;
 setLocale(initialLocale);
