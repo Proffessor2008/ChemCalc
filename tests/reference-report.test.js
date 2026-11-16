@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildReferenceReport } from '../js/report-builders.js';
+import { buildReferenceReport, splitWideTable } from '../js/report-builders.js';
 
 class FakeElement {
   constructor(tagName, { text = '', className = '', children = [] } = {}) {
@@ -116,4 +116,14 @@ test('отчёт справочника собирает таблицы, ряд 
   assert.ok(!matrix.some((block) => block.text?.includes('Проверить пару')));
   assert.deepEqual(report.sections[1].blocks[0], { type: 'table', headers: ['Элемент', 'E°, В'], rows: [['Mn', '0.00 В'], ['Zn', '−0.76 В']] });
   assert.deepEqual(report.sections[2].blocks.map((block) => block.text), ['Значения по Полингу.']);
+});
+
+test('wide solubility matrix is split without losing columns', () => {
+  const headers = ['Cation', ...Array.from({ length: 8 }, (_, index) => `A${index + 1}`)];
+  const rows = [['Na', ...Array.from({ length: 8 }, (_, index) => `P${index + 1}`)]];
+  const chunks = splitWideTable({ type: 'table', headers, rows }, 6);
+  assert.equal(chunks.length, 2);
+  assert.deepEqual(chunks[0].headers, ['Cation', 'A1', 'A2', 'A3', 'A4', 'A5', 'A6']);
+  assert.deepEqual(chunks[1].headers, ['Cation', 'A7', 'A8']);
+  assert.deepEqual(chunks.map((chunk) => chunk.rows[0].slice(1)).flat(), rows[0].slice(1));
 });

@@ -2,6 +2,12 @@ import { createHash, randomBytes, scryptSync, timingSafeEqual } from 'node:crypt
 
 const digest = (value) => createHash('sha256').update(value).digest('hex');
 const cookieName = 'chemcalc_session';
+const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+const SESSION_MAX_AGE = 30 * 24 * 60 * 60;
+
+export function sessionCookie(token, secure = process.env.NODE_ENV === 'production') {
+  return `${cookieName}=${encodeURIComponent(token)}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${SESSION_MAX_AGE}${secure ? '; Secure' : ''}`;
+}
 
 export function normalizeLogin(value) {
   return String(value || '').trim().toLocaleLowerCase();
@@ -38,11 +44,11 @@ export async function createSession(db, userId, secure = process.env.NODE_ENV ==
   const token = randomBytes(32).toString('base64url');
   const csrf = randomBytes(24).toString('base64url');
   const now = new Date();
-  const expires = new Date(now.getTime() + 12 * 60 * 60 * 1000);
+  const expires = new Date(now.getTime() + SESSION_TTL_MS);
   await db.prepare('INSERT INTO sessions(token_hash,user_id,csrf_token,created_at,expires_at,last_seen_at) VALUES(?,?,?,?,?,?)')
     .run(digest(token), userId, csrf, now.toISOString(), expires.toISOString(), now.toISOString());
   return {
-    cookie: `${cookieName}=${encodeURIComponent(token)}; HttpOnly; SameSite=Lax; Path=/; Max-Age=43200${secure ? '; Secure' : ''}`,
+    cookie: sessionCookie(token, secure),
     csrfToken: csrf,
     expiresAt: expires.toISOString()
   };
@@ -58,6 +64,11 @@ export async function getSession(db, request) {
     return null;
   }
   if (Date.now() - Date.parse(session.last_seen_at) > 60000) await db.prepare('UPDATE sessions SET last_seen_at = ? WHERE token_hash = ?').run(new Date().toISOString(), session.token_hash);
+  if (Date.parse(session.expires_at) - Date.now() < 7 * 24 * 60 * 60 * 1000) {
+    const expires = new Date(Date.now() + SESSION_TTL_MS).toISOString();
+    await db.prepare('UPDATE sessions SET expires_at = ? WHERE token_hash = ?').run(expires, session.token_hash);
+    session.expires_at = expires;
+  }
   return { ...session, token };
 }
 

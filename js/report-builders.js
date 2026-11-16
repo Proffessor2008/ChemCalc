@@ -158,6 +158,20 @@ export function activityToReportBlock(container) {
   };
 }
 
+export function splitWideTable(block, maxColumns = 6) {
+  if (!block?.headers?.length || block.headers.length <= maxColumns + 1) return [block];
+  const chunks = [];
+  for (let start = 1; start < block.headers.length; start += maxColumns) {
+    const end = Math.min(block.headers.length, start + maxColumns);
+    chunks.push({
+      type: 'table',
+      headers: [block.headers[0], ...block.headers.slice(start, end)],
+      rows: block.rows.map((row) => [row[0], ...row.slice(start, end)])
+    });
+  }
+  return chunks;
+}
+
 export function buildReferenceReport({ root, id, label, source = '', filter = '' }) {
   const cards = [...root.querySelectorAll(':scope > section.card')];
   const sections = [];
@@ -175,7 +189,17 @@ export function buildReferenceReport({ root, id, label, source = '', filter = ''
     if (node.classList?.contains('tool-card') || node.classList?.contains('tool-result') || node.classList?.contains('en-grid')) return;
     if (tag === 'table') {
       const block = tableBlock(node);
-      if (block) blocks.push(block);
+      if (block) {
+        if (id === 'solubility' && String(block.headers[0] || '').includes('Катион')) {
+          const chunks = splitWideTable(block, 6);
+          chunks.forEach((chunk, index) => {
+            blocks.push({ type: 'paragraph', text: `Матрица растворимости · часть ${index + 1} из ${chunks.length}`, variant: 'subheading' });
+            blocks.push(chunk);
+          });
+        } else {
+          blocks.push(block);
+        }
+      }
       return;
     }
     if (node.classList?.contains('activity-series')) {

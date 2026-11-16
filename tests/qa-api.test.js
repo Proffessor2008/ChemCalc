@@ -103,6 +103,19 @@ test('вопросы сообщества: вопрос, теги, ответы,
     method: 'DELETE', cookie: creator.cookie, csrfToken: creator.csrfToken
   });
   assert.equal(moderatorDelete.status, 200);
+  const preservedComment = await request(port, `/api/questions/${questionId}/comment`, {
+    method: 'POST', cookie: charlie.cookie, csrfToken: charlie.csrfToken, body: { body: 'Останется после удаления аккаунта' }
+  });
+  const preservedId = preservedComment.data.comments[0].id;
+  const deleteCharlie = await request(port, '/api/auth/account', {
+    method: 'DELETE', cookie: charlie.cookie, csrfToken: charlie.csrfToken,
+    body: { password: 'password123', confirm: 'УДАЛИТЬ' }
+  });
+  assert.equal(deleteCharlie.status, 200);
+  const afterAccountDelete = await request(port, `/api/questions/${questionId}`);
+  const preserved = afterAccountDelete.data.question.comments.find((item) => item.id === preservedId);
+  assert.ok(preserved);
+  assert.equal(preserved.author_login, 'Удалённый пользователь');
 
   // Алиса голосует за ответ Боба и отмечает его полезным.
   const vote = await request(port, `/api/answers/${answerId}/vote`, { method: 'POST', cookie: alice.cookie, csrfToken: alice.csrfToken, body: { value: 1 } });

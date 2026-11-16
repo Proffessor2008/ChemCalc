@@ -3,7 +3,7 @@ import { EventEmitter } from 'node:events';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { openCommunityDatabase, publicUser, jsonRecord, transaction } from './db.mjs';
 import { openPostgresDatabase } from './postgres.mjs';
-import { createSession, destroySession, getSession, hashPassword, normalizeLogin, requireUser, validateCredentials, verifyPassword } from './auth.mjs';
+import { createSession, destroySession, getSession, hashPassword, normalizeLogin, requireUser, sessionCookie, validateCredentials, verifyPassword } from './auth.mjs';
 import { validateProposal } from './validation.mjs';
 import { communityPackage, publishProposal, rollbackRule } from './production.mjs';
 import { MAX_VOTES_PER_HOUR, REPUTATION_SQL, recordReview, reputationForUser, reviewHistory, reviewHistoryMap, voteWeight } from './review.mjs';
@@ -606,7 +606,7 @@ export async function createCommunityServer({ dbPath, god, staticHandler, dbBack
         const session = await getSession(db, request);
         const user = await requireUser(db, request);
         user.reputation = await reputationForUser(db, user.id);
-        return send(response, 200, { user: publicUser(user), csrfToken: session.csrf_token, expiresAt: session.expires_at });
+        return send(response, 200, { user: publicUser(user), csrfToken: session.csrf_token, expiresAt: session.expires_at }, { 'Set-Cookie': sessionCookie(session.token) });
       }
       if (path === '/api/notifications' && request.method === 'GET') {
         const user = await requireUser(db, request);

@@ -89,6 +89,8 @@ function selectOptions(values, selected, translate = (value) => t(value)) {
 export function initCommunityUI({ storage, showToast, onNavigate, getAutoContext = () => null, getCheckContext = () => null }) {
   let user = null;
   let csrfToken = '';
+  let authState = 'restoring';
+  let restorePromise = null;
   let proposals = [];
   let ownProposals = [];
   let editing = null;
@@ -114,6 +116,31 @@ export function initCommunityUI({ storage, showToast, onNavigate, getAutoContext
   let lastAuthSignature = '';
   let profileEditing = false;
   let profileDraft = { avatar: '', nickname: '', privacy: 'public' };
+
+  const AUTH_SNAPSHOT_KEY = 'chemcalc-auth-snapshot';
+  const AUTH_SNAPSHOT_TTL = 30 * 24 * 60 * 60 * 1000;
+
+  function readAuthSnapshot() {
+    try {
+      const snapshot = JSON.parse(storage.getItem(AUTH_SNAPSHOT_KEY) || 'null');
+      if (!snapshot?.user?.id || !Number.isFinite(snapshot.savedAt)) return null;
+      if (Date.now() - snapshot.savedAt > AUTH_SNAPSHOT_TTL) return null;
+      return snapshot.user;
+    } catch {
+      return null;
+    }
+  }
+
+  function saveAuthSnapshot(account) {
+    if (!account?.id) return;
+    try {
+      storage.setItem(AUTH_SNAPSHOT_KEY, JSON.stringify({ user: account, savedAt: Date.now() }));
+    } catch { /* локальное хранилище может быть недоступно */ }
+  }
+
+  function clearAuthSnapshot() {
+    try { storage.setItem(AUTH_SNAPSHOT_KEY, ''); } catch { /* игнорируем */ }
+  }
 
   function setDraftUser(account) {
     clearTimeout(draftTimer);
@@ -154,8 +181,8 @@ export function initCommunityUI({ storage, showToast, onNavigate, getAutoContext
     draftTimer = setTimeout(saveDraft, 500);
   }
 
-  async function api(path, { method = 'GET', body } = {}) {
-    const response = await fetch(path, {
+  async function api(path, { method = 'GET', body, timeout = 0 } = {}) {
+    const options = {
       method,
       credentials: 'same-origin',
       headers: {
@@ -164,7 +191,11 @@ export function initCommunityUI({ storage, showToast, onNavigate, getAutoContext
         ...(csrfToken && method !== 'GET' ? { 'X-CSRF-Token': csrfToken } : {})
       },
       body: body ? JSON.stringify(body) : undefined
-    });
+    };
+    if (timeout && typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function') {
+      options.signal = AbortSignal.timeout(timeout);
+    }
+    const response = await fetch(path, options);
     const data = await response.json().catch(() => ({ error: { message: t('serverUnavailable') } }));
     if (!response.ok) {
       const error = new Error(data.error?.message || t('serverUnavailable'));
@@ -175,7 +206,11 @@ export function initCommunityUI({ storage, showToast, onNavigate, getAutoContext
         user = null;
         csrfToken = '';
         setDraftUser(null);
-        renderAccount();
+        clearAuthSnapshot();
+        if (authState !== 'restoring' && !restorePromise) {
+          authState = 'anonymous';
+          renderAccount();
+        }
       }
       throw error;
     }
@@ -259,6 +294,20 @@ export function initCommunityUI({ storage, showToast, onNavigate, getAutoContext
   }
 
   function renderAccount() {
+    const restoring = authState === 'restoring';
+    const offline = authState === 'offline';
+    if (restoring || offline) {
+      $('#community-auth').hidden = true;
+      $('#cabinet-private').hidden = true;
+      $('#cabinet-public').hidden = true;
+      $('#cabinet-new-proposal').hidden = true;
+      $('#community-own-section').hidden = true;
+      $('#community-users-section').hidden = true;
+      $('#community-sidebar').hidden = true;
+      $('#profile-danger-zone').hidden = true;
+      $('#cabinet-status').textContent = restoring ? t('restoringSession') : t('sessionOffline');
+      return;
+    }
     const authSignature = user ? `${user.id}:${user.nickname || user.login}:${user.login}:${user.avatar || ''}:${user.privileges}:${user.privacy || ''}:${user.telegram_linked}:${user.telegram_username}` : '';
     if (authSignature !== lastAuthSignature) {
       lastAuthSignature = authSignature;
@@ -428,6 +477,8 @@ export function initCommunityUI({ storage, showToast, onNavigate, getAutoContext
     try {
       const data = await api('/api/auth/telegram/link', { method: 'POST', body: { initData } });
       user = data.user;
+      authState = 'authenticated';
+      saveAuthSnapshot(user);
       profileEditing = false;
       renderAccount();
       showToast(t('telegramLinked'));
@@ -448,6 +499,8 @@ export function initCommunityUI({ storage, showToast, onNavigate, getAutoContext
       const data = await api('/api/auth/telegram/merge', { method: 'POST', body: { login, password } });
       user = data.user;
       csrfToken = data.csrfToken;
+      authState = 'authenticated';
+      saveAuthSnapshot(user);
       setDraftUser(user);
       profileEditing = false;
       renderAccount();
@@ -477,6 +530,8 @@ export function initCommunityUI({ storage, showToast, onNavigate, getAutoContext
       });
       user = null;
       csrfToken = '';
+      authState = 'anonymous';
+      clearAuthSnapshot();
       setDraftUser(null);
       profileEditing = false;
       $('#delete-account-dialog').close();
@@ -535,6 +590,7 @@ export function initCommunityUI({ storage, showToast, onNavigate, getAutoContext
       user = data.user;
       profileEditing = false;
       profileDraft = { avatar: user.avatar || '', nickname: user.nickname || user.login, privacy: user.privacy || 'public' };
+      saveAuthSnapshot(user);
       renderAccount();
       showToast(t('profileSaved'));
     } catch (error) {
@@ -723,6 +779,7 @@ export function initCommunityUI({ storage, showToast, onNavigate, getAutoContext
         if (generation === requestGeneration) {
           user = session.user;
           csrfToken = session.csrfToken;
+          saveAuthSnapshot(user);
         }
       }) : Promise.resolve();
       const [feed, own, notificationData] = await Promise.all([feedRequest, ownRequest, notificationRequest, accountRequest]);
@@ -755,7 +812,7 @@ export function initCommunityUI({ storage, showToast, onNavigate, getAutoContext
   function scheduleRefresh(event) {
     clearTimeout(refreshTimer);
     refreshTimer = setTimeout(() => {
-      if (event?.type === 'user') restore();
+      if (event?.type === 'user') restore(true);
       else {
         refresh();
         if (event?.type === 'review') refreshRules();
@@ -771,6 +828,8 @@ export function initCommunityUI({ storage, showToast, onNavigate, getAutoContext
       const response = await api(path, { method: 'POST', body: data });
       user = response.user;
       csrfToken = response.csrfToken;
+      authState = 'authenticated';
+      saveAuthSnapshot(user);
       setDraftUser(user);
       form.reset();
       requestGeneration++;
@@ -801,6 +860,8 @@ export function initCommunityUI({ storage, showToast, onNavigate, getAutoContext
     }
     user = null;
     csrfToken = '';
+    authState = 'anonymous';
+    clearAuthSnapshot();
     setDraftUser(null);
     requestGeneration++;
     renderAccount();
@@ -1219,32 +1280,67 @@ export function initCommunityUI({ storage, showToast, onNavigate, getAutoContext
     }
   }
 
-  async function restore() {
-    try {
-      const session = await api('/api/auth/me');
-      user = session.user;
-      csrfToken = session.csrfToken;
-      if (draftStore?.userId !== user.id) setDraftUser(user);
-    } catch (error) {
-      if (error.status !== 401) $('#community-status').textContent = t('communityOffline');
-      if (error.status === 401) {
-        try {
-          const webApp = await ensureTelegramSdk();
-          const initData = webApp?.initData || getTelegramInitData();
-          if (initData) {
-            const session = await api('/api/auth/telegram', { method: 'POST', body: { initData } });
-            user = session.user;
-            csrfToken = session.csrfToken;
-            setDraftUser(user);
-          }
-        } catch (telegramError) {
-          if (telegramError.status === 401) showToast(t('telegramAuthError'));
-        }
+  async function performRestore(silent = false) {
+    if (!silent) {
+      authState = 'restoring';
+      renderAccount();
+    }
+    let session = null;
+    let networkError = null;
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        session = await api('/api/auth/me', { timeout: 10000 });
+        break;
+      } catch (error) {
+        if (error.status === 401) break;
+        networkError = error;
+        if (attempt < 2) await new Promise((resolve) => setTimeout(resolve, 900 * (attempt + 1)));
       }
     }
-    if (!user && !publicProfile) $('#cabinet-status').textContent = t('authRequired');
+    if (session) {
+      user = session.user;
+      csrfToken = session.csrfToken;
+      authState = 'authenticated';
+      saveAuthSnapshot(user);
+      if (draftStore?.userId !== user.id) setDraftUser(user);
+    } else if (networkError) {
+      if (silent && user && authState !== 'offline') return;
+      authState = 'offline';
+      renderAccount();
+      setTimeout(() => { if (authState === 'offline') restore(true); }, 5000);
+      return;
+    } else {
+      if (user) {
+        user = null;
+        csrfToken = '';
+        setDraftUser(null);
+      }
+      clearAuthSnapshot();
+      try {
+        const webApp = await ensureTelegramSdk();
+        const initData = webApp?.initData || getTelegramInitData();
+        if (initData) {
+          const telegramSession = await api('/api/auth/telegram', { method: 'POST', body: { initData } });
+          user = telegramSession.user;
+          csrfToken = telegramSession.csrfToken;
+          authState = 'authenticated';
+          saveAuthSnapshot(user);
+          setDraftUser(user);
+        }
+      } catch (telegramError) {
+        if (telegramError.status === 401) showToast(t('telegramAuthError'));
+      }
+      if (!user) authState = 'anonymous';
+    }
     renderAccount();
-    await Promise.all([refresh(), refreshRules()]);
+    if (authState === 'authenticated') await Promise.all([refresh(), refreshRules()]);
+    else await refreshRules();
+  }
+
+  function restore(silent = false) {
+    if (restorePromise) return restorePromise;
+    restorePromise = performRestore(silent).finally(() => { restorePromise = null; });
+    return restorePromise;
   }
 
   if (typeof EventSource === 'function') {
@@ -1293,6 +1389,11 @@ export function initCommunityUI({ storage, showToast, onNavigate, getAutoContext
   });
   renderCommunityView();
   mountQuestions().catch(() => {});
+
+  const authSnapshot = readAuthSnapshot();
+  if (authSnapshot) user = authSnapshot;
+  authState = 'restoring';
+  renderAccount();
 
   const profileMatch = location.pathname.match(/^\/([^/]+)\/?$/);
   const initialWork = restore();

@@ -38,6 +38,7 @@ test('профиль: никнейм, аватар и приватность а�
   context.after(() => app.close());
 
   const alice = await register(port, 'alice_profile');
+  assert.match(alice.cookie, /Max-Age=2592000/);
   const bob = await register(port, 'bob_profile');
   const creator = await login(port, credentials.login, credentials.password);
 
