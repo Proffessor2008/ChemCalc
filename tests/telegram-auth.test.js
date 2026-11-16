@@ -110,6 +110,28 @@ test('Telegram API: вход, привязка и сохранение акка�
   assert.equal(linkedLogin.status, 200);
   assert.equal(linkedLogin.data.user.login, 'web_user');
 
+  // Если Telegram уже создал пустой tg-аккаунт, привязка переносит его на существующий аккаунт.
+  const autoUser = await request(port, '/api/auth/telegram', {
+    method: 'POST', body: { initData: signInitData({ id: 333333333, first_name: 'Пустой', username: 'empty_tg' }, { queryId: 'empty-login' }) }
+  });
+  assert.equal(autoUser.status, 200);
+  assert.equal(autoUser.data.user.login, 'tg_333333333');
+  const transferUser = await request(port, '/api/auth/register', { method: 'POST', body: { login: 'transfer_user', password: 'password123', confirmPassword: 'password123' } });
+  const transfer = await request(port, '/api/auth/telegram/link', {
+    method: 'POST', cookie: transferUser.cookie, csrfToken: transferUser.data.csrfToken,
+    body: { initData: signInitData({ id: 333333333, first_name: 'Пустой', username: 'empty_tg' }, { queryId: 'transfer-link' }) }
+  });
+  assert.equal(transfer.status, 200, JSON.stringify(transfer.data));
+  assert.equal(transfer.data.user.login, 'transfer_user');
+  assert.equal(transfer.data.user.telegram_linked, true);
+  const oldSession = await request(port, '/api/auth/me', { cookie: autoUser.cookie });
+  assert.equal(oldSession.status, 401);
+  const afterTransfer = await request(port, '/api/auth/telegram', {
+    method: 'POST', body: { initData: signInitData({ id: 333333333, first_name: 'Пустой', username: 'empty_tg' }, { queryId: 'after-transfer' }) }
+  });
+  assert.equal(afterTransfer.status, 200);
+  assert.equal(afterTransfer.data.user.login, 'transfer_user');
+
   // Другой пользователь не может занять тот же Telegram.
   const other = await request(port, '/api/auth/register', { method: 'POST', body: { login: 'other_user', password: 'password123', confirmPassword: 'password123' } });
   const conflict = await request(port, '/api/auth/telegram/link', {

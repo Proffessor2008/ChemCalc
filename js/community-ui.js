@@ -292,6 +292,7 @@ export function initCommunityUI({ storage, showToast, onNavigate, getAutoContext
       element('h3', 'community-login', user.nickname || user.login),
       element('p', 'help-text', `${t('loginForAuth')}: ${user.login}`),
       ...(user.telegram_linked ? [element('p', 'help-text', `Telegram: ${user.telegram_username ? `@${user.telegram_username}` : t('telegramLinked')}`)] : []),
+      ...(user.telegram_linked && String(user.login).startsWith('tg_') ? [element('p', 'help-text', t('telegramAccountHint'))] : []),
       element('p', `role-badge role-${user.privileges.toLowerCase()}`, `${t('role')}: ${user.privileges}`),
       element('p', 'help-text', `${t('registered')}: ${formatDate(user.created_at)}`),
       element('p', 'help-text', `${t('lastSession')}: ${formatDate(user.last_login_at)}`),

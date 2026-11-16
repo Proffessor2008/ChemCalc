@@ -6,9 +6,10 @@
 
 - Бот: **@ChemCalk_bot**.
 - Публичный адрес: **https://chemcalc-a5y5.onrender.com**.
-- В коде уже реализованы Telegram shell, серверная проверка `initData`, вход `tg_<id>`, привязка Telegram к существующему аккаунту и скрипт настройки меню/вебхука.
+- В коде реализованы Telegram shell, серверная проверка `initData`, вход `tg_<id>`, привязка Telegram к существующему аккаунту и скрипт настройки меню/вебхука.
 - Локальная E2E-проверка пройдена: автоматический вход, никнейм/логин из Telegram, привязка к обычному аккаунту, мобильный профиль.
-- Публичный домен всё ещё отдаёт старую сборку (`/api/health` → `schemaVersion: 5`). Нужен деплой текущего кода и переменные Render.
+- Публичный домен обновлён: `/api/health` → `schemaVersion: 6`, `/api/auth/telegram` активен.
+- Меню-кнопка бота и вебхук `https://chemcalc-a5y5.onrender.com/api/telegram/webhook` настроены; `getWebhookInfo` подтверждает доставку.
 - Bot token **не хранится в репозитории**: только `TELEGRAM_BOT_TOKEN` в секретах Render/окружении.
 
 ## 1. Краткий вывод
@@ -301,13 +302,15 @@ function verifyTelegramInitData(initData, botToken) {
 
 ## 8. Деплой и настройка бота
 
-1. Задеплоить текущий код на Render (auto-deploy из репозитория или ручной деплой).
-2. В Render → Environment добавить:
-   - `APP_URL=https://chemcalc-a5y5.onrender.com`
-   - `TELEGRAM_BOT_TOKEN` — токен из `@BotFather` (секрет, не в репозиторий);
-   - `TELEGRAM_WEBHOOK_SECRET` — случайная строка, например `openssl rand -hex 32`.
-3. Убедиться, что `/api/health` отдаёт `schemaVersion: 6`.
-4. Настроить меню и вебхук (локально или в Render Shell):
+Уже выполнено для текущего проекта:
+
+1. Код задеплоен на Render; `/api/health` отдаёт `schemaVersion: 6`.
+2. В Render заданы `APP_URL`, `TELEGRAM_BOT_TOKEN` и `TELEGRAM_WEBHOOK_SECRET`.
+3. Menu button указывает на `https://chemcalc-a5y5.onrender.com/?tg=1`.
+4. Вебхук установлен на `https://chemcalc-a5y5.onrender.com/api/telegram/webhook`; `getWebhookInfo` подтверждает доставку.
+5. Команды бота: `/start` и `/app`.
+
+Повторная настройка (если нужно поменять домен/секрет):
 
 ```powershell
 $env:TELEGRAM_BOT_TOKEN='<токен>'
@@ -316,29 +319,24 @@ $env:APP_URL='https://chemcalc-a5y5.onrender.com'
 node scripts/setup-telegram.mjs
 ```
 
-Скрипт выставит menu button с URL `https://chemcalc-a5y5.onrender.com/?tg=1` и вебхук `/api/telegram/webhook`.
+Проверьте в Telegram Desktop/iOS/Android:
+- `/start` в боте → кнопка «Открыть ChemCalc»;
+- первый запуск создаёт пользователя `tg_<id>`;
+- профиль показывает `@username`, никнейм и Telegram;
+- обычный веб-пользователь может привязать Telegram в профиле;
+- после перезапуска Mini App сессия сохраняется.
 
-5. В `@BotFather`:
-   - `/setmenubutton` → URL приложения (если не используется скрипт);
-   - при необходимости `/setdescription`, `/setuserpic`.
-6. Проверить в Telegram Desktop/iOS/Android:
-   - `/start` в боте → кнопка «Открыть ChemCalc»;
-   - первый запуск создаёт пользователя `tg_<id>`;
-   - профиль показывает `@username`, никнейм и Telegram;
-   - обычный веб-пользователь может привязать Telegram в профиле;
-   - после перезапуска Mini App сессия сохраняется.
+## 9. Что осталось
 
-## 9. Что осталось от владельца проекта
-
-1. Задеплоить текущий код и прописать секреты Render (без этого публичный домен остаётся на schema 5).
+1. Ручная проверка на реальных Telegram iOS/Android/Desktop (cookie, клавиатура, safe-area).
 2. Политика конфиденциальности и правила сообщества для Telegram-данных.
-3. Тестовые Telegram-аккаунты iOS/Android/Desktop для финальной проверки.
-4. Решение по модерации/репутации Telegram-пользователей (сейчас новые получают `basic`).
+3. Решение по модерации/репутации Telegram-пользователей (сейчас новые получают `basic`).
+4. При необходимости — установка пароля для аккаунтов, созданных только через Telegram.
 
 ## 10. Ориентировочная оценка
 
 - Мобильная полировка: выполнена, осталась ручная проверка iOS — 0.5 дня.
 - Telegram shell и UX: реализовано в коде, проверено локально.
 - initData-авторизация и привязка аккаунта: реализовано в коде, покрыто тестом.
-- Деплой/SSL/прокси/мониторинг: осталось 0.5–1 день.
+- Деплой/SSL/прокси/мониторинг: выполнено.
 - Тестирование на реальных устройствах и исправления: 1–2 дня.

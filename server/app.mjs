@@ -121,6 +121,24 @@ export async function createCommunityServer({ dbPath, god, staticHandler, dbBack
     return candidate;
   }
 
+  async function telegramAccountHasActivity(userId) {
+    const checks = [
+      ['proposals', 'author_id'],
+      ['votes', 'user_id'],
+      ['questions', 'author_id'],
+      ['answers', 'author_id'],
+      ['comments', 'author_id'],
+      ['post_votes', 'user_id'],
+      ['post_edits', 'editor_id'],
+      ['question_flags', 'user_id'],
+      ['notifications', 'user_id']
+    ];
+    for (const [table, column] of checks) {
+      if (await db.prepare(`SELECT 1 AS found FROM ${table} WHERE ${column} = ? LIMIT 1`).get(userId)) return true;
+    }
+    return false;
+  }
+
   async function sendTelegramMessage(chatId, text, buttonUrl) {
     if (!telegramBotToken) return;
     const keyboard = buttonUrl
@@ -382,8 +400,14 @@ export async function createCommunityServer({ dbPath, god, staticHandler, dbBack
         if (!verified) error(401, 'invalid_telegram_data', 'Не удалось проверить данные Telegram');
         await consumeTelegramAuth(verified.queryId || verified.hash);
         const telegramId = Number(verified.user.id);
-        const existing = await db.prepare('SELECT id FROM users WHERE telegram_id = ?').get(telegramId);
-        if (existing && Number(existing.id) !== Number(current.id)) error(409, 'telegram_already_linked', 'Этот Telegram уже привязан к другому аккаунту');
+        const existing = await db.prepare('SELECT * FROM users WHERE telegram_id = ?').get(telegramId);
+        if (existing && Number(existing.id) !== Number(current.id)) {
+          const telegramOnly = String(existing.login || '').startsWith('tg_') && Number(existing.telegram_id) === telegramId;
+          if (!telegramOnly || await telegramAccountHasActivity(existing.id)) {
+            error(409, 'telegram_already_linked', 'Этот Telegram уже привязан к другому аккаунту');
+          }
+          await db.prepare('DELETE FROM users WHERE id = ?').run(existing.id);
+        }
         const telegramUsername = /^[A-Za-z0-9_]{1,64}$/.test(String(verified.user.username || '')) ? String(verified.user.username) : '';
         const telegramPhoto = typeof verified.user.photo_url === 'string' && /^https:\/\//.test(verified.user.photo_url)
           ? verified.user.photo_url.slice(0, 2048)

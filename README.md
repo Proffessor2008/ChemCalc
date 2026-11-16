@@ -216,8 +216,9 @@ node scripts/build-electronegativity.mjs
 
 ### Telegram Mini App
 
-1. Добавьте в Render секреты `TELEGRAM_BOT_TOKEN` и `TELEGRAM_WEBHOOK_SECRET`, а также `APP_URL=https://chemcalc-a5y5.onrender.com`.
-2. После деплоя выполните локально (токен не хранится в репозитории):
+Проект уже развёрнут: бот `@ChemCalk_bot`, домен `https://chemcalc-a5y5.onrender.com`, меню и вебхук настроены. В Render должны быть заданы `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET` и `APP_URL`.
+
+Для повторной настройки меню/вебхука (токен не хранится в репозитории):
 
 ```powershell
 $env:TELEGRAM_BOT_TOKEN='<токен>'
@@ -226,7 +227,7 @@ $env:APP_URL='https://chemcalc-a5y5.onrender.com'
 npm run telegram:setup
 ```
 
-Скрипт выставит menu button Mini App и вебхук `/api/telegram/webhook`. Бот — `@ChemCalk_bot`; при первом запуске создаётся аккаунт `tg_<id>`, а существующий веб-аккаунт можно привязать в профиле. Подробный аудит и план — [TELEGRAM.md](./TELEGRAM.md).
+При первом запуске создаётся аккаунт `tg_<id>`, а существующий веб-аккаунт можно привязать в профиле. Подробный аудит и план — [TELEGRAM.md](./TELEGRAM.md).
 
 ### Только статический калькулятор
 

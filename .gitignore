@@ -5,4 +5,5 @@ var/
 node_modules/
 .env
 .env.*
+GOD.txt
 .DS_Store
