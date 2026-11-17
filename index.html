@@ -242,9 +242,6 @@
           <section class="card" aria-labelledby="community-feed-title"><div class="section-inline"><h2 id="community-feed-title" data-i18n="proposalFeed">Лента предложений</h2><label for="community-sort" class="compact-label"><span data-i18n="sort">Сортировка</span><select id="community-sort"><option value="score" data-i18n="byRating">По рейтингу</option><option value="reputation" data-i18n="byAuthorReputation">По репутации автора</option><option value="recent" data-i18n="byDate">Сначала новые</option></select></label></div><p class="help-text" data-i18n="feedHelp">Голоса помогают модераторам заметить заявку. Публикацию подтверждает только admin или GOD.</p><div id="community-feed" class="proposal-list" aria-live="polite"></div><nav id="community-feed-pagination" class="pagination" aria-label="Страницы ленты"></nav></section>
           <section id="community-moderation-note" class="card moderation-note" hidden><h2 data-i18n="moderation">Модерация</h2><p data-i18n="moderationHelp">Сравните уравнение с источником, проверьте условия и ионный состав. После утверждения правило станет активным для пользователей.</p></section>
         </div>
-        <aside class="community-sidebar" id="community-sidebar">
-          <section id="community-users-section" class="card" hidden><h2 data-i18n="userManagement">Пользователи и роли</h2><p class="help-text" data-i18n="userManagementHelp">Только GOD назначает администраторов. Пароли в списке не отображаются.</p><div id="community-users"></div><nav id="community-users-pagination" class="pagination" aria-label="Страницы пользователей"></nav></section>
-        </aside>
       </div>
       </div>
       <div id="community-questions-view" hidden></div>
@@ -302,9 +299,28 @@
           </div>
         </section>
         <section class="card"><h2 data-i18n="account">Аккаунт</h2><div id="cabinet-summary"></div></section>
-        <section class="card"><div class="section-inline"><h2 data-i18n="notifications">Уведомления</h2><button id="notifications-read-all" class="text-button" type="button" data-i18n="markAllRead">Отметить все прочитанными</button></div><div id="cabinet-notifications"></div></section>
-        <section class="card cabinet-wide"><h2 data-i18n="drafts">Черновики заявок</h2><p class="help-text" data-i18n="draftStorageNote">Черновики сохраняются только на этом устройстве.</p><div id="cabinet-drafts"></div></section>
-        <section id="community-own-section" class="card cabinet-wide"><h2 data-i18n="myProposals">Мои заявки</h2><div id="community-own" class="proposal-list compact-proposals"></div><nav id="community-own-pagination" class="pagination" aria-label="Страницы моих заявок"></nav></section>
+        <section id="cabinet-users-card" class="card" hidden>
+          <div class="section-inline"><h2 data-i18n="userManagement">Пользователи и роли</h2><button id="open-users-directory" class="button secondary" type="button" data-i18n="openUsersList">Открыть список</button></div>
+          <p class="help-text" data-i18n="userManagementHelp">Только GOD назначает администраторов. Пароли в списке не отображаются.</p>
+        </section>
+        <section class="card">
+          <details class="account-collapse" data-account-collapse="notifications" open>
+            <summary><span class="account-collapse-title" data-i18n="notifications">Уведомления</span><span class="account-collapse-icon" aria-hidden="true">⌄</span></summary>
+            <div class="account-collapse-body"><div class="account-collapse-actions"><button id="notifications-read-all" class="text-button" type="button" data-i18n="markAllRead">Отметить все прочитанными</button></div><div id="cabinet-notifications"></div></div>
+          </details>
+        </section>
+        <section class="card cabinet-wide">
+          <details class="account-collapse" data-account-collapse="drafts" open>
+            <summary><span class="account-collapse-title" data-i18n="drafts">Черновики заявок</span><span class="account-collapse-icon" aria-hidden="true">⌄</span></summary>
+            <div class="account-collapse-body"><p class="help-text" data-i18n="draftStorageNote">Черновики сохраняются только на этом устройстве.</p><div id="cabinet-drafts"></div></div>
+          </details>
+        </section>
+        <section id="community-own-section" class="card cabinet-wide">
+          <details class="account-collapse" data-account-collapse="proposals" open>
+            <summary><span class="account-collapse-title" data-i18n="myProposals">Мои заявки</span><span class="account-collapse-icon" aria-hidden="true">⌄</span></summary>
+            <div class="account-collapse-body"><div id="community-own" class="proposal-list compact-proposals"></div><nav id="community-own-pagination" class="pagination" aria-label="Страницы моих заявок"></nav></div>
+          </details>
+        </section>
       </div>
       <section id="cabinet-public" class="card" hidden><div id="public-profile-summary"></div><h2 data-i18n="publicProposalHistory">История заявок</h2><div id="public-profile-proposals" class="proposal-list"></div></section>
       <footer class="account-legal-footer">
@@ -482,6 +498,12 @@
   <dialog id="support-dialog" class="support-dialog" aria-labelledby="support-dialog-title"><div id="support-app" class="support-app"></div></dialog>
   <dialog id="review-dialog" class="dialog review-dialog" aria-labelledby="review-title"><div id="review-app"></div></dialog>
   <dialog id="review-public-dialog" class="dialog review-public-dialog" aria-labelledby="review-public-title"><div id="review-public-content"></div></dialog>
+  <dialog id="users-directory-dialog" class="dialog users-directory-dialog" aria-labelledby="users-directory-title">
+    <div class="dialog-heading"><h2 id="users-directory-title" data-i18n="userManagement">Пользователи и роли</h2><button id="users-directory-close" class="icon-button" type="button" aria-label="Закрыть">×</button></div>
+    <p class="help-text" data-i18n="userManagementHelp">Только GOD назначает администраторов. Пароли в списке не отображаются.</p>
+    <div id="community-users"></div>
+    <nav id="community-users-pagination" class="pagination" aria-label="Страницы пользователей"></nav>
+  </dialog>
   <dialog id="community-proposal-dialog" class="dialog community-proposal-dialog" aria-labelledby="community-proposal-title"><div id="community-proposal-content"></div></dialog>
   <dialog id="confirm-dialog" class="dialog">
     <form method="dialog">

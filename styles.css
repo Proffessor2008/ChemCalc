@@ -967,3 +967,29 @@ body { min-height: 100dvh; }
   .review-public-dialog { width: 100%; max-width: none; max-height: 92dvh; margin: auto auto 0; border-radius: 18px 18px 0 0; }
   .review-public-body { padding: 14px 16px calc(16px + env(safe-area-inset-bottom)); }
 }
+
+/* Collapsible account blocks */
+.account-collapse { display: block; }
+.account-collapse > summary { display: flex; align-items: center; justify-content: space-between; gap: 10px; cursor: pointer; list-style: none; color: var(--text); }
+.account-collapse > summary::-webkit-details-marker { display: none; }
+.account-collapse-title { font-size: 1.05rem; font-weight: 800; letter-spacing: -.02em; }
+.account-collapse-icon { display: inline-grid; place-items: center; width: 26px; height: 26px; border: 1px solid var(--line); border-radius: 7px; color: var(--muted); font-size: 1rem; transition: transform .16s ease, color .16s ease; }
+.account-collapse[open] .account-collapse-icon { transform: rotate(180deg); color: var(--accent); }
+.account-collapse-body { padding-top: 12px; }
+.account-collapse-actions { display: flex; justify-content: flex-end; margin-bottom: 4px; }
+.account-collapse > summary:hover .account-collapse-icon { border-color: var(--accent); color: var(--accent); }
+
+/* Separate users directory */
+.users-directory-dialog { width: min(1000px, calc(100% - 24px)); max-height: 88dvh; padding: 0; overflow: hidden; }
+.users-directory-dialog[open] { display: flex; flex-direction: column; }
+.users-directory-dialog .dialog-heading { margin: 0; padding: 18px 22px 12px; border-bottom: 1px solid var(--line); }
+.users-directory-dialog > .help-text { margin: 12px 22px 0; }
+.users-directory-dialog #community-users { overflow: auto; padding: 12px 22px 0; }
+.users-directory-dialog .pagination { padding: 10px 22px 18px; margin: 0; }
+@media (max-width: 640px) {
+  .users-directory-dialog { width: 100%; max-width: none; max-height: 92dvh; margin: auto auto 0; border-radius: 18px 18px 0 0; }
+  .users-directory-dialog .dialog-heading { padding: 16px 16px 10px; }
+  .users-directory-dialog > .help-text { margin: 10px 16px 0; }
+  .users-directory-dialog #community-users { padding: 10px 16px 0; }
+  .users-directory-dialog .pagination { padding: 8px 16px calc(12px + env(safe-area-inset-bottom)); }
+}

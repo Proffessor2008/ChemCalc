@@ -307,14 +307,14 @@ export function initCommunityUI({ storage, showToast, onNavigate, getAutoContext
       $('#cabinet-public').hidden = true;
       $('#cabinet-new-proposal').hidden = true;
       $('#community-own-section').hidden = true;
-      $('#community-users-section').hidden = true;
-      $('#community-sidebar').hidden = true;
+      $('#cabinet-users-card').hidden = true;
       $('#profile-danger-zone').hidden = true;
       $('#cabinet-status').textContent = restoring ? t('restoringSession') : t('sessionOffline');
       return;
     }
     const avatarSignature = user?.avatar ? `${user.avatar.length}:${user.avatar.slice(-32)}` : '';
     const authSignature = user ? `${user.id}:${user.nickname || user.login}:${user.login}:${avatarSignature}:${user.privileges}:${user.privacy || ''}:${user.telegram_linked}:${user.telegram_username}` : '';
+    if (user?.privileges !== 'GOD') $('#users-directory-dialog')?.close();
     if (authSignature !== lastAuthSignature) {
       lastAuthSignature = authSignature;
       qaController?.onAuthChange({ reload: true });
@@ -323,8 +323,7 @@ export function initCommunityUI({ storage, showToast, onNavigate, getAutoContext
     $('#community-auth-forms').hidden = false;
     $('#cabinet-new-proposal').hidden = !user || Boolean(publicProfile);
     $('#community-own-section').hidden = !user || Boolean(publicProfile);
-    $('#community-users-section').hidden = user?.privileges !== 'GOD';
-    $('#community-sidebar').hidden = user?.privileges !== 'GOD';
+    $('#cabinet-users-card').hidden = user?.privileges !== 'GOD' || Boolean(publicProfile);
     $('#community-moderation-note').hidden = !MODERATORS.includes(user?.privileges);
     $('#cabinet-private').hidden = !user || Boolean(publicProfile);
     $('#profile-danger-zone').hidden = !user || Boolean(publicProfile);
@@ -738,7 +737,7 @@ export function initCommunityUI({ storage, showToast, onNavigate, getAutoContext
 
   async function refreshUsers() {
     if (user?.privileges !== 'GOD') return;
-    const data = await api(`/api/users?page=${usersPage}&limit=50`);
+    const data = await api(`/api/users?page=${usersPage}&limit=10`);
     if (data.pagination.pages && usersPage > data.pagination.pages) {
       usersPage = data.pagination.pages;
       return refreshUsers();
@@ -803,7 +802,7 @@ export function initCommunityUI({ storage, showToast, onNavigate, getAutoContext
       notifications = notificationData.notifications;
       unreadNotifications = notificationData.unread;
       renderFeed();
-      if (user?.privileges === 'GOD') await refreshUsers();
+      if (user?.privileges === 'GOD' && $('#users-directory-dialog')?.open) await refreshUsers();
     } catch (error) {
       if (error.status !== 401) notifyError(error);
     } finally {
@@ -882,6 +881,16 @@ export function initCommunityUI({ storage, showToast, onNavigate, getAutoContext
     } catch (error) { notifyError(error); }
   });
   $('#community-sort').addEventListener('change', () => { feedPage = 1; refresh(); });
+  $('#open-users-directory')?.addEventListener('click', async () => {
+    if (user?.privileges !== 'GOD') return;
+    usersPage = 1;
+    $('#users-directory-dialog')?.showModal();
+    try { await refreshUsers(); } catch (error) { notifyError(error); }
+  });
+  $('#users-directory-close')?.addEventListener('click', () => $('#users-directory-dialog')?.close());
+  $('#users-directory-dialog')?.addEventListener('click', (event) => {
+    if (event.target === event.currentTarget) event.currentTarget.close();
+  });
   $('#community-new-proposal').addEventListener('click', () => openProposal());
   $('#cabinet-new-proposal').addEventListener('click', () => openProposal());
 
@@ -1416,6 +1425,18 @@ export function initCommunityUI({ storage, showToast, onNavigate, getAutoContext
   if (profileMatch && !location.pathname.includes('.')) {
     initialWork.then(() => {
       try { showPublicProfile(decodeURIComponent(profileMatch[1])); } catch { $('#cabinet-status').textContent = t('serverUnavailable'); }
+    });
+  }
+
+  for (const details of document.querySelectorAll('[data-account-collapse]')) {
+    const key = `chemcalc-account-collapse:${details.dataset.accountCollapse}`;
+    try {
+      const saved = storage.getItem(key);
+      if (saved === '0') details.open = false;
+      if (saved === '1') details.open = true;
+    } catch { /* локальное хранилище может быть недоступно */ }
+    details.addEventListener('toggle', () => {
+      try { storage.setItem(key, details.open ? '1' : '0'); } catch { /* игнорируем */ }
     });
   }
 

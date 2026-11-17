@@ -29,6 +29,12 @@ test('вместо документации открываются настро�
   assert.ok(html.includes('id="review-dialog"'));
   assert.ok(html.includes('id="review-public-open"'));
   assert.ok(html.includes('id="review-public-dialog"'));
+  assert.ok(html.includes('data-account-collapse="notifications"'));
+  assert.ok(html.includes('data-account-collapse="drafts"'));
+  assert.ok(html.includes('data-account-collapse="proposals"'));
+  assert.ok(html.includes('id="open-users-directory"'));
+  assert.ok(html.includes('id="users-directory-dialog"'));
+  assert.ok(!html.includes('id="community-users-section"'));
   assert.ok(html.includes('data-i18n="support"'));
   assert.ok(ui.includes("$('#settings-toggle')"));
   assert.ok(ui.includes('initSupportUI'));

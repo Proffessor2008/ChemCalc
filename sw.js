@@ -1,4 +1,4 @@
-const CACHE_NAME = 'chemcalc-v62';
+const CACHE_NAME = 'chemcalc-v63';
 const COMMUNITY_PACKAGE = './data/reaction-rules-community.json';
 const SHELL = [
   './', './index.html', './404.html', './styles.css', './manifest.webmanifest', './icons/icon-192.svg', './icons/icon-512.svg',

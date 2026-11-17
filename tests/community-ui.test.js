@@ -10,7 +10,9 @@ const auto = readFileSync('js/auto-ui.js', 'utf8');
 test('сообщество содержит регистрацию, роли, ленту и модерацию', () => {
   assert.ok(html.includes('data-panel="community"'));
   assert.ok(html.includes('id="community-register-confirm"'));
-  assert.ok(html.includes('id="community-users-section"'));
+  assert.ok(html.includes('id="community-users"'));
+  assert.ok(html.includes('id="users-directory-dialog"'));
+  assert.ok(html.includes('id="open-users-directory"'));
   assert.ok(html.includes('id="community-sort"'));
   assert.ok(main.includes("'community'"));
   assert.ok(main.includes('initCommunityUI'));
