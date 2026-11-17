@@ -946,3 +946,24 @@ body { min-height: 100dvh; }
 .review-admin-score { color: #ffc56d; font-size: 1rem; letter-spacing: .08em; }
 .support-review-text { margin: 4px 0 0; color: var(--text); font-size: .82rem; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
 
+
+/* Public review aggregate (no individual reviews) */
+.review-public-summary { display: grid; gap: 8px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 11px; background: var(--surface-muted); }
+.review-public-summary .help-text { margin: 0; }
+.review-public-top { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; font-size: .78rem; }
+.review-public-top strong { color: var(--text); }
+.review-public-top span { color: var(--muted); }
+.review-distribution { display: grid; gap: 4px; }
+.review-distribution-row { display: grid; grid-template-columns: 38px minmax(0, 1fr) 62px; align-items: center; gap: 7px; color: var(--muted); font-size: .7rem; }
+.review-distribution-rating { color: #d2a24d; white-space: nowrap; }
+.review-distribution-track { height: 7px; overflow: hidden; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); }
+.review-distribution-bar { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #d29b3f, #ffc56d); }
+.review-distribution-count { text-align: right; white-space: nowrap; }
+.review-public-dialog { width: min(520px, calc(100% - 24px)); max-height: 88dvh; padding: 0; overflow: hidden; }
+.review-public-dialog[open] { display: flex; flex-direction: column; }
+.review-public-dialog .dialog-heading { margin: 0; padding: 18px 20px 12px; border-bottom: 1px solid var(--line); }
+.review-public-body { display: grid; gap: 10px; padding: 18px 20px 22px; overflow-y: auto; }
+@media (max-width: 520px) {
+  .review-public-dialog { width: 100%; max-width: none; max-height: 92dvh; margin: auto auto 0; border-radius: 18px 18px 0 0; }
+  .review-public-body { padding: 14px 16px calc(16px + env(safe-area-inset-bottom)); }
+}

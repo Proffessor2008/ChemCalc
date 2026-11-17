@@ -38,6 +38,79 @@ export function initReviewUI({ showToast = () => {} } = {}) {
   let context = 'settings';
   let prompt = false;
   let promptPending = false;
+  let summary = null;
+  const publicDialog = document.getElementById('review-public-dialog');
+  const publicContent = document.getElementById('review-public-content');
+
+  async function fetchSummary() {
+    try { summary = await api('/api/reviews/summary'); } catch { summary = null; }
+    return summary;
+  }
+
+  function renderDistribution(host, data) {
+    host.replaceChildren();
+    if (!data?.count) {
+      host.append(element('p', 'help-text', t('reviewPublicEmpty')));
+      return;
+    }
+    const top = element('div', 'review-public-top');
+    top.append(element('strong', '', t('reviewPublicCount', { count: data.count })));
+    top.append(element('span', '', t('reviewPublicAverage', { average: Number(data.average).toFixed(1) })));
+    host.append(top);
+    const list = element('div', 'review-distribution');
+    for (let rating = 5; rating >= 1; rating -= 1) {
+      const entry = data.distribution?.find((item) => Number(item.rating) === rating);
+      const count = Number(entry?.count || 0);
+      const percent = data.count ? Math.round(count / data.count * 100) : 0;
+      const row = element('div', 'review-distribution-row');
+      row.append(element('span', 'review-distribution-rating', `${rating} ★`));
+      const track = element('div', 'review-distribution-track');
+      const bar = element('span', 'review-distribution-bar');
+      bar.style.width = `${percent}%`;
+      track.append(bar);
+      row.append(track, element('span', 'review-distribution-count', `${count} · ${percent}%`));
+      list.append(row);
+    }
+    host.append(list);
+  }
+
+  async function refreshSummary() {
+    const inline = document.getElementById('review-public-summary');
+    if (!inline) return;
+    inline.replaceChildren(element('p', 'help-text', t('reviewSending')));
+    await fetchSummary();
+    renderDistribution(inline, summary);
+  }
+
+  async function openPublicSummary() {
+    if (!publicDialog || !publicContent) return;
+    publicContent.replaceChildren(element('p', 'help-text', t('reviewSending')));
+    publicDialog.showModal();
+    await fetchSummary();
+    publicContent.replaceChildren();
+    const header = element('div', 'dialog-heading');
+    const heading = element('h2', '', t('reviewPublicTitle'));
+    heading.id = 'review-public-title';
+    header.append(heading);
+    const close = button('×', 'icon-button');
+    close.setAttribute('aria-label', t('close'));
+    close.addEventListener('click', () => publicDialog.close());
+    header.append(close);
+    const body = element('div', 'review-public-body');
+    renderDistribution(body, summary);
+    publicContent.append(header, body);
+  }
+
+  async function syncOwnLabel() {
+    const trigger = document.getElementById('review-open');
+    if (!trigger) return;
+    try {
+      const data = await api('/api/reviews/mine');
+      const hasReview = Boolean(data.review);
+      trigger.textContent = t(hasReview ? 'reviewEdit' : 'reviewOpen');
+      trigger.dataset.i18n = hasReview ? 'reviewEdit' : 'reviewOpen';
+    } catch { /* оставляем подпись по умолчанию */ }
+  }
 
   async function api(path, { method = 'GET', body } = {}) {
     const response = await fetch(path, {
@@ -166,6 +239,8 @@ export function initReviewUI({ showToast = () => {} } = {}) {
         });
         existing = data.review;
         try { localStorage.setItem(SUBMITTED_KEY, '1'); localStorage.setItem(PROMPT_KEY, '1'); } catch { /* ignore */ }
+        await refreshSummary();
+        syncOwnLabel();
         root.replaceChildren();
         const thanks = element('div', 'review-thanks');
         thanks.append(element('div', 'review-thanks-icon', '✓'), element('h2', '', t('reviewThanks')));
@@ -222,8 +297,12 @@ export function initReviewUI({ showToast = () => {} } = {}) {
   }
 
   document.getElementById('review-open')?.addEventListener('click', () => open({ context: 'settings' }));
+  document.getElementById('review-public-open')?.addEventListener('click', openPublicSummary);
+  publicDialog?.addEventListener('click', (event) => { if (event.target === publicDialog) publicDialog.close(); });
   dialog.addEventListener('click', (event) => { if (event.target === dialog) closeDialog(); });
   window.addEventListener('chemcalc:successful-use', (event) => {
     maybePrompt(event?.detail?.context || 'settings');
   });
+  refreshSummary();
+  syncOwnLabel();
 }

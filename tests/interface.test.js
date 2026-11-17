@@ -27,6 +27,8 @@ test('вместо документации открываются настро�
   assert.ok(html.includes('id="support-dialog"'));
   assert.ok(html.includes('id="review-open"'));
   assert.ok(html.includes('id="review-dialog"'));
+  assert.ok(html.includes('id="review-public-open"'));
+  assert.ok(html.includes('id="review-public-dialog"'));
   assert.ok(html.includes('data-i18n="support"'));
   assert.ok(ui.includes("$('#settings-toggle')"));
   assert.ok(ui.includes('initSupportUI'));

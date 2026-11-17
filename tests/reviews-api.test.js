@@ -54,6 +54,13 @@ test('отзывы: аноним, обновление, вопросы и про
   const invalid = await api(port, '/api/reviews', { method: 'POST', cookie: anonymousCookie, body: { rating: 0 } });
   assert.equal(invalid.status, 422);
 
+  const summary = await api(port, '/api/reviews/summary');
+  assert.equal(summary.status, 200);
+  assert.equal(summary.data.count, 1);
+  assert.equal(summary.data.distribution.find((item) => item.rating === 4).count, 1);
+  assert.equal(summary.data.suggestions, undefined);
+  assert.equal(summary.data.reviews, undefined);
+
   const alice = await register(port, 'review_alice');
   const noCsrf = await api(port, '/api/reviews', {
     method: 'POST', cookie: alice.cookie, body: { rating: 5, suggestions: 'Без CSRF' }

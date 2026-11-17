@@ -1183,6 +1183,17 @@ export async function createCommunityServer({ dbPath, god, staticHandler, dbBack
         }
         error(405, 'method_not_allowed', 'Действие не поддерживается');
       }
+      if (path === '/api/reviews/summary' && request.method === 'GET') {
+        const rows = await db.prepare('SELECT rating, COUNT(*) AS count FROM app_reviews GROUP BY rating').all();
+        const counts = new Map(rows.map((row) => [Number(row.rating), Number(row.count)]));
+        const count = [...counts.values()].reduce((sum, value) => sum + value, 0);
+        const average = count ? [...counts.entries()].reduce((sum, [rating, value]) => sum + rating * value, 0) / count : 0;
+        return send(response, 200, {
+          count,
+          average: Number(average.toFixed(1)),
+          distribution: [1, 2, 3, 4, 5].map((rating) => ({ rating, count: counts.get(rating) || 0 }))
+        });
+      }
       if (path === '/api/reviews/mine' && request.method === 'GET') {
         const session = await getSession(db, request);
         const identity = reviewIdentity(request, response, session ? await db.prepare('SELECT id FROM users WHERE id = ?').get(session.user_id) : null);
