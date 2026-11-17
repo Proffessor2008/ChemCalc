@@ -34,10 +34,20 @@ export function verifyPassword(password, stored) {
 }
 
 function cookies(request) {
-  return Object.fromEntries(String(request.headers.cookie || '').split(';').filter(Boolean).map((part) => {
+  const result = {};
+  for (const part of String(request.headers.cookie || '').split(';').filter(Boolean)) {
     const index = part.indexOf('=');
-    return [part.slice(0, index).trim(), decodeURIComponent(part.slice(index + 1))];
-  }));
+    if (index < 1) continue;
+    const name = part.slice(0, index).trim();
+    try { result[name] = decodeURIComponent(part.slice(index + 1)); } catch { /* игнорируем повреждённую cookie */ }
+  }
+  return result;
+}
+
+function constantTimeEqual(left, right) {
+  const first = Buffer.from(String(left ?? ''), 'utf8');
+  const second = Buffer.from(String(right ?? ''), 'utf8');
+  return first.length === second.length && timingSafeEqual(first, second);
 }
 
 export async function createSession(db, userId, secure = process.env.NODE_ENV === 'production') {
@@ -86,9 +96,13 @@ export async function requireUser(db, request, roles = ['basic', 'admin', 'admin
   if (!user || !roles.includes(user.privileges)) throw Object.assign(new Error('Недостаточно привилегий'), { status: 403, code: 'forbidden' });
   if (csrf) {
     const origin = request.headers.origin;
-    if (origin && new URL(origin).host !== request.headers.host) throw Object.assign(new Error('Недопустимый источник запроса'), { status: 403, code: 'origin_rejected' });
+    if (origin) {
+      let originHost = null;
+      try { originHost = new URL(origin).host; } catch { originHost = null; }
+      if (originHost !== request.headers.host) throw Object.assign(new Error('Недопустимый источник запроса'), { status: 403, code: 'origin_rejected' });
+    }
     const token = request.headers['x-csrf-token'];
-    if (!token || token !== session.csrf_token) throw Object.assign(new Error('Недопустимый CSRF-токен'), { status: 403, code: 'csrf_rejected' });
+    if (!token || !constantTimeEqual(token, session.csrf_token)) throw Object.assign(new Error('Недопустимый CSRF-токен'), { status: 403, code: 'csrf_rejected' });
   }
   return user;
 }

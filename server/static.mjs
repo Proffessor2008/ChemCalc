@@ -11,6 +11,11 @@ const MIN_COMPRESS_SIZE = 1024;
 const MAX_FILE_CACHE = 64;
 const fileCache = new Map();
 
+const PUBLIC_FILES = new Set([
+  '/index.html', '/404.html', '/manifest.webmanifest', '/sw.js', '/styles.css'
+]);
+const PUBLIC_DIRECTORIES = ['/js/', '/data/', '/vendor/', '/icons/', '/LICENSES/'];
+
 function acceptsEncoding(header, encoding) {
   return String(header || '').split(',').some((part) => {
     const [name, ...parameters] = part.trim().split(';').map((value) => value.trim());
@@ -18,6 +23,34 @@ function acceptsEncoding(header, encoding) {
     const quality = parameters.find((parameter) => parameter.startsWith('q='));
     return !quality || Number(quality.slice(2)) > 0;
   });
+}
+
+function isPublicPath(pathname) {
+  if (pathname === '/' || pathname === '') return true;
+  if (PUBLIC_FILES.has(pathname)) return true;
+  if (pathname.startsWith('/.') || pathname.includes('..') || pathname.includes('\\') || pathname.includes('\0')) return false;
+  return PUBLIC_DIRECTORIES.some((directory) => pathname.startsWith(directory) && pathname.length > directory.length);
+}
+
+function sendNotFound(request, response, rootPath) {
+  let body;
+  let type = 'text/plain; charset=utf-8';
+  if (String(request.headers.accept || '').includes('text/html') || String(request.headers.accept || '').includes('*/*')) {
+    try {
+      body = readFileSync(resolve(rootPath, '404.html'));
+      type = 'text/html; charset=utf-8';
+    } catch { /* fallback ниже */ }
+  }
+  if (!body) body = Buffer.from('Not found', 'utf8');
+  const headers = {
+    'Content-Type': type,
+    'Content-Length': body.length,
+    'Cache-Control': 'no-store',
+    'X-Content-Type-Options': 'nosniff',
+    'Referrer-Policy': 'no-referrer'
+  };
+  response.writeHead(404, headers);
+  response.end(request.method === 'HEAD' ? undefined : body);
 }
 
 function readCached(file, stat) {
@@ -57,7 +90,9 @@ function sendFile(response, request, file, stat, entry, extension, encoded, enco
     'Content-Type': MIME[extension] || 'application/octet-stream',
     'Content-Length': (encoded || entry.raw).length,
     'Cache-Control': 'no-cache',
-    ETag: etag(stat)
+    'ETag': etag(stat),
+    'X-Content-Type-Options': 'nosniff',
+    'Referrer-Policy': 'no-referrer'
   };
   if (COMPRESSIBLE.has(extension)) headers.Vary = 'Accept-Encoding';
   if (encoding) headers['Content-Encoding'] = encoding;
@@ -85,10 +120,13 @@ export function createStaticHandler(root = process.cwd()) {
       response.end();
       return;
     }
+    if (!isPublicPath(pathname)) {
+      sendNotFound(request, response, rootPath);
+      return;
+    }
     let file = resolve(rootPath, `.${pathname === '/' ? '/index.html' : pathname}`);
     if (!file.startsWith(`${rootPath}${sep}`) || file.startsWith(`${rootPath}${sep}var${sep}`) || file.startsWith(`${rootPath}${sep}.git${sep}`)) {
-      response.writeHead(403);
-      response.end();
+      sendNotFound(request, response, rootPath);
       return;
     }
     let stat;
@@ -96,13 +134,8 @@ export function createStaticHandler(root = process.cwd()) {
       stat = statSync(file);
       if (!stat.isFile()) throw new Error('not a file');
     } catch {
-      if (extname(pathname)) {
-        response.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
-        response.end('Not found');
-        return;
-      }
-      file = resolve(rootPath, 'index.html');
-      stat = statSync(file);
+      sendNotFound(request, response, rootPath);
+      return;
     }
     const entry = readCached(file, stat);
     const extension = extname(file);

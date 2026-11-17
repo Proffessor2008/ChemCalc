@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b1514">
+  <meta name="robots" content="noindex, nofollow">
+  <title>404 — страница испарилась · ChemCalc</title>
+  <link rel="icon" href="./icons/icon-192.svg" type="image/svg+xml">
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #08110f;
+      --surface: rgba(18, 36, 32, .86);
+      --line: rgba(129, 196, 181, .2);
+      --text: #e7f4ef;
+      --muted: #92aaa4;
+      --accent: #6de3c1;
+      --accent-strong: #139b78;
+      --amber: #ffc56d;
+      --danger: #ff8f80;
+    }
+    * { box-sizing: border-box; }
+    html, body { min-height: 100%; }
+    body {
+      margin: 0;
+      min-height: 100dvh;
+      overflow-x: hidden;
+      background:
+        radial-gradient(900px 500px at 80% 8%, rgba(31, 143, 117, .24), transparent 65%),
+        radial-gradient(700px 400px at 8% 88%, rgba(255, 197, 109, .1), transparent 70%),
+        var(--bg);
+      color: var(--text);
+      font: 16px/1.55 "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: .35;
+      background-image: linear-gradient(rgba(109, 227, 193, .035) 1px, transparent 1px), linear-gradient(90deg, rgba(109, 227, 193, .035) 1px, transparent 1px);
+      background-size: 44px 44px;
+      mask-image: linear-gradient(to bottom, #000, transparent 78%);
+    }
+    .wrap {
+      position: relative;
+      z-index: 1;
+      width: min(1120px, calc(100% - 32px));
+      min-height: 100dvh;
+      margin: 0 auto;
+      padding: 28px 0 24px;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 28px;
+    }
+    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+    .brand { display: inline-flex; align-items: center; gap: 10px; color: var(--text); text-decoration: none; font-weight: 800; letter-spacing: -.02em; }
+    .brand-mark {
+      display: grid;
+      place-items: center;
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      color: #06221b;
+      background: linear-gradient(145deg, #8af5d6, #36b893);
+      box-shadow: 0 8px 30px rgba(54, 184, 147, .24);
+      font-size: .84rem;
+      font-weight: 900;
+    }
+    .brand small { display: block; color: var(--muted); font-size: .7rem; font-weight: 500; letter-spacing: .01em; }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 7px 11px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(18, 36, 32, .6);
+      color: var(--muted);
+      font-size: .72rem;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+    .badge i { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 12px var(--accent); }
+    .hero {
+      align-self: center;
+      display: grid;
+      grid-template-columns: minmax(0, 1.15fr) minmax(260px, .85fr);
+      align-items: center;
+      gap: clamp(22px, 6vw, 72px);
+      padding: clamp(18px, 4vw, 54px);
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      background: linear-gradient(135deg, rgba(17, 39, 34, .9), rgba(10, 23, 20, .68));
+      box-shadow: 0 30px 90px rgba(0, 0, 0, .35), inset 0 1px 0 rgba(255, 255, 255, .04);
+      backdrop-filter: blur(14px);
+    }
+    .eyebrow { margin: 0 0 10px; color: var(--accent); font-size: .74rem; font-weight: 800; letter-spacing: .18em; text-transform: uppercase; }
+    h1 { margin: 0; font-size: clamp(4.8rem, 17vw, 10rem); line-height: .82; letter-spacing: -.08em; font-weight: 900; }
+    h1 span { color: var(--accent); text-shadow: 0 0 46px rgba(109, 227, 193, .22); }
+    h2 { margin: 22px 0 8px; font-size: clamp(1.35rem, 3vw, 2rem); line-height: 1.15; letter-spacing: -.03em; }
+    .lead { max-width: 47ch; margin: 0; color: var(--muted); font-size: clamp(.94rem, 1.4vw, 1.06rem); }
+    .path {
+      display: inline-flex;
+      max-width: 100%;
+      margin-top: 16px;
+      padding: 8px 12px;
+      border: 1px dashed var(--line);
+      border-radius: 9px;
+      background: rgba(0, 0, 0, .16);
+      color: var(--muted);
+      font: .76rem/1.4 "Cascadia Code", Consolas, monospace;
+      overflow-wrap: anywhere;
+    }
+    .actions { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 22px; }
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 44px;
+      padding: 10px 16px;
+      border: 1px solid transparent;
+      border-radius: 11px;
+      color: var(--text);
+      text-decoration: none;
+      font: inherit;
+      font-size: .86rem;
+      font-weight: 800;
+      cursor: pointer;
+      transition: transform .16s ease, background .16s ease, border-color .16s ease;
+    }
+    .button:hover { transform: translateY(-1px); }
+    .button.primary { background: var(--accent); color: #05241c; box-shadow: 0 10px 28px rgba(109, 227, 193, .16); }
+    .button.primary:hover { background: #8af5d6; }
+    .button.ghost { border-color: var(--line); background: rgba(255, 255, 255, .025); }
+    .button.ghost:hover { border-color: rgba(109, 227, 193, .42); }
+    .note { margin: 18px 0 0; color: #6f8982; font-size: .72rem; }
+    .art { position: relative; display: grid; place-items: center; min-height: 300px; }
+    .orbit {
+      position: absolute;
+      width: min(310px, 80vw);
+      aspect-ratio: 1;
+      border: 1px solid rgba(109, 227, 193, .18);
+      border-radius: 50%;
+      animation: spin 28s linear infinite;
+    }
+    .orbit::before, .orbit::after {
+      content: "";
+      position: absolute;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 18px var(--accent);
+    }
+    .orbit::before { top: 8%; left: 22%; }
+    .orbit::after { right: 12%; bottom: 19%; background: var(--amber); box-shadow: 0 0 18px var(--amber); }
+    .flask {
+      position: relative;
+      width: min(260px, 70vw);
+      filter: drop-shadow(0 24px 34px rgba(0, 0, 0, .36));
+      animation: float 6s ease-in-out infinite;
+    }
+    .bubble { transform-origin: center; animation: rise 4.5s ease-in-out infinite; }
+    .bubble:nth-child(2) { animation-delay: -1.2s; }
+    .bubble:nth-child(3) { animation-delay: -2.4s; }
+    .bubble:nth-child(4) { animation-delay: -3.1s; }
+    .fun {
+      position: absolute;
+      right: 0;
+      bottom: 4px;
+      max-width: 190px;
+      padding: 10px 12px;
+      border: 1px solid rgba(255, 197, 109, .24);
+      border-radius: 12px;
+      background: rgba(24, 33, 24, .82);
+      color: #d9c39a;
+      font-size: .7rem;
+      line-height: 1.4;
+      transform: rotate(-2deg);
+    }
+    footer { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; color: #607a73; font-size: .7rem; }
+    footer a { color: #90b8ae; text-decoration: none; }
+    footer a:hover { color: var(--accent); }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes float { 0%, 100% { transform: translateY(0) rotate(-1deg); } 50% { transform: translateY(-12px) rotate(1deg); } }
+    @keyframes rise { 0% { opacity: 0; transform: translateY(8px) scale(.7); } 35% { opacity: .8; } 100% { opacity: 0; transform: translateY(-30px) scale(1.08); } }
+    @media (max-width: 760px) {
+      .wrap { width: min(100% - 22px, 620px); padding-top: 16px; gap: 18px; }
+      .hero { grid-template-columns: 1fr; padding: 22px 18px 26px; border-radius: 22px; }
+      .art { min-height: 210px; order: -1; }
+      .flask { width: min(190px, 58vw); }
+      .orbit { width: min(220px, 66vw); }
+      .fun { right: 4px; bottom: -4px; max-width: 155px; font-size: .64rem; }
+      h1 { font-size: clamp(4.2rem, 28vw, 7.2rem); }
+      .badge { display: none; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation: none !important; transition: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="topbar">
+      <a class="brand" href="./" aria-label="ChemCalc — на главную">
+        <span class="brand-mark">Cc</span>
+        <span>ChemCalc<small>химический калькулятор</small></span>
+      </a>
+      <span class="badge"><i></i> страница не найдена</span>
+    </header>
+
+    <main class="hero">
+      <section>
+        <p class="eyebrow">Ошибка 404 · потерялась в растворе</p>
+        <h1>4<span>0</span>4</h1>
+        <h2>Эта страница испарилась</h2>
+        <p class="lead">Похоже, молекула распалась, а адрес — нет. Такой страницы не существует, но калькулятор и сообщество на месте.</p>
+        <span class="path" id="requested-path">/</span>
+        <div class="actions">
+          <a class="button primary" href="./">← На главную</a>
+          <a class="button ghost" href="./#community">В сообщество</a>
+          <button class="button ghost" id="go-back" type="button">Назад</button>
+        </div>
+        <p class="note">The page you are looking for does not exist. Try the calculator or the community.</p>
+      </section>
+
+      <aside class="art" aria-hidden="true">
+        <div class="orbit"></div>
+        <svg class="flask" viewBox="0 0 260 260" role="img" aria-label="Химическая колба">
+          <defs>
+            <linearGradient id="liquid" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#8af5d6"/>
+              <stop offset="1" stop-color="#149b78"/>
+            </linearGradient>
+            <linearGradient id="glass" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="rgba(255,255,255,.32)"/>
+              <stop offset=".5" stop-color="rgba(255,255,255,.06)"/>
+              <stop offset="1" stop-color="rgba(109,227,193,.18)"/>
+            </linearGradient>
+            <filter id="glow"><feGaussianBlur stdDeviation="4" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+          </defs>
+          <path d="M104 28h52v16c0 8 3 14 8 20l45 110c9 22-4 46-28 46H79c-24 0-37-24-28-46l45-110c5-6 8-12 8-20V28Z" fill="url(#glass)" stroke="rgba(154,255,226,.7)" stroke-width="3"/>
+          <path d="M82 168h96l26 62c5 12-2 24-15 24H71c-13 0-20-12-15-24l26-62Z" fill="url(#liquid)" opacity=".88" filter="url(#glow)"/>
+          <path d="M112 30h36" stroke="rgba(230,255,248,.7)" stroke-width="5" stroke-linecap="round"/>
+          <circle class="bubble" cx="112" cy="190" r="5" fill="rgba(230,255,248,.8)"/>
+          <circle class="bubble" cx="140" cy="204" r="3.5" fill="rgba(230,255,248,.8)"/>
+          <circle class="bubble" cx="124" cy="174" r="2.6" fill="rgba(230,255,248,.8)"/>
+          <circle class="bubble" cx="154" cy="184" r="2.2" fill="rgba(230,255,248,.8)"/>
+          <path d="M84 142h92" stroke="rgba(255,255,255,.24)" stroke-width="2" stroke-dasharray="3 7" stroke-linecap="round"/>
+          <path d="M72 220c22-8 34 8 56 1s36 6 61-1" stroke="rgba(255,255,255,.35)" stroke-width="2" fill="none" stroke-linecap="round"/>
+        </svg>
+        <div class="fun">Совет: страницу можно найти заново, а уравнение — сбалансировать.</div>
+      </aside>
+    </main>
+
+    <footer>
+      <span>ChemCalc · 404 · страница не существует</span>
+      <span><a href="./">Главная</a> · <a href="./#community">Сообщество</a> · <a href="https://t.me/ChemCalk_bot" target="_blank" rel="noopener noreferrer">Telegram</a></span>
+    </footer>
+  </div>
+  <script>
+    (() => {
+      const path = document.getElementById('requested-path');
+      if (path) path.textContent = location.pathname + location.search;
+      const back = document.getElementById('go-back');
+      if (back) back.addEventListener('click', () => {
+        if (history.length > 1) history.back(); else location.href = './';
+      });
+    })();
+  </script>
+</body>
+</html>

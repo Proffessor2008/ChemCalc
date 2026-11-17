@@ -399,6 +399,12 @@ export async function createCommunityServer({ dbPath, god, staticHandler, dbBack
   const server = createServer(async (request, response) => {
     response.setHeader('X-Content-Type-Options', 'nosniff');
     response.setHeader('Referrer-Policy', 'no-referrer');
+    response.setHeader('Permissions-Policy', 'camera=(self), microphone=(), geolocation=()');
+    response.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
+    response.setHeader('Content-Security-Policy', "frame-ancestors 'self' https://web.telegram.org https://*.telegram.org; base-uri 'self'; object-src 'none'");
+    if (process.env.NODE_ENV === 'production' || request.headers['x-forwarded-proto'] === 'https') {
+      response.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    }
     const url = new URL(request.url, 'http://localhost');
     const path = url.pathname;
     try {

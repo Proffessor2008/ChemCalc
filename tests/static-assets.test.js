@@ -32,10 +32,10 @@ test('статика сжимается, получает ETag и поддерж
   assert.equal(gzip.headers.get('content-encoding'), 'gzip');
   assert.ok(Number(gzip.headers.get('content-length')) < statSync('data/elements.json').size / 5);
 
-  const fallback = await fetch(url('/public-profile'));
-  assert.equal(fallback.status, 200);
-  assert.match(fallback.headers.get('content-type'), /text\/html/);
-  assert.match(await fallback.text(), /id="panel-calculator"/);
+  const missingPage = await fetch(url('/public-profile'));
+  assert.equal(missingPage.status, 404);
+  assert.match(missingPage.headers.get('content-type'), /text\/html/);
+  assert.match(await missingPage.text(), /404/);
 
   const missing = await fetch(url('/missing.js'));
   assert.equal(missing.status, 404);
