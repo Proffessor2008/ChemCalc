@@ -8,7 +8,7 @@
 - Публичный адрес: **https://chemcalc-a5y5.onrender.com**.
 - В коде реализованы Telegram shell, серверная проверка `initData`, вход `tg_<id>`, привязка Telegram к существующему аккаунту и скрипт настройки меню/вебхука.
 - Локальная E2E-проверка пройдена: автоматический вход, никнейм/логин из Telegram, привязка к обычному аккаунту, мобильный профиль.
-- Публичный домен обновлён: `/api/health` → `schemaVersion: 8`, `/api/auth/telegram` активен.
+- Публичный домен обновлён: `/api/health` → `schemaVersion: 9`, `/api/auth/telegram` активен.
 - Меню-кнопка бота и вебхук `https://chemcalc-a5y5.onrender.com/api/telegram/webhook` настроены; `getWebhookInfo` подтверждает доставку.
 - Добавлены привязка Telegram к существующему аккаунту, нативное скачивание PDF/DOCX, удаление аккаунта и удаление комментариев автором/модератором.
 - Bot token **не хранится в репозитории**: только `TELEGRAM_BOT_TOKEN` в секретах Render/окружении.
@@ -284,7 +284,7 @@ function verifyTelegramInitData(initData, botToken) {
 
 - Калькулятор и локальные данные могут работать без сети.
 - API/SSE/cookie — никогда не кэшировать.
-- При деплое обновлять версию кэша (`chemcalc-v60` и выше).
+- При деплое обновлять версию кэша (`chemcalc-v61` и выше).
 - В Telegram первый запуск обычно онлайн; офлайн-режим — бонус, не обязательное условие.
 
 ## 6.6. Дополнительные функции текущего этапа
@@ -317,7 +317,7 @@ function verifyTelegramInitData(initData, botToken) {
 
 Уже выполнено для текущего проекта:
 
-1. Код задеплоен на Render; `/api/health` отдаёт `schemaVersion: 8`.
+1. Код задеплоен на Render; `/api/health` отдаёт `schemaVersion: 9`.
 2. В Render заданы `APP_URL`, `TELEGRAM_BOT_TOKEN` и `TELEGRAM_WEBHOOK_SECRET`.
 3. Menu button указывает на `https://chemcalc-a5y5.onrender.com/?tg=1`.
 4. Вебхук установлен на `https://chemcalc-a5y5.onrender.com/api/telegram/webhook`; `getWebhookInfo` подтверждает доставку.

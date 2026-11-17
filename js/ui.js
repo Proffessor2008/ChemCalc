@@ -1,6 +1,7 @@
 import { initAutoUI } from './auto-ui.js';
 import { initCommunityUI } from './community-ui.js';
 import { initSupportUI } from './support-ui.js';
+import { initReviewUI } from './review-ui.js';
 import { ensureTelegramSdk, initTelegramApp } from './telegram.js';
 import { balanceEquation, inspectBalance } from './balancer.js';
 import { checkEquation, findSubstance, getHint, revealAnswer } from './checker.js';
@@ -357,6 +358,7 @@ function renderResult(result) {
   }
   if (result.balance?.isBalanced) renderThermoPanel('#check-thermo-panel', result.equation, { solvent: state.checkSolvent });
   else $('#check-thermo-panel').hidden = true;
+  if (result.balance?.isBalanced) window.dispatchEvent(new CustomEvent('chemcalc:successful-use', { detail: { context: 'calculator' } }));
   renderSubstances(result);
   $('#check-proposal-button').hidden = false;
 }
@@ -790,6 +792,7 @@ const afterFirstPaint = window.requestAnimationFrame || ((callback) => setTimeou
 afterFirstPaint(() => setTimeout(initializeDeferredTools, 0));
 const onboardingController = initOnboarding({ storage, navigate: setTab, setMode });
 initSupportUI({ showToast });
+initReviewUI({ showToast });
 $('#restart-onboarding')?.addEventListener('click', () => {
   $('#settings-dialog')?.close();
   onboardingController.restart();

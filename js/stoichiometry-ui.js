@@ -115,6 +115,7 @@ export function initStoichiometryUI({ getCurrentEquation, showToast = null }) {
   function render(result) {
     lastResult = result;
     $('#stoich-result').hidden = false;
+    window.dispatchEvent(new CustomEvent('chemcalc:successful-use', { detail: { context: 'stoichiometry' } }));
     $('#stoich-result-equation').textContent = result.equationUnicode;
     $('#stoich-limiting').hidden = !result.limitingFormula;
     $('#stoich-limiting').textContent = result.limitingFormula ? t('limitingReactant', { formula: formulaToUnicode(result.limitingFormula) }) : '';

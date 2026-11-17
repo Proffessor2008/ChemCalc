@@ -42,6 +42,8 @@ export function initSupportUI({ showToast = () => {} } = {}) {
   let csrf = '';
   let categories = [];
   let threads = [];
+  let reviews = [];
+  let reviewsLoading = false;
   let thread = null;
   let view = 'list';
   let scope = 'mine';
@@ -101,6 +103,12 @@ export function initSupportUI({ showToast = () => {} } = {}) {
     const back = button('←', 'icon-button support-back', 'button');
     back.setAttribute('aria-label', t('supportBack'));
     back.addEventListener('click', () => {
+      if (view === 'reviews') {
+        view = 'list';
+        scope = 'inbox';
+        loadThreads();
+        return;
+      }
       if (view === 'thread' || view === 'new') {
         view = 'list';
         thread = null;
@@ -126,7 +134,14 @@ export function initSupportUI({ showToast = () => {} } = {}) {
         thread = null;
         loadThreads();
       });
-      right.append(inbox);
+      const reviews = button(t('supportReviews'), 'text-button');
+      reviews.addEventListener('click', () => {
+        view = 'reviews';
+        scope = 'inbox';
+        thread = null;
+        loadReviews();
+      });
+      right.append(inbox, reviews);
     }
     const closeButton = button('×', 'icon-button', 'button');
     closeButton.setAttribute('aria-label', t('close'));
@@ -200,6 +215,52 @@ export function initSupportUI({ showToast = () => {} } = {}) {
     card.append(meta);
     card.addEventListener('click', () => openThread(item.id));
     return card;
+  }
+
+  function renderReviews() {
+    const wrapper = element('div', 'support-list-wrap');
+    if (reviewsLoading) wrapper.append(element('p', 'help-text', t('supportSending')));
+    else if (!reviews.length) wrapper.append(emptyState(t('reviewAdminEmpty')));
+    else {
+      const list = element('div', 'support-list');
+      for (const review of reviews) {
+        const card = element('article', 'support-card review-admin-card');
+        const top = element('div', 'support-card-top');
+        const score = element('span', 'review-admin-score', `${'★'.repeat(review.rating)}${'☆'.repeat(5 - review.rating)}`);
+        top.append(score, element('span', 'support-number', formatDate(review.updated_at || review.created_at)));
+        card.append(top);
+        const byline = element('div', 'support-card-meta');
+        byline.append(element('span', '', review.author?.nickname || review.author?.login || t('reviewAnonymous')));
+        byline.append(element('span', '', t({ calculator: 'reviewContextCalculator', stoichiometry: 'reviewContextStoichiometry', settings: 'reviewContextSettings' }[review.context] || 'reviewContextSettings')));
+        if (review.usability) byline.append(element('span', '', `${t('reviewUsabilityLabel')}: ${review.usability}/5`));
+        card.append(byline);
+        if (review.features?.length) {
+          const row = element('div', 'support-card-meta');
+          for (const key of review.features) row.append(element('span', '', t(`reviewFeature${key.charAt(0).toUpperCase()}${key.slice(1)}`)));
+          card.append(row);
+        }
+        if (review.suggestions) card.append(element('p', 'support-review-text', review.suggestions));
+        list.append(card);
+      }
+      wrapper.append(list);
+    }
+    renderShell(wrapper, t('supportReviews'), t('supportStaff'));
+  }
+
+  async function loadReviews() {
+    reviewsLoading = true;
+    view = 'reviews';
+    renderReviews();
+    try {
+      const data = await api('/api/reviews?limit=100');
+      reviews = data.reviews || [];
+    } catch (error) {
+      toastError(error);
+      reviews = [];
+    } finally {
+      reviewsLoading = false;
+      renderReviews();
+    }
   }
 
   function renderList() {

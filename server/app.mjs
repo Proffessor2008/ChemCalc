@@ -419,6 +419,41 @@ export async function createCommunityServer({ dbPath, god, staticHandler, dbBack
     { key: 'other', label: 'Другое', hint: 'Опишите ситуацию как можно точнее.' }
   ];
   const SUPPORT_IMAGE_TYPES = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp' };
+  const REVIEW_FEATURES = ['calculations', 'redox', 'stoichiometry', 'references', 'reports', 'community', 'telegram', 'design'];
+  const REVIEW_CONTEXTS = ['calculator', 'stoichiometry', 'settings'];
+  const reviewAttempts = new Map();
+  function reviewRateLimit(key) {
+    const now = Date.now();
+    const recent = (reviewAttempts.get(key) || []).filter((time) => now - time < 60 * 60 * 1000);
+    if (recent.length >= 12) error(429, 'review_rate_limit', 'Слишком много отзывов. Попробуйте позже.');
+    recent.push(now);
+    reviewAttempts.set(key, recent);
+    if (reviewAttempts.size > 5000) reviewAttempts.delete(reviewAttempts.keys().next().value);
+  }
+  function reviewIdentity(request, response, user) {
+    if (user) return { key: `u:${user.id}`, userId: user.id, setCookie: '' };
+    let token = requestCookie(request, 'chemcalc_reviewer');
+    let setCookie = '';
+    if (!token) {
+      token = randomBytes(18).toString('base64url');
+      setCookie = `chemcalc_reviewer=${encodeURIComponent(token)}; HttpOnly; SameSite=Lax; Path=/; Max-Age=31536000${process.env.NODE_ENV === 'production' ? '; Secure' : ''}`;
+    }
+    return { key: `a:${createHash('sha256').update(token).digest('hex')}`, userId: null, setCookie };
+  }
+  function reviewView(row) {
+    if (!row) return null;
+    return {
+      id: row.id,
+      rating: Number(row.rating),
+      usability: row.usability === null || row.usability === undefined ? null : Number(row.usability),
+      features: (() => { try { return JSON.parse(row.features || '[]'); } catch { return []; } })(),
+      suggestions: row.suggestions || '',
+      context: row.context || 'settings',
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+      author: row.user_id ? { id: row.user_id, login: row.login || '', nickname: row.nickname || row.login || '' } : null
+    };
+  }
   const SUPPORT_STATUSES = ['new', 'open', 'waiting_user', 'resolved', 'closed', 'deleted'];
   const SUPPORT_THREAD_SELECT = `SELECT support_threads.*,
     COALESCE(NULLIF(author.nickname, ''), author.login) AS author_nickname,
@@ -619,7 +654,7 @@ export async function createCommunityServer({ dbPath, god, staticHandler, dbBack
         response.once('error', cleanup);
         return;
       }
-      if (path === '/api/health' && request.method === 'GET') return send(response, 200, { ok: true, database: db.kind || 'sqlite', schemaVersion: 8 });
+      if (path === '/api/health' && request.method === 'GET') return send(response, 200, { ok: true, database: db.kind || 'sqlite', schemaVersion: 9 });
       if (path === '/api/files/temp' && request.method === 'POST') {
         rateLimit(request);
         const input = await body(request, 8_000_000);
@@ -1147,6 +1182,63 @@ export async function createCommunityServer({ dbPath, god, staticHandler, dbBack
           return send(response, 200, { ok: true });
         }
         error(405, 'method_not_allowed', 'Действие не поддерживается');
+      }
+      if (path === '/api/reviews/mine' && request.method === 'GET') {
+        const session = await getSession(db, request);
+        const identity = reviewIdentity(request, response, session ? await db.prepare('SELECT id FROM users WHERE id = ?').get(session.user_id) : null);
+        const row = identity.userId
+          ? await db.prepare('SELECT * FROM app_reviews WHERE user_id = ? ORDER BY updated_at DESC LIMIT 1').get(identity.userId)
+          : await db.prepare('SELECT * FROM app_reviews WHERE visitor_key = ? ORDER BY updated_at DESC LIMIT 1').get(identity.key);
+        return send(response, 200, { review: reviewView(row) }, identity.setCookie ? { 'Set-Cookie': identity.setCookie } : {});
+      }
+      if (path === '/api/reviews' && request.method === 'POST') {
+        const session = await getSession(db, request);
+        const current = session ? await requireUser(db, request, ['basic', 'admin', 'admin+', 'GOD'], true) : null;
+        if (!current) {
+          const origin = request.headers.origin;
+          if (origin) {
+            let originHost = null;
+            try { originHost = new URL(origin).host; } catch { originHost = null; }
+            if (originHost !== request.headers.host) error(403, 'origin_rejected', 'Недопустимый источник запроса');
+          }
+        }
+        const identity = reviewIdentity(request, response, current);
+        reviewRateLimit(identity.key);
+        const input = await body(request);
+        const rating = Number(input.rating);
+        if (!Number.isInteger(rating) || rating < 1 || rating > 5) error(422, 'invalid_rating', 'Поставьте оценку от 1 до 5');
+        const usability = input.usability === undefined || input.usability === null || input.usability === '' ? null : Number(input.usability);
+        if (usability !== null && (!Number.isInteger(usability) || usability < 1 || usability > 5)) error(422, 'invalid_usability', 'Оценка удобства должна быть от 1 до 5');
+        const features = Array.isArray(input.features) ? [...new Set(input.features.map((value) => String(value)).filter((value) => REVIEW_FEATURES.includes(value)))].slice(0, REVIEW_FEATURES.length) : [];
+        const suggestions = String(input.suggestions || '').trim().slice(0, 2000);
+        const context = REVIEW_CONTEXTS.includes(input.context) ? input.context : 'settings';
+        const timestamp = new Date().toISOString();
+        const existing = identity.userId
+          ? await db.prepare('SELECT id FROM app_reviews WHERE user_id = ?').get(identity.userId)
+          : await db.prepare('SELECT id FROM app_reviews WHERE visitor_key = ?').get(identity.key);
+        let reviewId;
+        if (existing) {
+          reviewId = existing.id;
+          await db.prepare('UPDATE app_reviews SET rating = ?, usability = ?, features = ?, suggestions = ?, context = ?, updated_at = ? WHERE id = ?')
+            .run(rating, usability, JSON.stringify(features), suggestions, context, timestamp, reviewId);
+        } else {
+          reviewId = randomUUID();
+          await db.prepare('INSERT INTO app_reviews(id,user_id,visitor_key,rating,usability,features,suggestions,context,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?)')
+            .run(reviewId, identity.userId, identity.key, rating, usability, JSON.stringify(features), suggestions, context, timestamp, timestamp);
+        }
+        const row = identity.userId
+          ? await db.prepare('SELECT app_reviews.*, users.login, users.nickname FROM app_reviews LEFT JOIN users ON users.id = app_reviews.user_id WHERE app_reviews.id = ?').get(reviewId)
+          : await db.prepare('SELECT * FROM app_reviews WHERE id = ?').get(reviewId);
+        return send(response, existing ? 200 : 201, { review: reviewView(row) }, identity.setCookie ? { 'Set-Cookie': identity.setCookie } : {});
+      }
+      if (path === '/api/reviews' && request.method === 'GET') {
+        await requireUser(db, request, ['admin+', 'GOD']);
+        const page = pagination(url);
+        const total = Number((await db.prepare('SELECT COUNT(*) AS count FROM app_reviews').get()).count);
+        const rows = await db.prepare(`SELECT app_reviews.*, users.login, users.nickname FROM app_reviews
+          LEFT JOIN users ON users.id = app_reviews.user_id
+          ORDER BY app_reviews.updated_at DESC LIMIT ? OFFSET ?`).all(page.limit, page.offset);
+        return send(response, 200, { reviews: rows.map(reviewView), pagination: paginationResult(page, total) });
       }
       if (path === '/api/users' && request.method === 'GET') {
         await requireUser(db, request, ['GOD']);

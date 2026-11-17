@@ -356,6 +356,21 @@ export function openCommunityDatabase(path) {
       created_at TEXT NOT NULL
     );
     CREATE INDEX IF NOT EXISTS support_events_thread ON support_events(thread_id, created_at);
+    CREATE TABLE IF NOT EXISTS app_reviews (
+      id TEXT PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      visitor_key TEXT NOT NULL,
+      rating INTEGER NOT NULL CHECK(rating BETWEEN 1 AND 5),
+      usability INTEGER CHECK(usability BETWEEN 1 AND 5),
+      features TEXT NOT NULL DEFAULT '[]',
+      suggestions TEXT NOT NULL DEFAULT '',
+      context TEXT NOT NULL DEFAULT 'settings',
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS app_reviews_user ON app_reviews(user_id);
+    CREATE INDEX IF NOT EXISTS app_reviews_visitor ON app_reviews(visitor_key);
+    CREATE INDEX IF NOT EXISTS app_reviews_created ON app_reviews(created_at DESC);
   `);
   migratePrivileges(db);
   migrateCommunityFeatures(db);
