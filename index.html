@@ -463,7 +463,13 @@
       <h3 data-i18n="training">Обучение</h3>
       <button id="restart-onboarding" class="button secondary" type="button" data-i18n="restartOnboarding">Пройти обучение</button>
     </section>
+    <section class="settings-section">
+      <h3 data-i18n="support">Поддержка</h3>
+      <button id="support-open" class="button secondary support-open-button" type="button"><span data-i18n="supportOpen">Написать в поддержку</span><span id="support-badge" class="support-badge" hidden>0</span></button>
+      <p class="help-text" data-i18n="supportHint">Ответят администраторы ChemCalc. Приложите скриншот, если это ошибка.</p>
+    </section>
   </dialog>
+  <dialog id="support-dialog" class="support-dialog" aria-labelledby="support-dialog-title"><div id="support-app" class="support-app"></div></dialog>
   <dialog id="community-proposal-dialog" class="dialog community-proposal-dialog" aria-labelledby="community-proposal-title"><div id="community-proposal-content"></div></dialog>
   <dialog id="confirm-dialog" class="dialog">
     <form method="dialog">

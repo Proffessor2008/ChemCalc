@@ -227,6 +227,66 @@ const SCHEMA = `
   CREATE INDEX IF NOT EXISTS uploads_question ON uploads(question_id);
   CREATE INDEX IF NOT EXISTS uploads_answer ON uploads(answer_id);
   CREATE INDEX IF NOT EXISTS uploads_created ON uploads(created_at);
+  CREATE TABLE IF NOT EXISTS support_threads (
+    id TEXT PRIMARY KEY,
+    number TEXT NOT NULL UNIQUE,
+    author_id BIGINT NOT NULL REFERENCES users(id),
+    category TEXT NOT NULL,
+    subject TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'new',
+    priority TEXT NOT NULL DEFAULT 'normal',
+    assigned_to BIGINT REFERENCES users(id),
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    last_message_at TEXT NOT NULL,
+    closed_by BIGINT REFERENCES users(id),
+    closed_at TEXT,
+    resolution_note TEXT NOT NULL DEFAULT '',
+    deleted_by BIGINT REFERENCES users(id),
+    deleted_at TEXT,
+    delete_reason TEXT NOT NULL DEFAULT '',
+    user_helpful_at TEXT
+  );
+  CREATE INDEX IF NOT EXISTS support_threads_status ON support_threads(status, last_message_at DESC);
+  CREATE INDEX IF NOT EXISTS support_threads_author ON support_threads(author_id, last_message_at DESC);
+  CREATE INDEX IF NOT EXISTS support_threads_assigned ON support_threads(assigned_to, status);
+  CREATE TABLE IF NOT EXISTS support_messages (
+    id TEXT PRIMARY KEY,
+    thread_id TEXT NOT NULL REFERENCES support_threads(id) ON DELETE CASCADE,
+    author_id BIGINT NOT NULL REFERENCES users(id),
+    body TEXT NOT NULL,
+    visibility TEXT NOT NULL DEFAULT 'public' CHECK(visibility IN ('public', 'internal')),
+    created_at TEXT NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS support_messages_thread ON support_messages(thread_id, created_at);
+  CREATE TABLE IF NOT EXISTS support_attachments (
+    id TEXT PRIMARY KEY,
+    thread_id TEXT REFERENCES support_threads(id) ON DELETE CASCADE,
+    message_id TEXT REFERENCES support_messages(id) ON DELETE CASCADE,
+    uploader_id BIGINT NOT NULL REFERENCES users(id),
+    filename TEXT NOT NULL,
+    mime TEXT NOT NULL,
+    size INTEGER NOT NULL,
+    data BYTEA NOT NULL,
+    created_at TEXT NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS support_attachments_thread ON support_attachments(thread_id);
+  CREATE INDEX IF NOT EXISTS support_attachments_message ON support_attachments(message_id);
+  CREATE TABLE IF NOT EXISTS support_reads (
+    thread_id TEXT NOT NULL REFERENCES support_threads(id) ON DELETE CASCADE,
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    last_read_at TEXT NOT NULL,
+    PRIMARY KEY(thread_id, user_id)
+  );
+  CREATE TABLE IF NOT EXISTS support_events (
+    id TEXT PRIMARY KEY,
+    thread_id TEXT NOT NULL REFERENCES support_threads(id) ON DELETE CASCADE,
+    actor_id BIGINT REFERENCES users(id),
+    action TEXT NOT NULL,
+    note TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS support_events_thread ON support_events(thread_id, created_at);
   ALTER TABLE users DROP CONSTRAINT IF EXISTS users_privileges_check;
   ALTER TABLE users ADD CONSTRAINT users_privileges_check CHECK(privileges IN ('basic', 'admin', 'admin+', 'GOD'));
   ALTER TABLE proposals ALTER COLUMN score TYPE DOUBLE PRECISION;

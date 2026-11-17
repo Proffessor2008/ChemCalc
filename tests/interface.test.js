@@ -23,7 +23,11 @@ test('вместо документации открываются настро�
   for (const option of ['light', 'dark', 'system']) assert.ok(html.includes(`data-theme-option="${option}"`));
   for (const size of ['compact', 'normal', 'large']) assert.ok(html.includes(`data-size-option="${size}"`));
   assert.ok(html.includes('id="restart-onboarding"'));
+  assert.ok(html.includes('id="support-open"'));
+  assert.ok(html.includes('id="support-dialog"'));
+  assert.ok(html.includes('data-i18n="support"'));
   assert.ok(ui.includes("$('#settings-toggle')"));
+  assert.ok(ui.includes('initSupportUI'));
   assert.ok(ui.includes('data-theme-option'));
   assert.ok(ui.includes('data-size-option'));
   assert.ok(!ui.includes("'documentation'"));

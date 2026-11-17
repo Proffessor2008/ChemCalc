@@ -396,6 +396,192 @@ export async function createCommunityServer({ dbPath, god, staticHandler, dbBack
     for (const moderator of moderators) await notifyUser(db, moderator.id, actorId, kind, message);
   }
 
+  const SUPPORT_ROLES = ['admin+', 'GOD'];
+  const isSupportAgent = (user) => Boolean(user && SUPPORT_ROLES.includes(user.privileges));
+  const supportRate = new Map();
+  function supportRateLimit(userId, bucket, max, windowMs) {
+    const key = `${userId}:${bucket}`;
+    const now = Date.now();
+    const recent = (supportRate.get(key) || []).filter((time) => now - time < windowMs);
+    if (recent.length >= max) error(429, 'support_rate_limit', 'Слишком много действий в поддержке. Повторите позже.');
+    recent.push(now);
+    supportRate.set(key, recent);
+    if (supportRate.size > 5000) supportRate.delete(supportRate.keys().next().value);
+  }
+  const SUPPORT_CATEGORIES = [
+    { key: 'bug', label: 'Ошибка в программе', hint: 'Что вы делали, что ожидали и что получилось. Приложите скриншот.' },
+    { key: 'calculation', label: 'Вопрос по расчёту/химии', hint: 'Уравнение или задача, ваш вариант решения и ожидаемый ответ.' },
+    { key: 'account', label: 'Аккаунт, вход, Telegram', hint: 'Логин или никнейм, способ входа и текст ошибки.' },
+    { key: 'export', label: 'PDF/DOCX и печать', hint: 'Формат, справочник, страница и что именно не так.' },
+    { key: 'community', label: 'Сообщество и модерация', hint: 'Ссылка на вопрос или ответ и краткое описание ситуации.' },
+    { key: 'billing', label: 'Оплата и подписка', hint: 'План, дата платежа и последние 4 цифры карты. Не присылайте полный номер.' },
+    { key: 'idea', label: 'Предложение', hint: 'Что улучшить и зачем это нужно.' },
+    { key: 'other', label: 'Другое', hint: 'Опишите ситуацию как можно точнее.' }
+  ];
+  const SUPPORT_IMAGE_TYPES = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp' };
+  const SUPPORT_STATUSES = ['new', 'open', 'waiting_user', 'resolved', 'closed', 'deleted'];
+  const SUPPORT_THREAD_SELECT = `SELECT support_threads.*,
+    COALESCE(NULLIF(author.nickname, ''), author.login) AS author_nickname,
+    author.login AS author_login, author.privileges AS author_privileges, author.avatar AS author_avatar,
+    COALESCE(NULLIF(assignee.nickname, ''), assignee.login) AS assignee_nickname
+    FROM support_threads
+    JOIN users AS author ON author.id = support_threads.author_id
+    LEFT JOIN users AS assignee ON assignee.id = support_threads.assigned_to`;
+
+  function supportCategory(key) {
+    return SUPPORT_CATEGORIES.find((item) => item.key === key) || null;
+  }
+
+  async function supportUnreadFor(db, threadId, userId) {
+    const row = await db.prepare(`SELECT COUNT(*) AS count FROM support_messages
+      WHERE thread_id = ? AND visibility = 'public' AND author_id <> ?
+      AND created_at > COALESCE((SELECT last_read_at FROM support_reads WHERE thread_id = ? AND user_id = ?), '')`)
+      .get(threadId, userId, threadId, userId);
+    return Number(row?.count || 0);
+  }
+
+  async function supportRowsFor(db, { viewer, scope = 'mine', status = '', category = '', query = '', page }) {
+    const conditions = [];
+    const parameters = [];
+    if (scope === 'inbox') {
+      if (!isSupportAgent(viewer)) error(403, 'forbidden', 'Очередь поддержки доступна admin+ и GOD');
+      conditions.push('support_threads.status <> ?');
+      parameters.push('deleted');
+    } else {
+      conditions.push('support_threads.author_id = ?', 'support_threads.status <> ?');
+      parameters.push(viewer.id, 'deleted');
+    }
+    if (SUPPORT_STATUSES.includes(status) && status !== 'deleted') {
+      conditions[conditions.length - 1] = 'support_threads.status = ?';
+      parameters[parameters.length - 1] = status;
+    } else if (status === 'deleted' && scope === 'inbox') {
+      conditions[conditions.length - 1] = 'support_threads.status = ?';
+      parameters[parameters.length - 1] = 'deleted';
+    }
+    if (supportCategory(category)) {
+      conditions.push('support_threads.category = ?');
+      parameters.push(category);
+    }
+    const search = String(query || '').trim().slice(0, 120);
+    if (search) {
+      conditions.push('(support_threads.subject LIKE ? OR support_threads.number LIKE ? OR author.login LIKE ? OR author.nickname LIKE ?)');
+      const like = `%${search}%`;
+      parameters.push(like, like, like, like);
+    }
+    const where = conditions.length ? conditions.join(' AND ') : '1 = 1';
+    const total = Number((await db.prepare(`SELECT COUNT(*) AS count FROM support_threads JOIN users AS author ON author.id = support_threads.author_id WHERE ${where}`).get(...parameters)).count);
+    const rows = await db.prepare(`${SUPPORT_THREAD_SELECT} WHERE ${where} ORDER BY support_threads.last_message_at DESC LIMIT ? OFFSET ?`)
+      .all(...parameters, page.limit, page.offset);
+    return {
+      rows,
+      total
+    };
+  }
+
+  async function supportThreadView(db, row, viewer, detail = false) {
+    const thread = {
+      id: row.id,
+      number: row.number,
+      category: row.category,
+      category_label: supportCategory(row.category)?.label || row.category,
+      subject: row.subject,
+      status: row.status,
+      priority: row.priority,
+      assigned_to: row.assigned_to,
+      assigned_nickname: row.assignee_nickname || '',
+      author: {
+        id: row.author_id,
+        login: row.author_login,
+        nickname: row.author_nickname,
+        privileges: row.author_privileges,
+        avatar: row.author_avatar || ''
+      },
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+      last_message_at: row.last_message_at,
+      closed_at: row.closed_at,
+      resolution_note: row.resolution_note,
+      deleted_at: row.deleted_at,
+      delete_reason: row.delete_reason,
+      helpful_at: row.user_helpful_at,
+      unread: await supportUnreadFor(db, row.id, viewer.id)
+    };
+    if (!detail) return thread;
+    const messages = await db.prepare(`SELECT support_messages.*,
+      COALESCE(NULLIF(users.nickname, ''), users.login) AS author_nickname,
+      users.login AS author_login, users.privileges AS author_privileges, users.avatar AS author_avatar
+      FROM support_messages JOIN users ON users.id = support_messages.author_id
+      WHERE support_messages.thread_id = ?
+      ${isSupportAgent(viewer) ? '' : "AND support_messages.visibility = 'public'"}
+      ORDER BY support_messages.created_at ASC, support_messages.id ASC`).all(row.id);
+    const attachments = await db.prepare('SELECT id, message_id, thread_id, filename, mime, size, created_at FROM support_attachments WHERE thread_id = ? ORDER BY created_at ASC').all(row.id);
+    const byMessage = new Map();
+    for (const attachment of attachments) {
+      if (!byMessage.has(attachment.message_id)) byMessage.set(attachment.message_id, []);
+      byMessage.get(attachment.message_id).push(attachment);
+    }
+    thread.messages = messages.map((message) => ({
+      id: message.id,
+      body: message.body,
+      visibility: message.visibility,
+      created_at: message.created_at,
+      author: {
+        id: message.author_id,
+        login: message.author_login,
+        nickname: message.author_nickname,
+        privileges: message.author_privileges,
+        avatar: message.author_avatar || ''
+      },
+      attachments: byMessage.get(message.id) || []
+    }));
+    if (isSupportAgent(viewer)) {
+      thread.events = await db.prepare(`SELECT support_events.*, COALESCE(NULLIF(users.nickname, ''), users.login) AS actor_nickname
+        FROM support_events LEFT JOIN users ON users.id = support_events.actor_id
+        WHERE support_events.thread_id = ? ORDER BY support_events.created_at ASC`).all(row.id);
+    }
+    return thread;
+  }
+
+  async function getSupportThreadRow(db, id, viewer) {
+    const row = await db.prepare(`${SUPPORT_THREAD_SELECT} WHERE support_threads.id = ?`).get(id);
+    if (!row) error(404, 'not_found', 'Обращение не найдено');
+    if (Number(row.author_id) !== Number(viewer.id) && !isSupportAgent(viewer)) error(404, 'not_found', 'Обращение не найдено');
+    if (row.status === 'deleted' && !isSupportAgent(viewer)) error(404, 'not_found', 'Обращение не найдено');
+    return row;
+  }
+
+  async function markSupportRead(db, threadId, userId) {
+    await db.prepare(`INSERT INTO support_reads(thread_id,user_id,last_read_at) VALUES(?,?,?)
+      ON CONFLICT(thread_id,user_id) DO UPDATE SET last_read_at = excluded.last_read_at`)
+      .run(threadId, userId, new Date().toISOString());
+  }
+
+  async function supportEvent(db, threadId, actorId, action, note = '') {
+    await db.prepare('INSERT INTO support_events(id,thread_id,actor_id,action,note,created_at) VALUES(?,?,?,?,?,?)')
+      .run(randomUUID(), threadId, actorId, action, String(note || '').slice(0, 500), new Date().toISOString());
+  }
+
+  async function attachSupportPhotos(db, threadId, messageId, userId, ids) {
+    if (!Array.isArray(ids) || !ids.length) return;
+    if (ids.length > 3) error(422, 'too_many_attachments', 'К сообщению можно приложить не более 3 фото');
+    for (const id of [...new Set(ids.map((value) => String(value || '')).filter(Boolean))]) {
+      const photo = await db.prepare('SELECT id, uploader_id, message_id FROM support_attachments WHERE id = ?').get(id);
+      if (!photo || Number(photo.uploader_id) !== Number(userId) || photo.message_id) error(422, 'invalid_attachment', 'Некорректное вложение');
+      await db.prepare('UPDATE support_attachments SET thread_id = ?, message_id = ? WHERE id = ?').run(threadId, messageId, id);
+    }
+  }
+
+  async function notifySupportAgents(db, actorId, kind, message) {
+    const agents = await db.prepare("SELECT id FROM users WHERE privileges IN ('admin+', 'GOD')").all();
+    for (const agent of agents) await notifyUser(db, agent.id, actorId, kind, message);
+  }
+
+  function supportStatusAfterMessage(thread, user, internal) {
+    if (internal) return thread.status;
+    if (isSupportAgent(user)) return thread.status === 'resolved' ? 'resolved' : 'waiting_user';
+    return 'open';
+  }
+
   const server = createServer(async (request, response) => {
     response.setHeader('X-Content-Type-Options', 'nosniff');
     response.setHeader('Referrer-Policy', 'no-referrer');
@@ -433,7 +619,7 @@ export async function createCommunityServer({ dbPath, god, staticHandler, dbBack
         response.once('error', cleanup);
         return;
       }
-      if (path === '/api/health' && request.method === 'GET') return send(response, 200, { ok: true, database: db.kind || 'sqlite', schemaVersion: 7 });
+      if (path === '/api/health' && request.method === 'GET') return send(response, 200, { ok: true, database: db.kind || 'sqlite', schemaVersion: 8 });
       if (path === '/api/files/temp' && request.method === 'POST') {
         rateLimit(request);
         const input = await body(request, 8_000_000);
@@ -757,6 +943,210 @@ export async function createCommunityServer({ dbPath, god, staticHandler, dbBack
         const result = await db.prepare('UPDATE notifications SET read_at = ? WHERE id = ? AND user_id = ?').run(new Date().toISOString(), notificationMatch[1], user.id);
         if (!result.changes) error(404, 'not_found', 'Уведомление не найдено');
         return send(response, 200, await notificationsForUser(db, user.id));
+      }
+      if (path === '/api/support/categories' && request.method === 'GET') {
+        return send(response, 200, { categories: SUPPORT_CATEGORIES });
+      }
+      if (path === '/api/support/unread' && request.method === 'GET') {
+        const user = await requireUser(db, request);
+        const rows = isSupportAgent(user)
+          ? await db.prepare("SELECT id FROM support_threads WHERE status <> 'deleted'").all()
+          : await db.prepare("SELECT id FROM support_threads WHERE author_id = ? AND status <> 'deleted'").all(user.id);
+        let unread = 0;
+        for (const row of rows) unread += await supportUnreadFor(db, row.id, user.id);
+        return send(response, 200, { unread });
+      }
+      if (path === '/api/support/attachments' && request.method === 'POST') {
+        const user = await requireUser(db, request, ['basic', 'admin', 'admin+', 'GOD'], true);
+        const input = await body(request, 8_000_000);
+        supportRateLimit(user.id, 'photo', 30, 60 * 60 * 1000);
+        const mime = String(input.type || '').toLowerCase();
+        if (!SUPPORT_IMAGE_TYPES[mime]) error(422, 'invalid_attachment_type', 'Можно прикрепить только PNG, JPEG или WebP');
+        const data = String(input.data || '');
+        if (!data || data.length > 7_000_000) error(413, 'attachment_too_large', 'Фото слишком большое');
+        let buffer;
+        try { buffer = Buffer.from(data, 'base64'); } catch { error(422, 'invalid_attachment', 'Некорректное фото'); }
+        if (!buffer?.length || buffer.length > 5_000_000) error(413, 'attachment_too_large', 'Фото должно быть меньше 5 МБ');
+        const validMagic = mime === 'image/png'
+          ? buffer.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))
+          : mime === 'image/jpeg'
+            ? buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff
+            : buffer.subarray(0, 4).toString('ascii') === 'RIFF' && buffer.subarray(8, 12).toString('ascii') === 'WEBP';
+        if (!validMagic) error(422, 'invalid_attachment', 'Файл не является изображением выбранного формата');
+        const filename = String(input.filename || `photo.${SUPPORT_IMAGE_TYPES[mime]}`).replace(/["\\\r\n]/g, '_').slice(0, 160) || `photo.${SUPPORT_IMAGE_TYPES[mime]}`;
+        const id = randomUUID();
+        await db.prepare('INSERT INTO support_attachments(id,uploader_id,filename,mime,size,data,created_at) VALUES(?,?,?,?,?,?,?)')
+          .run(id, user.id, filename, mime, buffer.length, buffer, new Date().toISOString());
+        await db.prepare("DELETE FROM support_attachments WHERE message_id IS NULL AND created_at < ?").run(new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString());
+        return send(response, 201, { attachment: { id, filename, mime, size: buffer.length } });
+      }
+      const supportAttachmentMatch = path.match(/^\/api\/support\/attachments\/([^/]+)$/);
+      if (supportAttachmentMatch && request.method === 'GET') {
+        const user = await requireUser(db, request);
+        const attachment = await db.prepare(`SELECT support_attachments.*, support_threads.author_id AS thread_author, support_threads.status AS thread_status
+          FROM support_attachments LEFT JOIN support_threads ON support_threads.id = support_attachments.thread_id
+          WHERE support_attachments.id = ?`).get(supportAttachmentMatch[1]);
+        if (!attachment) error(404, 'not_found', 'Файл не найден');
+        const allowed = Number(attachment.uploader_id) === Number(user.id)
+          || (attachment.thread_id && (Number(attachment.thread_author) === Number(user.id) || isSupportAgent(user)));
+        if (!allowed || (attachment.thread_status === 'deleted' && !isSupportAgent(user))) {
+          error(404, 'not_found', 'Файл не найден');
+        }
+        const safeName = String(attachment.filename).replace(/["\\\r\n]/g, '_');
+        response.writeHead(200, {
+          'Content-Type': attachment.mime,
+          'Content-Length': attachment.data.length,
+          'Content-Disposition': `inline; filename="photo.${SUPPORT_IMAGE_TYPES[attachment.mime] || 'jpg'}"; filename*=UTF-8''${encodeURIComponent(safeName)}`,
+          'Cache-Control': 'private, no-store',
+          'X-Content-Type-Options': 'nosniff'
+        });
+        return response.end(attachment.data);
+      }
+      if (path === '/api/support/threads' && request.method === 'GET') {
+        const user = await requireUser(db, request);
+        const page = pagination(url);
+        const scope = url.searchParams.get('scope') === 'inbox' ? 'inbox' : 'mine';
+        const { rows, total } = await supportRowsFor(db, {
+          viewer: user,
+          scope,
+          status: url.searchParams.get('status') || '',
+          category: url.searchParams.get('category') || '',
+          query: url.searchParams.get('q') || '',
+          page
+        });
+        return send(response, 200, {
+          threads: await Promise.all(rows.map((row) => supportThreadView(db, row, user))),
+          pagination: paginationResult(page, total)
+        });
+      }
+      if (path === '/api/support/threads' && request.method === 'POST') {
+        const user = await requireUser(db, request, ['basic', 'admin', 'admin+', 'GOD'], true);
+        const input = await body(request);
+        supportRateLimit(user.id, 'thread', 5, 60 * 60 * 1000);
+        const category = String(input.category || '');
+        if (!supportCategory(category)) error(422, 'invalid_category', 'Выберите тему обращения');
+        const subject = String(input.subject || '').trim();
+        if (subject.length < 4 || subject.length > 160) error(422, 'invalid_subject', 'Тема должна содержать 4–160 символов');
+        const text = String(input.body || '').trim();
+        if (text.length < 10 || text.length > 8000) error(422, 'invalid_body', 'Описание должно содержать 10–8000 символов');
+        const id = randomUUID();
+        const messageId = randomUUID();
+        const timestamp = new Date().toISOString();
+        const number = `SC-${new Date().getUTCFullYear()}-${randomUUID().slice(0, 6).toUpperCase()}`;
+        await transaction(db, async () => {
+          await db.prepare(`INSERT INTO support_threads(id,number,author_id,category,subject,status,priority,created_at,updated_at,last_message_at)
+            VALUES(?,?,?,?,?,?,?,?,?,?)`).run(id, number, user.id, category, subject, 'new', 'normal', timestamp, timestamp, timestamp);
+          await db.prepare('INSERT INTO support_messages(id,thread_id,author_id,body,visibility,created_at) VALUES(?,?,?,?,?,?)')
+            .run(messageId, id, user.id, text, 'public', timestamp);
+          await attachSupportPhotos(db, id, messageId, user.id, input.attachments);
+        });
+        const row = await db.prepare(`${SUPPORT_THREAD_SELECT} WHERE support_threads.id = ?`).get(id);
+        await markSupportRead(db, id, user.id);
+        await notifySupportAgents(db, user.id, 'support_new', `Новое обращение ${number}: ${subject}`);
+        updated('support');
+        return send(response, 201, { thread: await supportThreadView(db, row, user, true) });
+      }
+      const supportThreadMatch = path.match(/^\/api\/support\/threads\/([^/]+)(?:\/(messages|helpful|close|reopen|delete|restore|assign))?$/);
+      if (supportThreadMatch) {
+        const [, id, action] = supportThreadMatch;
+        const user = await requireUser(db, request, ['basic', 'admin', 'admin+', 'GOD'], Boolean(action) && request.method !== 'GET');
+        const row = await getSupportThreadRow(db, id, user);
+        if (request.method === 'GET' && !action) {
+          if (row.status === 'deleted' && !isSupportAgent(user)) error(404, 'not_found', 'Обращение не найдено');
+          const thread = await supportThreadView(db, row, user, true);
+          await markSupportRead(db, id, user.id);
+          return send(response, 200, { thread });
+        }
+        if (request.method === 'POST' && action === 'messages') {
+          if (row.status === 'deleted') error(404, 'not_found', 'Обращение не найдено');
+          if (row.status === 'closed') error(409, 'thread_closed', 'Обращение закрыто');
+          const input = await body(request);
+          const text = String(input.body || '').trim();
+          supportRateLimit(user.id, 'message', 60, 60 * 60 * 1000);
+          if (!text || text.length > 8000) error(422, 'invalid_body', 'Введите сообщение до 8000 символов');
+          const internal = Boolean(input.internal);
+          if (internal && !isSupportAgent(user)) error(403, 'forbidden', 'Внутренние заметки доступны только поддержке');
+          const messageId = randomUUID();
+          const timestamp = new Date().toISOString();
+          const nextStatus = supportStatusAfterMessage(row, user, internal);
+          await transaction(db, async () => {
+            await db.prepare('INSERT INTO support_messages(id,thread_id,author_id,body,visibility,created_at) VALUES(?,?,?,?,?,?)')
+              .run(messageId, id, user.id, text, internal ? 'internal' : 'public', timestamp);
+            await attachSupportPhotos(db, id, messageId, user.id, input.attachments);
+            await db.prepare('UPDATE support_threads SET status = ?, updated_at = ?, last_message_at = ? WHERE id = ?')
+              .run(nextStatus, timestamp, timestamp, id);
+            await supportEvent(db, id, user.id, internal ? 'internal_note' : 'message', text.slice(0, 160));
+          });
+          if (!internal) {
+            if (isSupportAgent(user)) await notifyUser(db, row.author_id, user.id, 'support_reply', `Ответ поддержки по обращению ${row.number}`);
+            else await notifySupportAgents(db, user.id, 'support_reply', `Новое сообщение в ${row.number}`);
+          }
+          const updatedRow = await db.prepare(`${SUPPORT_THREAD_SELECT} WHERE support_threads.id = ?`).get(id);
+          await markSupportRead(db, id, user.id);
+          return send(response, 201, { thread: await supportThreadView(db, updatedRow, user, true) });
+        }
+        if (request.method === 'POST' && action === 'helpful') {
+          if (Number(row.author_id) !== Number(user.id)) error(403, 'forbidden', 'Отметить может только автор обращения');
+          const timestamp = new Date().toISOString();
+          await db.prepare('UPDATE support_threads SET user_helpful_at = ?, updated_at = ? WHERE id = ?').run(timestamp, timestamp, id);
+          await supportEvent(db, id, user.id, 'helpful');
+          return send(response, 200, { ok: true });
+        }
+        if (request.method === 'POST' && action === 'close') {
+          if (!isSupportAgent(user)) error(403, 'forbidden', 'Закрывать обращения может только admin+ или GOD');
+          if (row.status === 'closed') error(409, 'already_closed', 'Обращение уже закрыто');
+          if (row.status === 'deleted') error(404, 'not_found', 'Обращение не найдено');
+          const input = await body(request);
+          const note = String(input.note || '').trim().slice(0, 1000);
+          const timestamp = new Date().toISOString();
+          await db.prepare("UPDATE support_threads SET status = 'closed', closed_by = ?, closed_at = ?, resolution_note = ?, updated_at = ? WHERE id = ?")
+            .run(user.id, timestamp, note, timestamp, id);
+          await supportEvent(db, id, user.id, 'closed', note);
+          await notifyUser(db, row.author_id, user.id, 'support_closed', `Обращение ${row.number} закрыто`);
+          return send(response, 200, { thread: await supportThreadView(db, await db.prepare(`${SUPPORT_THREAD_SELECT} WHERE support_threads.id = ?`).get(id), user, true) });
+        }
+        if (request.method === 'POST' && action === 'reopen') {
+          if (!isSupportAgent(user)) error(403, 'forbidden', 'Переоткрывать обращения может только admin+ или GOD');
+          if (row.status === 'deleted') error(404, 'not_found', 'Обращение не найдено');
+          const timestamp = new Date().toISOString();
+          await db.prepare("UPDATE support_threads SET status = 'open', closed_by = NULL, closed_at = NULL, resolution_note = '', updated_at = ? WHERE id = ?")
+            .run(timestamp, id);
+          await supportEvent(db, id, user.id, 'reopened');
+          await notifyUser(db, row.author_id, user.id, 'support_reopened', `Обращение ${row.number} переоткрыто`);
+          return send(response, 200, { thread: await supportThreadView(db, await db.prepare(`${SUPPORT_THREAD_SELECT} WHERE support_threads.id = ?`).get(id), user, true) });
+        }
+        if (request.method === 'POST' && action === 'delete') {
+          if (!isSupportAgent(user)) error(403, 'forbidden', 'Удалять обращения может только admin+ или GOD');
+          const input = await body(request);
+          const reason = String(input.reason || '').trim();
+          if (reason.length < 3) error(422, 'reason_required', 'Укажите причину удаления');
+          const timestamp = new Date().toISOString();
+          await db.prepare("UPDATE support_threads SET status = 'deleted', deleted_by = ?, deleted_at = ?, delete_reason = ?, updated_at = ? WHERE id = ?")
+            .run(user.id, timestamp, reason.slice(0, 1000), timestamp, id);
+          await supportEvent(db, id, user.id, 'deleted', reason);
+          return send(response, 200, { ok: true });
+        }
+        if (request.method === 'POST' && action === 'restore') {
+          if (user.privileges !== 'GOD') error(403, 'forbidden', 'Восстанавливать обращения может только GOD');
+          const timestamp = new Date().toISOString();
+          await db.prepare("UPDATE support_threads SET status = 'open', deleted_by = NULL, deleted_at = NULL, delete_reason = '', updated_at = ? WHERE id = ?")
+            .run(timestamp, id);
+          await supportEvent(db, id, user.id, 'restored');
+          return send(response, 200, { thread: await supportThreadView(db, await db.prepare(`${SUPPORT_THREAD_SELECT} WHERE support_threads.id = ?`).get(id), user, true) });
+        }
+        if (request.method === 'POST' && action === 'assign') {
+          if (!isSupportAgent(user)) error(403, 'forbidden', 'Назначать обращения может только admin+ или GOD');
+          const input = await body(request);
+          const targetId = Number(input.userId);
+          if (!Number.isSafeInteger(targetId) || targetId < 1) error(422, 'invalid_user', 'Некорректный пользователь');
+          const target = await db.prepare('SELECT id, privileges FROM users WHERE id = ?').get(targetId);
+          if (!target || !isSupportAgent(target)) error(422, 'invalid_user', 'Назначить можно только admin+ или GOD');
+          const timestamp = new Date().toISOString();
+          await db.prepare('UPDATE support_threads SET assigned_to = ?, updated_at = ? WHERE id = ?').run(targetId, timestamp, id);
+          await supportEvent(db, id, user.id, 'assigned', String(targetId));
+          return send(response, 200, { ok: true });
+        }
+        error(405, 'method_not_allowed', 'Действие не поддерживается');
       }
       if (path === '/api/users' && request.method === 'GET') {
         await requireUser(db, request, ['GOD']);
