@@ -67,8 +67,22 @@ export function initOcrUI({ showToast = () => {} } = {}) {
   let drag = null;
   let lastBlob = null;
   let busy = false;
+  let cameraStream = null;
+  let videoElement = null;
+
+  function stopCamera() {
+    if (cameraStream) {
+      for (const track of cameraStream.getTracks()) track.stop();
+      cameraStream = null;
+    }
+    if (videoElement) {
+      videoElement.srcObject = null;
+      videoElement = null;
+    }
+  }
 
   function close() {
+    stopCamera();
     if (imageUrl) URL.revokeObjectURL(imageUrl);
     imageUrl = '';
     image = null;
@@ -127,6 +141,7 @@ export function initOcrUI({ showToast = () => {} } = {}) {
   }
 
   function renderSource() {
+    stopCamera();
     root.replaceChildren();
     const body = element('div', 'ocr-source');
     body.append(cameraIcon());
@@ -134,25 +149,11 @@ export function initOcrUI({ showToast = () => {} } = {}) {
     body.append(accuracyWarning());
     const take = button(t('ocrTakePhoto'), 'button primary');
     const upload = button(t('ocrChoosePhoto'), 'button secondary');
-    const takeInput = element('input', 'ocr-file-input');
-    takeInput.type = 'file';
-    takeInput.accept = 'image/*';
-    takeInput.capture = 'environment';
-    const uploadInput = element('input', 'ocr-file-input');
-    uploadInput.type = 'file';
-    uploadInput.accept = 'image/*';
-    take.addEventListener('click', () => takeInput.click());
-    upload.addEventListener('click', () => uploadInput.click());
-    const receive = (event) => {
-      const file = event.target.files?.[0];
-      event.target.value = '';
-      if (file) loadFile(file);
-    };
-    takeInput.addEventListener('change', receive);
-    uploadInput.addEventListener('change', receive);
+    take.addEventListener('click', () => startLiveCamera(() => pickFile(true), () => pickFile(false)));
+    upload.addEventListener('click', () => pickFile(false));
     const actions = element('div', 'ocr-source-actions');
     actions.append(take, upload);
-    body.append(actions, takeInput, uploadInput);
+    body.append(actions);
     const cancel = button(t('ocrCancel'), 'button ghost');
     cancel.addEventListener('click', close);
     body.append(cancel);
@@ -166,16 +167,122 @@ export function initOcrUI({ showToast = () => {} } = {}) {
     drag = null;
   }
 
-  async function loadFile(file) {
-    if (!file.type.startsWith('image/')) { showToast(t('ocrFailed')); return; }
+  function pickFile(capture = false) {
+    const input = element('input', 'ocr-file-input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    if (capture) input.capture = 'environment';
+    input.addEventListener('change', () => {
+      const file = input.files?.[0];
+      if (file) loadFile(file);
+      input.remove();
+    });
+    input.style.display = 'none';
+    document.body.append(input);
+    input.click();
+  }
+
+  async function loadBlob(blob) {
     if (imageUrl) URL.revokeObjectURL(imageUrl);
     resetCrop();
-    imageUrl = URL.createObjectURL(file);
+    imageUrl = URL.createObjectURL(blob);
     image = new Image();
     image.decoding = 'async';
     image.onload = () => renderCrop();
     image.onerror = () => showToast(t('ocrFailed'));
     image.src = imageUrl;
+  }
+
+  async function loadFile(file) {
+    if (!file.type.startsWith('image/')) { showToast(t('ocrFailed')); return; }
+    await loadBlob(file);
+  }
+
+  function renderCameraError(error, fallback, upload) {
+    stopCamera();
+    root.replaceChildren();
+    const body = element('div', 'ocr-login');
+    body.append(cameraIcon());
+    const name = error?.name;
+    const platform = window.Telegram?.WebApp?.platform;
+    const telegramDesktop = platform === 'tdesktop' || platform === 'macos';
+    const message = telegramDesktop ? t('ocrCameraTelegram')
+      : name === 'NotAllowedError' ? t('ocrCameraDenied')
+        : name === 'NotFoundError' ? t('ocrCameraNotFound')
+          : name === 'NotReadableError' ? t('ocrCameraBusy')
+            : t('ocrCameraUnavailable');
+    body.append(element('p', 'ocr-error', message));
+    const actions = element('div', 'dialog-actions ocr-actions');
+    const cancel = button(t('ocrCancel'), 'button ghost');
+    cancel.addEventListener('click', close);
+    const system = button(t('ocrOpenSystemCamera'), 'button secondary');
+    system.addEventListener('click', () => { stopCamera(); fallback(); });
+    const choose = button(t('ocrChoosePhoto'), 'button primary');
+    choose.addEventListener('click', () => { stopCamera(); upload(); });
+    actions.append(cancel, system, choose);
+    body.append(actions);
+    root.append(header(t('ocrTitle')), body);
+  }
+
+  function renderCameraStage(fallback, upload) {
+    root.replaceChildren();
+    const body = element('div', 'ocr-live');
+    body.append(accuracyWarning());
+    videoElement = element('video', 'ocr-video');
+    videoElement.autoplay = true;
+    videoElement.playsInline = true;
+    videoElement.muted = true;
+    videoElement.setAttribute('playsinline', '');
+    videoElement.setAttribute('muted', '');
+    body.append(videoElement, element('p', 'help-text ocr-live-hint', t('ocrLiveHint')));
+    const actions = element('div', 'dialog-actions ocr-actions');
+    const cancel = button(t('ocrCancel'), 'button ghost');
+    cancel.addEventListener('click', close);
+    const system = button(t('ocrOpenSystemCamera'), 'button ghost');
+    system.addEventListener('click', () => { stopCamera(); fallback(); });
+    const capture = button(t('ocrCapture'), 'button primary');
+    capture.disabled = true;
+    videoElement.addEventListener('loadedmetadata', () => { capture.disabled = false; }, { once: true });
+    capture.addEventListener('click', () => captureCamera());
+    actions.append(cancel, system, capture);
+    body.append(actions);
+    root.append(header(t('ocrTitle'), t('ocrHint')), body);
+  }
+
+  async function startLiveCamera(fallback, upload) {
+    stopCamera();
+    if (!navigator.mediaDevices?.getUserMedia || !window.isSecureContext) {
+      renderCameraError({ name: 'Unavailable' }, fallback, upload);
+      return;
+    }
+    renderCameraStage(fallback, upload);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: false,
+        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } }
+      });
+      if (!videoElement || !dialog.open) {
+        for (const track of stream.getTracks()) track.stop();
+        return;
+      }
+      cameraStream = stream;
+      videoElement.srcObject = stream;
+      await videoElement.play().catch(() => {});
+    } catch (error) {
+      renderCameraError(error, fallback, upload);
+    }
+  }
+
+  async function captureCamera() {
+    if (!videoElement || !videoElement.videoWidth || !videoElement.videoHeight) return;
+    const output = document.createElement('canvas');
+    output.width = videoElement.videoWidth;
+    output.height = videoElement.videoHeight;
+    output.getContext('2d').drawImage(videoElement, 0, 0, output.width, output.height);
+    const blob = await new Promise((resolve) => output.toBlob(resolve, 'image/jpeg', 0.9));
+    stopCamera();
+    if (blob) await loadBlob(blob);
+    else showToast(t('ocrFailed'));
   }
 
   function initialFrame(width, height) {
@@ -534,5 +641,7 @@ export function initOcrUI({ showToast = () => {} } = {}) {
     trigger.addEventListener('click', () => open(trigger.dataset.ocrTarget));
   }
   dialog.addEventListener('click', (event) => { if (event.target === dialog) close(); });
-  window.addEventListener('beforeunload', () => { if (imageUrl) URL.revokeObjectURL(imageUrl); });
+  dialog.addEventListener('close', stopCamera);
+  dialog.addEventListener('cancel', stopCamera);
+  window.addEventListener('beforeunload', () => { stopCamera(); if (imageUrl) URL.revokeObjectURL(imageUrl); });
 }

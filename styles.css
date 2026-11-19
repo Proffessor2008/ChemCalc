@@ -1040,3 +1040,9 @@ body { min-height: 100dvh; }
 .ocr-warning { width: 100%; margin: 0; padding: 9px 11px; border: 1px solid rgba(255, 190, 92, .35); border-radius: 9px; background: rgba(255, 190, 92, .08); color: #ffd08a; font-size: .74rem; line-height: 1.45; text-align: left; }
 .ocr-warning::before { content: '!'; display: inline-grid; place-items: center; width: 17px; height: 17px; margin-right: 7px; border: 1px solid currentColor; border-radius: 50%; font-size: .68rem; font-weight: 800; vertical-align: -3px; }
 
+
+.ocr-live { display: grid; gap: 12px; padding: 18px; overflow-y: auto; }
+.ocr-video { width: 100%; max-height: 52dvh; border: 1px solid var(--line); border-radius: 12px; background: #000; object-fit: contain; }
+.ocr-live-hint { margin: 0; }
+@media (max-width: 520px) { .ocr-live { padding: 14px 16px calc(14px + env(safe-area-inset-bottom)); } .ocr-video { max-height: 48dvh; } }
+
