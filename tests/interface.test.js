@@ -45,6 +45,8 @@ test('вместо документации открываются настро�
   assert.ok(html.includes('id="community-donate"'));
   assert.ok(html.includes('data-donation-link'));
   assert.ok(html.includes('https://boosty.to/chemcalc/donate'));
+  assert.ok(donation.includes('https://yoomoney.ru/to/4100119690266585'));
+  assert.ok(html.includes('id="donation-dialog"'));
   assert.ok(donation.includes('chemcalc-donation-shown-at'));
   assert.ok(donation.includes('7 * 24 * 60 * 60 * 1000'));
   assert.ok(ocr.includes('ocrAccuracyWarning'));

@@ -1,6 +1,9 @@
 import { t } from './i18n.js';
 
-const DONATION_URL = 'https://boosty.to/chemcalc/donate';
+const DONATION_OPTIONS = [
+  { key: 'boosty', url: 'https://boosty.to/chemcalc/donate', label: 'donateBoosty', hint: 'donateBoostyHint', mark: 'B', className: 'donation-option-boosty' },
+  { key: 'yoomoney', url: 'https://yoomoney.ru/to/4100119690266585', label: 'donateYoomoney', hint: 'donateYoomoneyHint', mark: 'Ю', className: 'donation-option-yoomoney' }
+];
 const STORAGE_KEY = 'chemcalc-donation-shown-at';
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -22,9 +25,11 @@ export function initDonationUI() {
   try { shownAt = Number(localStorage.getItem(STORAGE_KEY) || 0); } catch { /* ignore */ }
   let card = null;
   let pending = false;
+  const dialog = document.getElementById('donation-dialog');
+  const root = document.getElementById('donation-app');
 
-  function donationTarget() {
-    const url = new URL(DONATION_URL);
+  function donationTarget(value) {
+    const url = new URL(value);
     url.searchParams.set('utm_source', 'chemcalc');
     url.searchParams.set('utm_medium', 'app');
     url.searchParams.set('utm_campaign', 'donate');
@@ -36,11 +41,12 @@ export function initDonationUI() {
     try { localStorage.setItem(STORAGE_KEY, String(shownAt)); } catch { /* ignore */ }
   }
 
-  function openDonation(event) {
+  function openDonation(value, event) {
     event?.preventDefault();
     markShown();
-    const url = donationTarget();
+    const url = donationTarget(value);
     const webApp = window.Telegram?.WebApp;
+    dialog?.close();
     if (webApp?.openLink) {
       try { webApp.openLink(url); return; } catch { /* fall through */ }
     }
@@ -60,6 +66,49 @@ export function initDonationUI() {
     return true;
   }
 
+  function renderChoice() {
+    if (!dialog || !root) {
+      openDonation(DONATION_OPTIONS[0].url);
+      return;
+    }
+    root.replaceChildren();
+    const head = element('div', 'dialog-heading');
+    const title = element('h2', '', t('donateChooseTitle'));
+    title.id = 'donation-title';
+    const close = button('×', 'icon-button');
+    close.setAttribute('aria-label', t('close'));
+    close.addEventListener('click', () => dialog.close());
+    head.append(title, close);
+    const body = element('div', 'donation-choose');
+    body.append(element('p', 'help-text', t('donateChooseText')));
+    const list = element('div', 'donation-options');
+    for (const option of DONATION_OPTIONS) {
+      const link = element('a', `donation-option ${option.className}`);
+      link.href = option.url;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      const mark = element('span', 'donation-option-mark', option.mark);
+      mark.setAttribute('aria-hidden', 'true');
+      const copy = element('span', 'donation-option-copy');
+      copy.append(element('strong', '', t(option.label)), element('small', '', t(option.hint)));
+      const arrow = element('span', 'donation-option-arrow', '→');
+      arrow.setAttribute('aria-hidden', 'true');
+      link.append(mark, copy, arrow);
+      link.addEventListener('click', (event) => openDonation(option.url, event));
+      list.append(link);
+    }
+    body.append(list);
+    root.append(head, body);
+    if (!dialog.open) dialog.showModal();
+  }
+
+  function openChoice(event) {
+    event?.preventDefault();
+    markShown();
+    dismiss();
+    renderChoice();
+  }
+
   function showCard() {
     if (!canShow()) return;
     pending = false;
@@ -75,7 +124,7 @@ export function initDonationUI() {
     const notNow = button(t('donateNotNow'), 'text-button');
     notNow.addEventListener('click', dismiss);
     const support = button(t('donateSupport'), 'button primary compact');
-    support.addEventListener('click', openDonation);
+    support.addEventListener('click', openChoice);
     actions.append(notNow, support);
     card.append(icon, copy, actions);
     document.body.append(card);
@@ -83,8 +132,9 @@ export function initDonationUI() {
   }
 
   for (const link of document.querySelectorAll('[data-donation-link]')) {
-    link.addEventListener('click', openDonation);
+    link.addEventListener('click', openChoice);
   }
+  dialog?.addEventListener('click', (event) => { if (event.target === dialog) dialog.close(); });
 
   function tryShow() {
     if (!pending || card) return;
