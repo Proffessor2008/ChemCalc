@@ -52,7 +52,7 @@ test('документация удалена, настройки содержа
   assert.ok(!html.includes('data-doc-lang="en"'));
   assert.ok(!html.includes('id="docs-workflows"'));
   assert.ok(html.includes('id="settings-dialog"'));
-  for (const option of ['light', 'dark', 'system']) assert.ok(html.includes(`data-theme-option="${option}"`));
+  for (const option of ['light', 'classic', 'dark']) assert.ok(html.includes(`data-theme-option="${option}"`));
   for (const size of ['compact', 'normal', 'large']) assert.ok(html.includes(`data-size-option="${size}"`));
   assert.ok(html.includes('id="restart-onboarding"'));
   assert.ok(i18n.includes("settings: 'Настройки'"));

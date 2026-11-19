@@ -237,21 +237,18 @@ function applyUiSize(size) {
 }
 
 function updateSettingsControls() {
-  const theme = storage.getItem('chemcalc-theme') || 'system';
+  const theme = storage.getItem('chemcalc-theme') || 'classic';
   $$('[data-theme-option]').forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.themeOption === theme)));
   const size = document.documentElement.dataset.uiSize || 'normal';
   $$('[data-size-option]').forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.sizeOption === size)));
 }
 
 function setTheme(theme) {
-  const value = ['light', 'classic', 'dark', 'system'].includes(theme) ? theme : 'system';
-  if (value === 'system') document.documentElement.removeAttribute('data-theme');
-  else document.documentElement.dataset.theme = value;
+  const value = ['light', 'classic', 'dark'].includes(theme) ? theme : 'classic';
+  document.documentElement.dataset.theme = value;
   storage.setItem('chemcalc-theme', value);
   storage.setItem('chemcalc-theme-v2', '1');
-  const prefersDark = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)').matches : false;
-  const dark = value === 'dark' || value === 'classic' || (value === 'system' && prefersDark);
-  const themeColor = value === 'light' ? '#f4f7f6' : dark ? '#070809' : '#f4f7f6';
+  const themeColor = value === 'light' ? '#f4f7f6' : '#070809';
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', themeColor);
   telegramController?.refreshTheme?.();
   updateSettingsControls();
@@ -683,15 +680,16 @@ function insertElement(symbol) {
 [input, autoInput].forEach((field) => field.addEventListener('focus', () => { field.dataset.editing = 'true'; }));
 
 let savedTheme = storage.getItem('chemcalc-theme');
+if (savedTheme === 'system') savedTheme = 'classic';
 if (storage.getItem('chemcalc-theme-v2') !== '1') {
   if (savedTheme === 'dark') savedTheme = 'classic';
   storage.setItem('chemcalc-theme-v2', '1');
 }
-setTheme(['light', 'classic', 'dark', 'system'].includes(savedTheme) ? savedTheme : 'system');
+setTheme(['light', 'classic', 'dark'].includes(savedTheme) ? savedTheme : 'classic');
 applyUiSize(storage.getItem('chemcalc-ui-size') || 'normal');
 ensureTelegramSdk().then(() => {
   telegramController = initTelegramApp({
-    getThemePreference: () => storage.getItem('chemcalc-theme') || 'system',
+    getThemePreference: () => storage.getItem('chemcalc-theme') || 'classic',
     onBack() {
       const openDialog = [...document.querySelectorAll('dialog[open]')].pop();
       if (openDialog) {

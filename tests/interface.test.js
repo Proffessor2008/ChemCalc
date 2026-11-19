@@ -22,7 +22,7 @@ test('вместо документации открываются настро�
   assert.ok(html.includes('id="settings-dialog"'));
   assert.ok(html.includes('id="settings-toggle"'));
   assert.ok(!html.includes('id="theme-toggle"'));
-  for (const option of ['light', 'dark', 'system']) assert.ok(html.includes(`data-theme-option="${option}"`));
+  for (const option of ['light', 'classic', 'dark']) assert.ok(html.includes(`data-theme-option="${option}"`));
   for (const size of ['compact', 'normal', 'large']) assert.ok(html.includes(`data-size-option="${size}"`));
   assert.ok(html.includes('id="restart-onboarding"'));
   assert.ok(html.includes('id="support-open"'));
@@ -33,7 +33,8 @@ test('вместо документации открываются настро�
   assert.ok(html.includes('id="review-public-dialog"'));
   assert.ok(html.includes('id="review-float"'));
   assert.ok(html.includes('id="support-float"'));
-  for (const theme of ['light', 'classic', 'dark', 'system']) assert.ok(html.includes(`data-theme-option="${theme}"`));
+  for (const theme of ['light', 'classic', 'dark']) assert.ok(html.includes(`data-theme-option="${theme}"`));
+  assert.ok(!html.includes('data-theme-option="system"'));
   assert.ok(readFileSync('styles.css', 'utf8').includes(':root[data-theme="classic"]'));
   assert.ok(readFileSync('styles.css', 'utf8').includes(':root[data-theme="dark"]'));
   assert.ok(ui.includes("'classic', 'dark'"));
