@@ -1,6 +1,6 @@
 import { t } from './i18n.js';
 
-const DONATION_URL = 'https://yoomoney.ru/to/4100119690266585';
+const DONATION_URL = 'https://boosty.to/chemcalc/donate';
 const STORAGE_KEY = 'chemcalc-donation-shown-at';
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
