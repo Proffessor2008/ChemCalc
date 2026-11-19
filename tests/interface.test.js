@@ -29,6 +29,9 @@ test('вместо документации открываются настро�
   assert.ok(html.includes('id="review-dialog"'));
   assert.ok(html.includes('id="review-public-open"'));
   assert.ok(html.includes('id="review-public-dialog"'));
+  assert.ok(html.includes('class="ocr-trigger"'));
+  assert.ok(html.includes('id="ocr-dialog"'));
+  assert.ok(ui.includes('initOcrUI'));
   assert.ok(html.includes('data-account-collapse="notifications"'));
   assert.ok(html.includes('data-account-collapse="drafts"'));
   assert.ok(html.includes('data-account-collapse="proposals"'));

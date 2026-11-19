@@ -9,6 +9,7 @@ import { communityPackage, publishProposal, rollbackRule } from './production.mj
 import { MAX_VOTES_PER_HOUR, REPUTATION_SQL, recordReview, reputationForUser, reviewHistory, reviewHistoryMap, voteWeight } from './review.mjs';
 import { notificationsForUser, notifyProposalAuthor, notifyUser } from './notifications.mjs';
 import { telegramDisplayName, telegramLogin, verifyTelegramInitData } from './telegram.mjs';
+import { recognizeEquation } from './ocr.mjs';
 
 const JSON_LIMIT = 250_000;
 const attempts = new Map();
@@ -83,8 +84,11 @@ async function proposalView(db, row, viewerId, history = null, votes = null) {
   return proposal;
 }
 
-export async function createCommunityServer({ dbPath, god, staticHandler, dbBackend = 'sqlite', connectionString, pgClient, telegramBotToken = '', telegramWebhookSecret = '', publicUrl = '' }) {
+export async function createCommunityServer({ dbPath, god, staticHandler, dbBackend = 'sqlite', connectionString, pgClient, telegramBotToken = '', telegramWebhookSecret = '', publicUrl = '', ocrSpaceApiKey = process.env.OCR_SPACE_API_KEY || '', ocrFreeScans = Number(process.env.OCR_FREE_SCANS || 5), ocrRecognizer = recognizeEquation }) {
   const db = dbBackend === 'postgres' ? await openPostgresDatabase(connectionString, { client: pgClient }) : openCommunityDatabase(dbPath);
+  const OCR_FREE_SCANS = Number.isFinite(Number(ocrFreeScans)) && Number(ocrFreeScans) > 0 ? Math.floor(Number(ocrFreeScans)) : 5;
+  const ocrAttempts = new Map();
+  const ocrInFlight = new Map();
   const events = new EventEmitter();
   events.setMaxListeners(0);
   const clients = new Set();
@@ -408,9 +412,28 @@ export async function createCommunityServer({ dbPath, god, staticHandler, dbBack
     supportRate.set(key, recent);
     if (supportRate.size > 5000) supportRate.delete(supportRate.keys().next().value);
   }
+  function ocrMonthStart() {
+    const now = new Date();
+    return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
+  }
+
+  async function ocrUsedThisMonth(userId) {
+    const row = await db.prepare('SELECT COUNT(*) AS count FROM ocr_usage WHERE user_id = ? AND created_at >= ?').get(userId, ocrMonthStart());
+    return Number(row?.count || 0);
+  }
+
+  function ocrRateLimit(userId) {
+    const key = String(userId);
+    const now = Date.now();
+    const recent = (ocrAttempts.get(key) || []).filter((time) => now - time < 60 * 60 * 1000);
+    if (recent.length >= 10) error(429, 'ocr_rate_limit', 'Слишком много попыток распознавания. Повторите через час.');
+    recent.push(now);
+    ocrAttempts.set(key, recent);
+    if (ocrAttempts.size > 5000) ocrAttempts.delete(ocrAttempts.keys().next().value);
+  }
+
   const SUPPORT_CATEGORIES = [
-    { key: 'bug', label: 'Ошибка в программе', hint: 'Что вы делали, что ожидали и что получилось. Приложите скриншот.' },
-    { key: 'calculation', label: 'Вопрос по расчёту/химии', hint: 'Уравнение или задача, ваш вариант решения и ожидаемый ответ.' },
+    { key: 'bug', label: 'Ошибка в программе', hint: 'Что вы делали, что ожидали и что получилось. Приложите скриншот.' },    { key: 'calculation', label: 'Вопрос по расчёту/химии', hint: 'Уравнение или задача, ваш вариант решения и ожидаемый ответ.' },
     { key: 'account', label: 'Аккаунт, вход, Telegram', hint: 'Логин или никнейм, способ входа и текст ошибки.' },
     { key: 'export', label: 'PDF/DOCX и печать', hint: 'Формат, справочник, страница и что именно не так.' },
     { key: 'community', label: 'Сообщество и модерация', hint: 'Ссылка на вопрос или ответ и краткое описание ситуации.' },
@@ -654,7 +677,7 @@ export async function createCommunityServer({ dbPath, god, staticHandler, dbBack
         response.once('error', cleanup);
         return;
       }
-      if (path === '/api/health' && request.method === 'GET') return send(response, 200, { ok: true, database: db.kind || 'sqlite', schemaVersion: 9 });
+      if (path === '/api/health' && request.method === 'GET') return send(response, 200, { ok: true, database: db.kind || 'sqlite', schemaVersion: 10 });
       if (path === '/api/files/temp' && request.method === 'POST') {
         rateLimit(request);
         const input = await body(request, 8_000_000);
@@ -1250,6 +1273,59 @@ export async function createCommunityServer({ dbPath, god, staticHandler, dbBack
           LEFT JOIN users ON users.id = app_reviews.user_id
           ORDER BY app_reviews.updated_at DESC LIMIT ? OFFSET ?`).all(page.limit, page.offset);
         return send(response, 200, { reviews: rows.map(reviewView), pagination: paginationResult(page, total) });
+      }
+      if (path === '/api/ocr/quota' && request.method === 'GET') {
+        const current = await requireUser(db, request);
+        const used = await ocrUsedThisMonth(current.id);
+        return send(response, 200, { limit: OCR_FREE_SCANS, used, remaining: Math.max(0, OCR_FREE_SCANS - used), period: 'month' });
+      }
+      if (path === '/api/ocr' && request.method === 'POST') {
+        const current = await requireUser(db, request, undefined, true);
+        const used = await ocrUsedThisMonth(current.id);
+        if (used >= OCR_FREE_SCANS) error(429, 'ocr_quota_exceeded', 'Бесплатные распознавания на этот месяц закончились');
+        const ocrKey = String(current.id);
+        const inFlight = ocrInFlight.get(ocrKey) || 0;
+        if (used + inFlight >= OCR_FREE_SCANS) error(429, 'ocr_quota_exceeded', 'Бесплатные распознавания на этот месяц закончились');
+        ocrInFlight.set(ocrKey, inFlight + 1);
+        try {
+          ocrRateLimit(current.id);
+          const input = await body(request, 2_500_000);
+          const mime = String(input.mime || 'image/jpeg').toLowerCase();
+          const allowedMime = ['image/jpeg', 'image/png', 'image/webp'];
+          if (!allowedMime.includes(mime)) error(422, 'ocr_invalid_mime', 'Поддерживаются JPEG, PNG и WebP');
+          const encoded = String(input.image || '').replace(/^data:[^;]+;base64,/, '');
+          if (!encoded) error(422, 'ocr_image_required', 'Не передано изображение');
+          const buffer = Buffer.from(encoded, 'base64');
+          if (!buffer.length) error(422, 'ocr_invalid_image', 'Некорректное изображение');
+          if (buffer.length > 1_000_000) error(413, 'ocr_image_too_large', 'Изображение должно быть меньше 1 МБ');
+          const isJpeg = buffer.subarray(0, 3).equals(Buffer.from([0xff, 0xd8, 0xff]));
+          const isPng = buffer.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+          const isWebp = buffer.subarray(0, 4).toString('ascii') === 'RIFF' && buffer.subarray(8, 12).toString('ascii') === 'WEBP';
+          if (!isJpeg && !isPng && !isWebp) error(422, 'ocr_invalid_image', 'Файл не похож на изображение');
+          let result;
+          try {
+            result = await ocrRecognizer({ buffer, mime, apiKey: ocrSpaceApiKey });
+          } catch (recognizeError) {
+            if (recognizeError.status) throw recognizeError;
+            error(502, 'ocr_failed', 'Не удалось распознать уравнение. Попробуйте ещё раз или введите вручную.');
+          }
+          const text = String(result?.text || '').trim();
+          if (!text) error(502, 'ocr_failed', 'Не удалось распознать уравнение. Попробуйте ещё раз или введите вручную.');
+          await db.prepare('INSERT INTO ocr_usage(id,user_id,provider,chars,created_at) VALUES(?,?,?,?,?)')
+            .run(randomUUID(), current.id, result.provider || 'unknown', text.length, new Date().toISOString());
+          const usedAfter = await ocrUsedThisMonth(current.id);
+          return send(response, 200, {
+            text,
+            provider: result.provider || 'unknown',
+            confidence: result.confidence ?? null,
+            limit: OCR_FREE_SCANS,
+            remaining: Math.max(0, OCR_FREE_SCANS - usedAfter),
+            period: 'month'
+          });
+        } finally {
+          const left = (ocrInFlight.get(ocrKey) || 1) - 1;
+          if (left > 0) ocrInFlight.set(ocrKey, left); else ocrInFlight.delete(ocrKey);
+        }
       }
       if (path === '/api/users' && request.method === 'GET') {
         await requireUser(db, request, ['GOD']);

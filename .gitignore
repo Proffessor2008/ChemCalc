@@ -7,3 +7,6 @@ node_modules/
 .env.*
 GOD.txt
 .DS_Store
+
+eng.traineddata
+*.traineddata

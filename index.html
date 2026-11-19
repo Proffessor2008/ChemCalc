@@ -60,7 +60,7 @@
           <div class="card-heading"><span class="step-number" aria-hidden="true">01</span><h2 id="editor-title" data-i18n="editorTitle">Уравнение реакции</h2></div>
           <form id="equation-form" novalidate>
             <label for="equation-input" data-i18n="equationLabel">Полное уравнение с коэффициентами</label>
-            <input id="equation-input" class="equation-input" name="equation" type="text" inputmode="text" autocomplete="off" spellcheck="false" aria-describedby="equation-help inline-error">
+            <div class="ocr-input-shell"><input id="equation-input" class="equation-input" name="equation" type="text" inputmode="text" autocomplete="off" spellcheck="false" aria-describedby="equation-help inline-error"><button type="button" class="ocr-trigger" data-ocr-target="equation-input" aria-label="Распознать уравнение по фото" title="Распознать уравнение по фото"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h3l1.5-2h7L17 7h3v12H4z"/><circle cx="12" cy="13" r="3.5"/></svg></button></div>
             <p class="help-text" id="equation-help" data-i18n="equationHelp">Допустимы =, ->, → и ⇄; скобки, кристаллогидраты и заряды: Fe^3+, SO4^2-, e-.</p>
             <div class="check-solvent"><label for="check-solvent" data-i18n="solvent">Фаза / растворитель</label><select id="check-solvent"><option value="aqueous" data-i18n="aqueous">Водный раствор</option><option value="melt" data-i18n="melt">Расплав</option><option value="gas" data-i18n="gasPhase">Газовая фаза</option><option value="organic" data-i18n="organicSolvent">Органический растворитель</option></select></div>
             <p id="inline-error" class="inline-error" role="alert" hidden></p>
@@ -126,7 +126,7 @@
           <div class="card-heading"><span class="step-number" aria-hidden="true">01</span><h2 id="auto-title" data-i18n="autoTitle">Реагенты</h2></div>
           <form id="auto-form" novalidate>
             <label for="auto-input" data-i18n="autoLabel">Левая часть уравнения</label>
-            <input id="auto-input" class="equation-input" type="text" data-i18n-placeholder="autoPlaceholder" placeholder="Например: Zn + HCl" autocomplete="off" spellcheck="false">
+            <div class="ocr-input-shell"><input id="auto-input" class="equation-input" type="text" data-i18n-placeholder="autoPlaceholder" placeholder="Например: Zn + HCl" autocomplete="off" spellcheck="false"><button type="button" class="ocr-trigger" data-ocr-target="auto-input" aria-label="Распознать реагенты по фото" title="Распознать реагенты по фото"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h3l1.5-2h7L17 7h3v12H4z"/><circle cx="12" cy="13" r="3.5"/></svg></button></div>
             <p class="help-text" data-i18n="autoHelp">Введите только реагенты. Условия ниже реально изменяют выбор правила.</p>
             <p id="auto-input-hint" class="help-text" aria-live="polite"></p>
             <div class="examples-block">
@@ -181,7 +181,7 @@
       <div class="section-heading"><div><p class="eyebrow">ChemCalc / 02</p><h1 data-i18n="stoichiometry">Стехиометрия</h1></div><button id="stoich-use-current" class="button ghost" type="button" data-i18n="useCurrent">Взять уравнение из калькулятора</button></div>
       <form id="stoich-form" class="card" novalidate>
         <label for="stoich-equation" data-i18n="balancedEquation">Уравнение (коэффициенты будут подобраны автоматически)</label>
-        <input id="stoich-equation" class="equation-input" type="text" value="2H2 + O2 = 2H2O" autocomplete="off" spellcheck="false">
+        <div class="ocr-input-shell"><input id="stoich-equation" class="equation-input" type="text" value="2H2 + O2 = 2H2O" autocomplete="off" spellcheck="false"><button type="button" class="ocr-trigger" data-ocr-target="stoich-equation" aria-label="Распознать уравнение по фото" title="Распознать уравнение по фото"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h3l1.5-2h7L17 7h3v12H4z"/><circle cx="12" cy="13" r="3.5"/></svg></button></div>
         <div class="conditions-grid stoich-inputs">
           <label><span data-i18n="knownSubstance">Известное вещество</span><select id="stoich-substance"></select></label>
           <label><span data-i18n="inputKind">Исходная величина</span><select id="stoich-kind"><option value="mass" data-i18n="mass">Масса, г</option><option value="amount" data-i18n="amount">Количество, моль</option><option value="gas" data-i18n="gasVolume">Объём газа, л</option><option value="solution" data-i18n="solutionVolume">Объём раствора, л</option></select></label>
@@ -504,6 +504,7 @@
     <div id="community-users"></div>
     <nav id="community-users-pagination" class="pagination" aria-label="Страницы пользователей"></nav>
   </dialog>
+  <dialog id="ocr-dialog" class="dialog ocr-dialog" aria-labelledby="ocr-title"><div id="ocr-app"></div></dialog>
   <dialog id="community-proposal-dialog" class="dialog community-proposal-dialog" aria-labelledby="community-proposal-title"><div id="community-proposal-content"></div></dialog>
   <dialog id="confirm-dialog" class="dialog">
     <form method="dialog">

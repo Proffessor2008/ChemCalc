@@ -34,7 +34,7 @@
     } else {
       await registration.update();
       await navigator.serviceWorker.ready;
-      const cache = await caches.open('chemcalc-v63');
+      const cache = await caches.open('chemcalc-v64');
       const paths = ['./js/predictor.js', './js/reaction-conditions.js', './js/redox-predictor.js', './js/redox-view.js', './js/internal-redox.js', './js/electrolytes.js', './js/classes.js', './js/element-info.js', './js/qa-ui.js', './data/redox-sites.json', './data/functional-groups.json', './data/element-descriptions.json', './data/substance-descriptions.json', './js/dissociation.js', './js/clipboard.js', './js/export.js', './js/reference-ui.js', './data/thermo.json', './data/thermo-extra.json', './data/reaction-rules.json', './data/reaction-rules-final.json', './js/community-ui.js', './data/reaction-rules-community.json', './js/report.js', './js/report-builders.js', './js/report-docx.js', './js/report-pdf.js', './js/report-ui.js'];
       let responses = [];
       for (let attempt = 0; attempt < 40; attempt += 1) {

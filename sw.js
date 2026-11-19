@@ -1,9 +1,9 @@
-const CACHE_NAME = 'chemcalc-v63';
+const CACHE_NAME = 'chemcalc-v64';
 const COMMUNITY_PACKAGE = './data/reaction-rules-community.json';
 const SHELL = [
   './', './index.html', './404.html', './styles.css', './manifest.webmanifest', './icons/icon-192.svg', './icons/icon-512.svg',
   './vendor/katex/katex.min.js', './vendor/katex/katex.min.css',
-  './js/ui.js', './js/auto-ui.js', './js/community-ui.js', './js/support-ui.js', './js/review-ui.js', './js/classes.js', './js/balancer.js', './js/checker.js', './js/clipboard.js', './js/dissociation.js', './js/drafts.js', './js/electrolytes.js', './js/export.js', './js/history.js', './js/history-ui.js', './js/i18n.js', './js/internal-redox.js', './js/ionic.js', './js/onboarding.js', './js/parser.js', './js/physical-constants.js', './js/predictor.js', './js/reaction-conditions.js', './js/redox.js', './js/redox-predictor.js', './js/redox-view.js', './js/telegram.js', './js/thermo-panel.js',
+  './js/ui.js', './js/auto-ui.js', './js/community-ui.js', './js/support-ui.js', './js/review-ui.js', './js/ocr-ui.js', './js/classes.js', './js/balancer.js', './js/checker.js', './js/clipboard.js', './js/dissociation.js', './js/drafts.js', './js/electrolytes.js', './js/export.js', './js/history.js', './js/history-ui.js', './js/i18n.js', './js/internal-redox.js', './js/ionic.js', './js/onboarding.js', './js/parser.js', './js/physical-constants.js', './js/predictor.js', './js/reaction-conditions.js', './js/redox.js', './js/redox-predictor.js', './js/redox-view.js', './js/telegram.js', './js/thermo-panel.js',
   './data/elements.json', './data/redox-sites.json', './data/functional-groups.json', './data/solubility.json', './data/activity-series.json', './data/acid-base-constants.json', './data/electrode-potentials.json', './data/substances.json', './data/reaction-rules.json', './data/reaction-rules-final.json', COMMUNITY_PACKAGE
 ];
 const FULL = [
