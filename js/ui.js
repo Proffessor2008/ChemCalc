@@ -243,10 +243,15 @@ function updateSettingsControls() {
 }
 
 function setTheme(theme) {
-  const value = ['light', 'dark', 'system'].includes(theme) ? theme : 'system';
+  const value = ['light', 'classic', 'dark', 'system'].includes(theme) ? theme : 'system';
   if (value === 'system') document.documentElement.removeAttribute('data-theme');
   else document.documentElement.dataset.theme = value;
   storage.setItem('chemcalc-theme', value);
+  storage.setItem('chemcalc-theme-v2', '1');
+  const prefersDark = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)').matches : false;
+  const dark = value === 'dark' || value === 'classic' || (value === 'system' && prefersDark);
+  const themeColor = value === 'light' ? '#f4f7f6' : dark ? '#070809' : '#f4f7f6';
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', themeColor);
   telegramController?.refreshTheme?.();
   updateSettingsControls();
 }
@@ -676,8 +681,12 @@ function insertElement(symbol) {
 }
 [input, autoInput].forEach((field) => field.addEventListener('focus', () => { field.dataset.editing = 'true'; }));
 
-const savedTheme = storage.getItem('chemcalc-theme');
-setTheme(['light', 'dark', 'system'].includes(savedTheme) ? savedTheme : 'system');
+let savedTheme = storage.getItem('chemcalc-theme');
+if (storage.getItem('chemcalc-theme-v2') !== '1') {
+  if (savedTheme === 'dark') savedTheme = 'classic';
+  storage.setItem('chemcalc-theme-v2', '1');
+}
+setTheme(['light', 'classic', 'dark', 'system'].includes(savedTheme) ? savedTheme : 'system');
 applyUiSize(storage.getItem('chemcalc-ui-size') || 'normal');
 ensureTelegramSdk().then(() => {
   telegramController = initTelegramApp({

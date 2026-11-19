@@ -21,7 +21,7 @@
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
-:root[data-theme="dark"] {
+:root[data-theme="classic"] {
   color-scheme: dark;
   --bg: #101817;
   --surface: #172221;
@@ -42,26 +42,47 @@
   --shadow: 0 8px 30px rgb(0 0 0 / 18%);
 }
 
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #070809;
+  --surface: #101214;
+  --surface-raised: #171a1d;
+  --surface-muted: #202429;
+  --text: #f0f2f4;
+  --muted: #a2aab2;
+  --line: #2b3036;
+  --accent: #c4ccd4;
+  --accent-strong: #eef2f5;
+  --accent-soft: #262b31;
+  --success: #9fd8b4;
+  --success-soft: #1b3326;
+  --danger: #f2a0a0;
+  --danger-soft: #3d2525;
+  --warning: #e8c27d;
+  --warning-soft: #3a301f;
+  --shadow: 0 10px 36px rgb(0 0 0 / 42%);
+}
+
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
+  :root:not([data-theme]) {
     color-scheme: dark;
-    --bg: #101817;
-    --surface: #172221;
-    --surface-raised: #1c2927;
-    --surface-muted: #22312f;
-    --text: #e8f1ef;
-    --muted: #adc0bc;
-    --line: #344744;
-    --accent: #72d2c2;
-    --accent-strong: #a1e7db;
-    --accent-soft: #1d403b;
-    --success: #8bd9af;
-    --success-soft: #1b3a2a;
-    --danger: #f0a3a3;
-    --danger-soft: #422525;
-    --warning: #f1ca83;
-    --warning-soft: #3d321f;
-    --shadow: 0 8px 30px rgb(0 0 0 / 18%);
+    --bg: #070809;
+    --surface: #101214;
+    --surface-raised: #171a1d;
+    --surface-muted: #202429;
+    --text: #f0f2f4;
+    --muted: #a2aab2;
+    --line: #2b3036;
+    --accent: #c4ccd4;
+    --accent-strong: #eef2f5;
+    --accent-soft: #262b31;
+    --success: #9fd8b4;
+    --success-soft: #1b3326;
+    --danger: #f2a0a0;
+    --danger-soft: #3d2525;
+    --warning: #e8c27d;
+    --warning-soft: #3a301f;
+    --shadow: 0 10px 36px rgb(0 0 0 / 42%);
   }
 }
 
@@ -85,7 +106,8 @@ h3 { font-size: .95rem; }
 .app-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; background: var(--surface); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 20; }
 .brand { display: flex; align-items: center; gap: 10px; min-width: 0; min-height: 44px; padding: 0; border: 0; border-radius: 10px; background: transparent; color: var(--text); text-align: left; }
 .brand-mark { display: grid; place-items: center; width: 40px; height: 40px; flex: 0 0 auto; border-radius: 12px; background: var(--accent); color: white; font-family: Georgia, serif; font-weight: 700; font-size: 1.2rem; }
-:root[data-theme="dark"] .brand-mark { color: #102b27; }
+:root[data-theme="classic"] .brand-mark { color: #102b27; }
+:root[data-theme="dark"] .brand-mark { color: #08090a; }
 .brand strong, .brand small { display: block; }
 .brand strong { letter-spacing: -.03em; }
 .brand small { color: var(--muted); font-size: .66rem; white-space: nowrap; }
@@ -135,7 +157,8 @@ label, .control-label { display: block; color: var(--muted); font-size: .78rem; 
 .primary-actions { display: grid; gap: 8px; margin-top: 20px; }
 .button { min-height: 46px; border-radius: 11px; padding: 10px 14px; border: 1px solid transparent; font-weight: 700; font-size: .82rem; }
 .button.primary { background: var(--accent); color: #ffffff; }
-:root[data-theme="dark"] .button.primary { color: #102b27; }
+:root[data-theme="classic"] .button.primary { color: #102b27; }
+:root[data-theme="dark"] .button.primary { color: #08090a; }
 .button.primary:hover { background: var(--accent-strong); }
 .button.secondary { background: var(--accent-soft); color: var(--accent-strong); border-color: transparent; }
 .button.ghost { background: transparent; color: var(--muted); border-color: var(--line); }
@@ -703,7 +726,7 @@ select.reference-select-mobile { width: 100%; min-height: 46px; padding: 8px 10p
 .settings-dialog { width: min(560px, calc(100% - 28px)); }
 .settings-section { display: grid; gap: 10px; margin-top: 18px; }
 .settings-section h3 { margin: 0; font-size: .9rem; }
-.settings-segmented { grid-template-columns: repeat(3, 1fr); width: 100%; }
+.settings-segmented { grid-template-columns: repeat(4, 1fr); width: 100%; }
 .profile-settings-grid { display: grid; grid-template-columns: 160px minmax(0, 1fr); gap: 20px; align-items: start; }
 .profile-avatar-block { display: grid; gap: 10px; justify-items: start; }
 .profile-avatar { display: grid; place-items: center; width: 112px; height: 112px; border-radius: 50%; overflow: hidden; background: var(--accent-soft); color: var(--accent-strong); font-size: 2.2rem; font-weight: 800; border: 1px solid var(--line); }

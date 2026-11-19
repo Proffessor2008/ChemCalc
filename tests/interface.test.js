@@ -32,6 +32,10 @@ test('вместо документации открываются настро�
   assert.ok(html.includes('id="review-public-dialog"'));
   assert.ok(html.includes('id="review-float"'));
   assert.ok(html.includes('id="support-float"'));
+  for (const theme of ['light', 'classic', 'dark', 'system']) assert.ok(html.includes(`data-theme-option="${theme}"`));
+  assert.ok(readFileSync('styles.css', 'utf8').includes(':root[data-theme="classic"]'));
+  assert.ok(readFileSync('styles.css', 'utf8').includes(':root[data-theme="dark"]'));
+  assert.ok(ui.includes("'classic', 'dark'"));
   assert.ok(html.indexOf('id="profile-danger-zone"') < html.indexOf('class="account-legal-footer"'));
   assert.ok(html.includes('class="ocr-trigger"'));
   assert.ok(html.includes('id="ocr-dialog"'));

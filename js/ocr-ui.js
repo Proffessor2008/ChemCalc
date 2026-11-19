@@ -105,6 +105,7 @@ export function initOcrUI({ showToast = () => {} } = {}) {
   }
 
   function quotaLine() {
+    if (quota.unlimited) return element('p', 'help-text ocr-quota', t('ocrUnlimited'));
     return element('p', 'help-text ocr-quota', t('ocrRemaining', { count: quota.remaining, limit: quota.limit }));
   }
 
@@ -552,7 +553,9 @@ export function initOcrUI({ showToast = () => {} } = {}) {
         renderError(data?.error?.message || t('ocrFailed'));
         return;
       }
-      quota = { ...quota, used: quota.limit - (data.remaining ?? 0), remaining: Number(data.remaining ?? 0), limit: Number(data.limit || quota.limit) };
+      quota = data.unlimited
+        ? { ...quota, unlimited: true, limit: null, remaining: null, used: Number(quota.used || 0) + 1 }
+        : { ...quota, used: quota.limit - (data.remaining ?? 0), remaining: Number(data.remaining ?? 0), limit: Number(data.limit || quota.limit) };
       renderResult(String(data.text || ''), data.provider, data.confidence);
     } catch {
       renderError(t('ocrFailed'));
@@ -630,7 +633,7 @@ export function initOcrUI({ showToast = () => {} } = {}) {
       if (!quotaResponse.ok) { dialog.showModal(); renderLogin(); return; }
       quota = await quotaResponse.json();
       dialog.showModal();
-      if (Number(quota.remaining) <= 0) renderQuota(); else renderSource();
+      if (!quota.unlimited && Number(quota.remaining) <= 0) renderQuota(); else renderSource();
     } catch {
       dialog.showModal();
       renderError(t('ocrFailed'));

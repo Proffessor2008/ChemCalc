@@ -30,6 +30,33 @@ test('нормализация и fallback OCR', async () => {
   assert.equal(result.text, '2H2 + O2 = 2H2O');
 });
 
+test('GOD имеет безлимитное распознавание', async (context) => {
+  const app = await createCommunityServer({
+    dbPath: ':memory:',
+    god: credentials,
+    ocrFreeScans: 5,
+    ocrRecognizer: async () => ({ text: '2H2 + O2 = 2H2O', provider: 'ocr.space', confidence: null })
+  });
+  await new Promise((resolve) => app.server.listen(0, '127.0.0.1', resolve));
+  const port = app.server.address().port;
+  context.after(() => app.close());
+
+  const god = await api(port, '/api/auth/login', { method: 'POST', body: credentials });
+  assert.equal(god.status, 200);
+  const cookie = god.setCookie;
+  const csrfToken = god.data.csrfToken;
+  const quota = await api(port, '/api/ocr/quota', { cookie });
+  assert.equal(quota.data.unlimited, true);
+  assert.equal(quota.data.remaining, null);
+
+  for (let index = 0; index < 7; index += 1) {
+    const result = await api(port, '/api/ocr', { method: 'POST', cookie, csrfToken, body: { image: jpeg, mime: 'image/jpeg' } });
+    assert.equal(result.status, 200, JSON.stringify(result.data));
+    assert.equal(result.data.unlimited, true);
+    assert.equal(result.data.remaining, null);
+  }
+});
+
 test('OCR только для авторизованных и 5 бесплатных сканов', async (context) => {
   const app = await createCommunityServer({
     dbPath: ':memory:',
