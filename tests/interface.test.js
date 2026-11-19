@@ -15,6 +15,7 @@ test('полноэкранная таблица имеет явную кнопк
 test('вместо документации открываются настройки, а не вкладка', () => {
   const html = readFileSync('index.html', 'utf8');
   const ui = readFileSync('js/ui.js', 'utf8');
+  const ocr = readFileSync('js/ocr-ui.js', 'utf8');
   assert.ok(!html.includes('data-panel="documentation"'));
   assert.ok(!html.includes('panel-documentation'));
   assert.ok(html.includes('id="settings-dialog"'));
@@ -32,6 +33,8 @@ test('вместо документации открываются настро�
   assert.ok(html.includes('class="ocr-trigger"'));
   assert.ok(html.includes('id="ocr-dialog"'));
   assert.ok(ui.includes('initOcrUI'));
+  assert.ok(ocr.includes('ocrAccuracyWarning'));
+  assert.ok(ocr.includes('ocrLoginAction'));
   assert.ok(html.includes('data-account-collapse="notifications"'));
   assert.ok(html.includes('data-account-collapse="drafts"'));
   assert.ok(html.includes('data-account-collapse="proposals"'));

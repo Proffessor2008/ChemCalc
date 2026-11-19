@@ -50,12 +50,13 @@ test('OCR только для авторизованных и 5 бесплатн
   const cookie = registration.setCookie;
   const csrfToken = registration.data.csrfToken;
   const quota = await api(port, '/api/ocr/quota', { cookie });
-  assert.deepEqual({ limit: quota.data.limit, used: quota.data.used, remaining: quota.data.remaining }, { limit: 5, used: 0, remaining: 5 });
+  assert.deepEqual({ limit: quota.data.limit, used: quota.data.used, remaining: quota.data.remaining, period: quota.data.period }, { limit: 5, used: 0, remaining: 5, period: 'day' });
 
   for (let index = 0; index < 5; index += 1) {
     const result = await api(port, '/api/ocr', { method: 'POST', cookie, csrfToken, body: { image: jpeg, mime: 'image/jpeg', context: 'calculator' } });
     assert.equal(result.status, 200, JSON.stringify(result.data));
     assert.equal(result.data.text, 'C3H8 + 5O2 = 3CO2 + 4H2O');
+    assert.equal(result.data.period, 'day');
     assert.equal(result.data.remaining, 4 - index);
   }
   const exhausted = await api(port, '/api/ocr', { method: 'POST', cookie, csrfToken, body: { image: jpeg, mime: 'image/jpeg' } });

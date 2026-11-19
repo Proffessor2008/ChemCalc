@@ -91,6 +91,10 @@ export function initOcrUI({ showToast = () => {} } = {}) {
     return element('p', 'help-text ocr-quota', t('ocrRemaining', { count: quota.remaining, limit: quota.limit }));
   }
 
+  function accuracyWarning() {
+    return element('p', 'ocr-warning', t('ocrAccuracyWarning'));
+  }
+
   function renderLogin() {
     root.replaceChildren();
     const body = element('div', 'ocr-login');
@@ -99,6 +103,7 @@ export function initOcrUI({ showToast = () => {} } = {}) {
     login.addEventListener('click', () => {
       close();
       document.querySelector('[data-tab="account"]')?.click();
+      setTimeout(() => document.getElementById('community-auth')?.scrollIntoView({ block: 'start', behavior: 'smooth' }), 100);
     });
     const cancel = button(t('ocrCancel'), 'button ghost');
     cancel.addEventListener('click', close);
@@ -123,6 +128,7 @@ export function initOcrUI({ showToast = () => {} } = {}) {
     const body = element('div', 'ocr-source');
     body.append(cameraIcon());
     body.append(quotaLine());
+    body.append(accuracyWarning());
     const take = button(t('ocrTakePhoto'), 'button primary');
     const upload = button(t('ocrChoosePhoto'), 'button secondary');
     const takeInput = element('input', 'ocr-file-input');
@@ -254,6 +260,7 @@ export function initOcrUI({ showToast = () => {} } = {}) {
     const head = header(t('ocrTitle'), t('ocrCropHint'));
     root.append(head);
     const body = element('div', 'ocr-crop');
+    body.append(accuracyWarning());
     stage = element('div', 'ocr-stage');
     canvas = element('canvas', 'ocr-canvas');
     canvas.setAttribute('aria-label', t('ocrPhoto'));
@@ -374,7 +381,7 @@ export function initOcrUI({ showToast = () => {} } = {}) {
   function renderResult(text, provider, confidence) {
     root.replaceChildren();
     const body = element('div', 'ocr-result');
-    body.append(quotaLine());
+    body.append(quotaLine(), accuracyWarning());
     const resultLabel = element('label', 'review-label', t('ocrResult'));
     const textarea = element('textarea', 'ocr-result-input');
     textarea.rows = 3;

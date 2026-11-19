@@ -412,13 +412,13 @@ export async function createCommunityServer({ dbPath, god, staticHandler, dbBack
     supportRate.set(key, recent);
     if (supportRate.size > 5000) supportRate.delete(supportRate.keys().next().value);
   }
-  function ocrMonthStart() {
+  function ocrDayStart() {
     const now = new Date();
-    return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
+    return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).toISOString();
   }
 
-  async function ocrUsedThisMonth(userId) {
-    const row = await db.prepare('SELECT COUNT(*) AS count FROM ocr_usage WHERE user_id = ? AND created_at >= ?').get(userId, ocrMonthStart());
+  async function ocrUsedToday(userId) {
+    const row = await db.prepare('SELECT COUNT(*) AS count FROM ocr_usage WHERE user_id = ? AND created_at >= ?').get(userId, ocrDayStart());
     return Number(row?.count || 0);
   }
 
@@ -1276,16 +1276,16 @@ export async function createCommunityServer({ dbPath, god, staticHandler, dbBack
       }
       if (path === '/api/ocr/quota' && request.method === 'GET') {
         const current = await requireUser(db, request);
-        const used = await ocrUsedThisMonth(current.id);
-        return send(response, 200, { limit: OCR_FREE_SCANS, used, remaining: Math.max(0, OCR_FREE_SCANS - used), period: 'month' });
+        const used = await ocrUsedToday(current.id);
+        return send(response, 200, { limit: OCR_FREE_SCANS, used, remaining: Math.max(0, OCR_FREE_SCANS - used), period: 'day' });
       }
       if (path === '/api/ocr' && request.method === 'POST') {
         const current = await requireUser(db, request, undefined, true);
-        const used = await ocrUsedThisMonth(current.id);
-        if (used >= OCR_FREE_SCANS) error(429, 'ocr_quota_exceeded', 'Бесплатные распознавания на этот месяц закончились');
+        const used = await ocrUsedToday(current.id);
+        if (used >= OCR_FREE_SCANS) error(429, 'ocr_quota_exceeded', 'Бесплатные распознавания на сегодня закончились');
         const ocrKey = String(current.id);
         const inFlight = ocrInFlight.get(ocrKey) || 0;
-        if (used + inFlight >= OCR_FREE_SCANS) error(429, 'ocr_quota_exceeded', 'Бесплатные распознавания на этот месяц закончились');
+        if (used + inFlight >= OCR_FREE_SCANS) error(429, 'ocr_quota_exceeded', 'Бесплатные распознавания на сегодня закончились');
         ocrInFlight.set(ocrKey, inFlight + 1);
         try {
           ocrRateLimit(current.id);
@@ -1313,14 +1313,14 @@ export async function createCommunityServer({ dbPath, god, staticHandler, dbBack
           if (!text) error(502, 'ocr_failed', 'Не удалось распознать уравнение. Попробуйте ещё раз или введите вручную.');
           await db.prepare('INSERT INTO ocr_usage(id,user_id,provider,chars,created_at) VALUES(?,?,?,?,?)')
             .run(randomUUID(), current.id, result.provider || 'unknown', text.length, new Date().toISOString());
-          const usedAfter = await ocrUsedThisMonth(current.id);
+          const usedAfter = await ocrUsedToday(current.id);
           return send(response, 200, {
             text,
             provider: result.provider || 'unknown',
             confidence: result.confidence ?? null,
             limit: OCR_FREE_SCANS,
             remaining: Math.max(0, OCR_FREE_SCANS - usedAfter),
-            period: 'month'
+            period: 'day'
           });
         } finally {
           const left = (ocrInFlight.get(ocrKey) || 1) - 1;
