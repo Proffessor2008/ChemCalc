@@ -1,8 +1,15 @@
 const SUBSCRIPTS = { '₀': '0', '₁': '1', '₂': '2', '₃': '3', '₄': '4', '₅': '5', '₆': '6', '₇': '7', '₈': '8', '₉': '9' };
 const SUPERSCRIPTS = { '⁰': '0', '¹': '1', '²': '2', '³': '3', '⁴': '4', '⁵': '5', '⁶': '6', '⁷': '7', '⁸': '8', '⁹': '9', '⁺': '+', '⁻': '-' };
+const LATIN_LOOKALIKES = {
+  'А': 'A', 'В': 'B', 'С': 'C', 'Е': 'E', 'Н': 'H', 'К': 'K', 'М': 'M', 'О': 'O', 'Р': 'P', 'Т': 'T', 'Х': 'X', 'У': 'Y', 'І': 'I', 'Ј': 'J', 'Ѕ': 'S',
+  'а': 'a', 'в': 'b', 'с': 'c', 'е': 'e', 'н': 'h', 'к': 'k', 'м': 'm', 'о': 'o', 'р': 'p', 'т': 't', 'х': 'x', 'у': 'y', 'і': 'i', 'ј': 'j', 'ѕ': 's',
+  'Α': 'A', 'Β': 'B', 'Ε': 'E', 'Ζ': 'Z', 'Η': 'H', 'Ι': 'I', 'Κ': 'K', 'Μ': 'M', 'Ν': 'N', 'Ο': 'O', 'Ρ': 'P', 'Τ': 'T', 'Υ': 'Y', 'Χ': 'X',
+  'α': 'a', 'ε': 'e', 'ι': 'i', 'κ': 'k', 'ν': 'v', 'ο': 'o', 'ρ': 'p', 'τ': 't', 'υ': 'u', 'χ': 'x'
+};
 
 export function normalizeOcrEquation(value) {
   let text = String(value || '')
+    .normalize('NFKC')
     .replace(/\r/g, '\n')
     .replace(/[\u00a0\u2007\u202f]/g, ' ')
     .replace(/\\ce\{([^{}]*)\}/g, '$1')
@@ -18,6 +25,10 @@ export function normalizeOcrEquation(value) {
     .replace(/\^\{([^{}]+)\}/g, '^$1')
     .replace(/[{}]/g, '')
     .replace(/\((?:aq|s|l|g|ж|г|т)\)/gi, '')
+    .replace(/[А-Яа-яЁёΑ-Ωα-ω]/g, (character) => LATIN_LOOKALIKES[character] || '')
+    .replace(/[−–—]/g, '-')
+    .replace(/[∙⋅]/g, '·')
+    .replace(/[^\x20-\x7E·]/g, ' ')
     .replace(/[ \t]+/g, ' ')
     .replace(/\s*\n\s*/g, ' ')
     .replace(/\s*\+\s*/g, ' + ')
@@ -30,7 +41,7 @@ async function recognizeWithSpace(buffer, mime, apiKey) {
   if (!apiKey) throw Object.assign(new Error('OCR.space key is not configured'), { code: 'ocr_space_disabled' });
   const form = new FormData();
   form.append('file', new Blob([buffer], { type: mime }), 'equation.jpg');
-  form.append('language', 'auto');
+  form.append('language', 'eng');
   form.append('OCREngine', '2');
   form.append('scale', 'true');
   form.append('detectOrientation', 'true');

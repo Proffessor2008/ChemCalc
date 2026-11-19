@@ -18,6 +18,7 @@ async function api(port, path, { method = 'GET', body, cookie, csrfToken } = {})
 
 test('нормализация и fallback OCR', async () => {
   assert.equal(normalizeOcrEquation('C₃H₈ + 5O₂ → 3CO₂ + 4H₂O'), 'C3H8 + 5O2 = 3CO2 + 4H2O');
+  assert.equal(normalizeOcrEquation('С3Н8 + 5О2 → 3СО2 + 4Н2О'), 'C3H8 + 5O2 = 3CO2 + 4H2O');
   assert.equal(normalizeOcrEquation('\\ce{2H2 + O2 -> 2H2O}'), '2H2 + O2 = 2H2O');
   const result = await recognizeEquation({
     buffer: Buffer.from('x'),
