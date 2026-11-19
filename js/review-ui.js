@@ -297,6 +297,7 @@ export function initReviewUI({ showToast = () => {} } = {}) {
   }
 
   document.getElementById('review-open')?.addEventListener('click', () => open({ context: 'settings' }));
+  document.getElementById('review-float')?.addEventListener('click', () => open({ context: 'settings' }));
   document.getElementById('review-public-open')?.addEventListener('click', openPublicSummary);
   publicDialog?.addEventListener('click', (event) => { if (event.target === publicDialog) publicDialog.close(); });
   dialog.addEventListener('click', (event) => { if (event.target === dialog) closeDialog(); });

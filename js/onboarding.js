@@ -14,8 +14,14 @@ const STEPS = [
   { title: 'Офлайн, язык и тема', tab: 'account', target: '#language-select', text: 'Приложение — PWA: после первого открытия работает офлайн, service worker кеширует модули и справочники. Язык RU/EN переключается в шапке, тема и размер интерфейса — в настройках. Готово — приятной работы!' }
 ];
 
+STEPS.splice(STEPS.length - 1, 0,
+  { title: 'Распознавание по камере', tab: 'calculator', mode: 'check', target: '.ocr-trigger[data-ocr-target="equation-input"]', text: 'Кнопка камеры справа в поле уравнения открывает веб-камеру на компьютере или камеру телефона. Снимите уравнение, растяните рамку под нужную область и проверьте распознанный текст. В день доступно 5 сканов для авторизованных пользователей.' },
+  { title: 'Отзыв о программе', tab: 'calculator', target: '#review-float', text: 'Кнопка отзыва слева внизу открывает форму с оценкой и предложениями. Отзыв можно изменить в любой момент, а публично показывается только общее количество оценок и их распределение.' },
+  { title: 'Поддержка', tab: 'calculator', target: '#support-float', text: 'Кнопка поддержки справа внизу открывает личные обращения. Опишите проблему, приложите фото или скриншот — ответят администраторы. Здесь же можно посмотреть историю обращений.' }
+);
+
 export function initOnboarding({ storage, navigate, setMode }) {
-  const KEY = 'chemcalc-onboarding-v2';
+  const KEY = 'chemcalc-onboarding-v3';
 
   function start() {
     storage.setItem(KEY, 'pending');
@@ -36,7 +42,9 @@ export function initOnboarding({ storage, navigate, setMode }) {
     let highlighted = null;
     let frame = 0;
     document.querySelectorAll('.tour-target').forEach((element) => element.classList.remove('tour-target'));
-    document.querySelectorAll('.tour-overlay, .tour-card').forEach((element) => element.remove());
+    document.querySelectorAll('.tour-overlay, .tour-card').forEach((element) => {
+      if (element !== overlay && element !== card) element.remove();
+    });
     const stepEl = card.querySelector('.tour-step');
     const titleEl = card.querySelector('.tour-title');
     const textEl = card.querySelector('.tour-text');

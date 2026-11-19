@@ -1046,3 +1046,26 @@ body { min-height: 100dvh; }
 .ocr-live-hint { margin: 0; }
 @media (max-width: 520px) { .ocr-live { padding: 14px 16px calc(14px + env(safe-area-inset-bottom)); } .ocr-video { max-height: 48dvh; } }
 
+
+/* Floating feedback / support actions */
+.floating-action { position: fixed; z-index: 45; display: grid; place-items: center; width: 52px; height: 52px; padding: 0; border-radius: 50%; border: 1px solid transparent; box-shadow: 0 8px 28px rgba(0, 0, 0, .32); cursor: pointer; transition: transform .15s ease, filter .15s ease; }
+.floating-action:hover, .floating-action:focus-visible { transform: translateY(-2px); filter: brightness(1.08); }
+.floating-action svg { width: 25px; height: 25px; }
+.floating-review { left: 18px; bottom: 18px; background: #d9474d; border-color: #f07175; color: #fff; }
+.floating-support { right: 18px; bottom: 18px; background: var(--accent); border-color: var(--accent-bright, var(--accent)); color: #06221b; }
+.floating-support .support-badge { position: absolute; top: -3px; right: -3px; min-width: 21px; height: 21px; border: 2px solid var(--surface); font-size: .62rem; }
+@media (min-width: 768px) and (max-width: 1199px) {
+  .floating-support { bottom: 84px; }
+}
+@media (max-width: 767px) {
+  .floating-review { left: 14px; bottom: calc(78px + env(safe-area-inset-bottom)); width: 48px; height: 48px; }
+  .floating-support { right: 14px; bottom: calc(140px + env(safe-area-inset-bottom)); width: 48px; height: 48px; }
+  .floating-action svg { width: 23px; height: 23px; }
+}
+@media print {
+  .floating-action { display: none !important; }
+}
+
+/* Proposal feed uses the full content width without the former users sidebar */
+.community-layout { grid-template-columns: minmax(0, 1fr); }
+.community-main { width: 100%; }

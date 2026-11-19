@@ -85,15 +85,18 @@ export function initSupportUI({ showToast = () => {} } = {}) {
   async function refreshBadge() {
     if (!user) {
       document.getElementById('support-badge')?.setAttribute('hidden', '');
+      document.getElementById('support-float-badge')?.setAttribute('hidden', '');
       return;
     }
     try {
       const data = await api('/api/support/unread');
-      const badge = document.getElementById('support-badge');
-      if (!badge) return;
       const count = Number(data.unread || 0);
-      badge.textContent = String(Math.min(count, 99));
-      badge.hidden = count <= 0;
+      for (const id of ['support-badge', 'support-float-badge']) {
+        const badge = document.getElementById(id);
+        if (!badge) continue;
+        badge.textContent = String(Math.min(count, 99));
+        badge.hidden = count <= 0;
+      }
     } catch { /* не мешаем основному интерфейсу */ }
   }
 
@@ -739,6 +742,7 @@ export function initSupportUI({ showToast = () => {} } = {}) {
   }
 
   document.getElementById('support-open')?.addEventListener('click', open);
+  document.getElementById('support-float')?.addEventListener('click', open);
   dialog.addEventListener('click', (event) => { if (event.target === dialog) close(); });
   dialog.addEventListener('close', () => { pendingPhotos = []; });
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') refreshBadge(); });

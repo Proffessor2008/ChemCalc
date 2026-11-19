@@ -30,6 +30,9 @@ test('вместо документации открываются настро�
   assert.ok(html.includes('id="review-dialog"'));
   assert.ok(html.includes('id="review-public-open"'));
   assert.ok(html.includes('id="review-public-dialog"'));
+  assert.ok(html.includes('id="review-float"'));
+  assert.ok(html.includes('id="support-float"'));
+  assert.ok(html.indexOf('id="profile-danger-zone"') < html.indexOf('class="account-legal-footer"'));
   assert.ok(html.includes('class="ocr-trigger"'));
   assert.ok(html.includes('id="ocr-dialog"'));
   assert.ok(ui.includes('initOcrUI'));
