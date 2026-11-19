@@ -16,6 +16,7 @@ test('вместо документации открываются настро�
   const html = readFileSync('index.html', 'utf8');
   const ui = readFileSync('js/ui.js', 'utf8');
   const ocr = readFileSync('js/ocr-ui.js', 'utf8');
+  const donation = readFileSync('js/donation-ui.js', 'utf8');
   assert.ok(!html.includes('data-panel="documentation"'));
   assert.ok(!html.includes('panel-documentation'));
   assert.ok(html.includes('id="settings-dialog"'));
@@ -40,6 +41,11 @@ test('вместо документации открываются настро�
   assert.ok(html.includes('class="ocr-trigger"'));
   assert.ok(html.includes('id="ocr-dialog"'));
   assert.ok(ui.includes('initOcrUI'));
+  assert.ok(ui.includes('initDonationUI'));
+  assert.ok(html.includes('id="community-donate"'));
+  assert.ok(html.includes('data-donation-link'));
+  assert.ok(donation.includes('chemcalc-donation-shown-at'));
+  assert.ok(donation.includes('7 * 24 * 60 * 60 * 1000'));
   assert.ok(ocr.includes('ocrAccuracyWarning'));
   assert.ok(ocr.includes('ocrLoginAction'));
   assert.ok(html.includes('data-account-collapse="notifications"'));

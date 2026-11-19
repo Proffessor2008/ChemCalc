@@ -3,6 +3,7 @@ import { initCommunityUI } from './community-ui.js';
 import { initSupportUI } from './support-ui.js';
 import { initReviewUI } from './review-ui.js';
 import { initOcrUI } from './ocr-ui.js';
+import { initDonationUI } from './donation-ui.js';
 import { ensureTelegramSdk, initTelegramApp } from './telegram.js';
 import { balanceEquation, inspectBalance } from './balancer.js';
 import { checkEquation, findSubstance, getHint, revealAnswer } from './checker.js';
@@ -804,6 +805,7 @@ const onboardingController = initOnboarding({ storage, navigate: setTab, setMode
 initSupportUI({ showToast });
 initReviewUI({ showToast });
 initOcrUI({ showToast });
+initDonationUI();
 $('#restart-onboarding')?.addEventListener('click', () => {
   $('#settings-dialog')?.close();
   onboardingController.restart();
