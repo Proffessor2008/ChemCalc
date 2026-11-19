@@ -2,6 +2,9 @@ import { t } from './i18n.js';
 
 const MAX_FILE_BYTES = 900_000;
 const MAX_OUTPUT = 1600;
+const MIN_FRAME_WIDTH = 60;
+const MIN_FRAME_HEIGHT = 40;
+const FRAME_HIT = 20;
 
 function element(tag, className = '', text = '') {
   const node = document.createElement(tag);
@@ -175,14 +178,76 @@ export function initOcrUI({ showToast = () => {} } = {}) {
     image.src = imageUrl;
   }
 
-  function frameGeometry(width, height) {
-    let frameWidth = width * 0.82;
-    let frameHeight = frameWidth * 9 / 16;
-    if (frameHeight > height * 0.72) {
-      frameHeight = height * 0.72;
-      frameWidth = frameHeight * 16 / 9;
-    }
+  function initialFrame(width, height) {
+    const frameWidth = width * 0.82;
+    const frameHeight = height * 0.58;
     return { x: (width - frameWidth) / 2, y: (height - frameHeight) / 2, w: frameWidth, h: frameHeight };
+  }
+
+  function frameHandles(value = frame) {
+    return [
+      { name: 'nw', x: value.x, y: value.y },
+      { name: 'n', x: value.x + value.w / 2, y: value.y },
+      { name: 'ne', x: value.x + value.w, y: value.y },
+      { name: 'e', x: value.x + value.w, y: value.y + value.h / 2 },
+      { name: 'se', x: value.x + value.w, y: value.y + value.h },
+      { name: 's', x: value.x + value.w / 2, y: value.y + value.h },
+      { name: 'sw', x: value.x, y: value.y + value.h },
+      { name: 'w', x: value.x, y: value.y + value.h / 2 }
+    ];
+  }
+
+  function frameHit(pointX, pointY) {
+    let nearest = null;
+    let distance = FRAME_HIT;
+    for (const handle of frameHandles()) {
+      const current = Math.hypot(handle.x - pointX, handle.y - pointY);
+      if (current < distance) { distance = current; nearest = handle.name; }
+    }
+    return nearest;
+  }
+
+  function clampFrame(value, width, height) {
+    value.w = Math.max(MIN_FRAME_WIDTH, Math.min(width, value.w));
+    value.h = Math.max(MIN_FRAME_HEIGHT, Math.min(height, value.h));
+    value.x = Math.max(0, Math.min(width - value.w, value.x));
+    value.y = Math.max(0, Math.min(height - value.h, value.y));
+    return value;
+  }
+
+  function resizeFrame(start, handle, deltaX, deltaY, width, height) {
+    let x = start.x;
+    let y = start.y;
+    let w = start.w;
+    let h = start.h;
+    if (handle.includes('w')) {
+      const right = start.x + start.w;
+      x = Math.max(0, Math.min(start.x + deltaX, right - MIN_FRAME_WIDTH));
+      w = right - x;
+    }
+    if (handle.includes('e')) {
+      w = Math.max(MIN_FRAME_WIDTH, Math.min(width - start.x, start.w + deltaX));
+    }
+    if (handle.includes('n')) {
+      const bottom = start.y + start.h;
+      y = Math.max(0, Math.min(start.y + deltaY, bottom - MIN_FRAME_HEIGHT));
+      h = bottom - y;
+    }
+    if (handle.includes('s')) {
+      h = Math.max(MIN_FRAME_HEIGHT, Math.min(height - start.y, start.h + deltaY));
+    }
+    return clampFrame({ x, y, w, h }, width, height);
+  }
+
+  function cropCursor(pointX, pointY) {
+    if (!frame) return 'grab';
+    const handle = frameHit(pointX, pointY);
+    if (handle === 'nw' || handle === 'se') return 'nwse-resize';
+    if (handle === 'ne' || handle === 'sw') return 'nesw-resize';
+    if (handle === 'n' || handle === 's') return 'ns-resize';
+    if (handle === 'e' || handle === 'w') return 'ew-resize';
+    if (pointX >= frame.x && pointX <= frame.x + frame.w && pointY >= frame.y && pointY <= frame.y + frame.h) return 'move';
+    return 'grab';
   }
 
   function imageGeometry() {
@@ -235,14 +300,15 @@ export function initOcrUI({ showToast = () => {} } = {}) {
     ctx.strokeStyle = '#63d6ae';
     ctx.lineWidth = 2;
     ctx.strokeRect(frame.x, frame.y, frame.w, frame.h);
-    const corner = 18;
     ctx.strokeStyle = '#b7ffe7';
     ctx.lineWidth = 3;
-    for (const [x, y, dx, dy] of [[frame.x, frame.y, 1, 1], [frame.x + frame.w, frame.y, -1, 1], [frame.x, frame.y + frame.h, 1, -1], [frame.x + frame.w, frame.y + frame.h, -1, -1]]) {
+    for (const handle of frameHandles()) {
       ctx.beginPath();
-      ctx.moveTo(x + dx * corner, y);
-      ctx.lineTo(x, y);
-      ctx.lineTo(x, y + dy * corner);
+      ctx.arc(handle.x, handle.y, 5, 0, Math.PI * 2);
+      ctx.fillStyle = '#b7ffe7';
+      ctx.fill();
+      ctx.strokeStyle = '#0b1714';
+      ctx.lineWidth = 2;
       ctx.stroke();
     }
   }
@@ -289,24 +355,48 @@ export function initOcrUI({ showToast = () => {} } = {}) {
     requestAnimationFrame(() => {
       if (!stage || !canvas || !image) return;
       canvas.style.height = `${Math.min(430, Math.max(250, Math.round(stage.clientWidth * 0.56)))}px`;
-      frame = frameGeometry(canvas.clientWidth, canvas.clientHeight);
+      frame = initialFrame(canvas.clientWidth, canvas.clientHeight);
       drawCrop();
     });
     stage.addEventListener('pointerdown', (event) => {
-      drag = { x: event.clientX, y: event.clientY, offsetX, offsetY };
+      if (!canvas || !frame) return;
+      const rect = canvas.getBoundingClientRect();
+      const pointX = event.clientX - rect.left;
+      const pointY = event.clientY - rect.top;
+      const handle = frameHit(pointX, pointY);
+      if (handle) {
+        drag = { mode: 'resize', handle, x: event.clientX, y: event.clientY, frame: { ...frame } };
+      } else if (pointX >= frame.x && pointX <= frame.x + frame.w && pointY >= frame.y && pointY <= frame.y + frame.h) {
+        drag = { mode: 'frame', x: event.clientX, y: event.clientY, frame: { ...frame } };
+      } else {
+        drag = { mode: 'image', x: event.clientX, y: event.clientY, offsetX, offsetY };
+      }
       stage.setPointerCapture?.(event.pointerId);
       event.preventDefault();
     });
     stage.addEventListener('pointermove', (event) => {
-      if (!drag) return;
-      offsetX = drag.offsetX + event.clientX - drag.x;
-      offsetY = drag.offsetY + event.clientY - drag.y;
+      if (!canvas || !frame) return;
+      if (!drag) {
+        const rect = canvas.getBoundingClientRect();
+        canvas.style.cursor = cropCursor(event.clientX - rect.left, event.clientY - rect.top);
+        return;
+      }
+      const deltaX = event.clientX - drag.x;
+      const deltaY = event.clientY - drag.y;
+      if (drag.mode === 'resize') {
+        frame = resizeFrame(drag.frame, drag.handle, deltaX, deltaY, canvas.clientWidth, canvas.clientHeight);
+      } else if (drag.mode === 'frame') {
+        frame = clampFrame({ x: drag.frame.x + deltaX, y: drag.frame.y + deltaY, w: drag.frame.w, h: drag.frame.h }, canvas.clientWidth, canvas.clientHeight);
+      } else {
+        offsetX = drag.offsetX + deltaX;
+        offsetY = drag.offsetY + deltaY;
+      }
       drawCrop();
     });
     const endDrag = () => { drag = null; };
     stage.addEventListener('pointerup', endDrag);
     stage.addEventListener('pointercancel', endDrag);
-    stage.addEventListener('pointerleave', endDrag);
+    stage.addEventListener('pointerleave', () => { drag = null; });
   }
 
   async function recognizeCrop() {
