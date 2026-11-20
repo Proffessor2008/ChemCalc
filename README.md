@@ -75,6 +75,7 @@ npm run validate:data
 - Концепция сервиса поддержки и описание MVP — [SUPPORT.md](./SUPPORT.md).
 - План email-регистрации и входа по коду — [EMAIL-AUTH-PLAN.md](./EMAIL-AUTH-PLAN.md).
 - Распознавание формул с камеры/фото: анализ точности, стек и план — [OCR.md](./OCR.md).
+- Оптимизация загрузки, памяти и дублирования кода — [PERFORMANCE.md](./PERFORMANCE.md).
 - План внедрения камеры и crop-видоискателя для уравнений — [OCR-PLAN.md](./OCR-PLAN.md).
 - Бюджетный OCR на Tesseract/PaddleOCR/OCR.space и чек-лист внедрения — [OCR-BUDGET-PLAN.md](./OCR-BUDGET-PLAN.md).
 - PWA: manifest, service worker, локальные SVG-иконки. Service worker сначала активирует оболочку калькулятора, а полный офлайн-набор докачивает в фоне.
@@ -230,7 +231,7 @@ node scripts/build-electronegativity.mjs
 
 5. Запустите deploy и откройте `https://chemcalc-a5y5.onrender.com/api/health`. Ожидается `database: "postgres"` и `schemaVersion: 10`. Затем проверьте регистрацию, вход GOD, назначение admin/admin+ и независимую модерацию. Не помещайте реальный пароль GOD в журналы или скриншоты.
 
-Для уже работающего Render + Supabase достаточно загрузить изменённые файлы в ветку `test`: Auto Sync создаст deploy, а запуск `server/postgres.mjs` добавит `rule_versions` и `notifications` без удаления существующих данных. Менять `DATABASE_URL` и другие секреты не нужно. Как и при любом обновлении схемы, перед deploy рекомендуется сделать резервную копию Supabase. Старый service worker заменяется новой версией кэша `chemcalc-v71` после обновления страницы.
+Для уже работающего Render + Supabase достаточно загрузить изменённые файлы в ветку `test`: Auto Sync создаст deploy, а запуск `server/postgres.mjs` добавит `rule_versions` и `notifications` без удаления существующих данных. Менять `DATABASE_URL` и другие секреты не нужно. Как и при любом обновлении схемы, перед deploy рекомендуется сделать резервную копию Supabase. Старый service worker заменяется новой версией кэша `chemcalc-v72` после обновления страницы.
 
 При пустой облачной таблице будет создан новый GOD. Существующие пользователи SQLite не переносятся автоматически. Локальная `var/community.db` не должна загружаться в Render: при выбранном PostgreSQL она не используется. Для безопасности прежние опубликованные сессии и пароли следует считать скомпрометированными и заменить их перед публичным использованием.
 

@@ -1,21 +1,9 @@
 import { t } from './i18n.js';
+import { element, button } from './dom.js';
 
 const FEATURES = ['calculations', 'redox', 'stoichiometry', 'references', 'reports', 'community', 'telegram', 'design'];
 const PROMPT_KEY = 'chemcalc-review-prompted';
 const SUBMITTED_KEY = 'chemcalc-review-submitted';
-
-function element(tag, className = '', text = '') {
-  const node = document.createElement(tag);
-  if (className) node.className = className;
-  if (text) node.textContent = text;
-  return node;
-}
-
-function button(label, className = 'button secondary', type = 'button') {
-  const node = element('button', className, label);
-  node.type = type;
-  return node;
-}
 
 function featureLabel(key) {
   return t(`reviewFeature${key.charAt(0).toUpperCase()}${key.slice(1)}`);

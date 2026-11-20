@@ -4,7 +4,8 @@ import { extname, resolve, sep } from 'node:path';
 
 const MIME = {
   '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8',
-  '.json': 'application/json; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.webmanifest': 'application/manifest+json', '.txt': 'text/plain; charset=utf-8', '.md': 'text/markdown; charset=utf-8'
+  '.json': 'application/json; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.webmanifest': 'application/manifest+json', '.txt': 'text/plain; charset=utf-8', '.md': 'text/markdown; charset=utf-8',
+  '.woff2': 'font/woff2', '.woff': 'font/woff', '.ttf': 'font/ttf'
 };
 const COMPRESSIBLE = new Set(['.html', '.css', '.js', '.mjs', '.json', '.svg', '.txt', '.md', '.webmanifest']);
 const MIN_COMPRESS_SIZE = 1024;
@@ -86,10 +87,11 @@ function etagMatches(header, value) {
 }
 
 function sendFile(response, request, file, stat, entry, extension, encoded, encoding) {
+  const noCache = ['.html', '.webmanifest'].includes(extension) || file.endsWith(`${sep}sw.js`);
   const headers = {
     'Content-Type': MIME[extension] || 'application/octet-stream',
     'Content-Length': (encoded || entry.raw).length,
-    'Cache-Control': 'no-cache',
+    'Cache-Control': noCache ? 'no-cache' : 'public, max-age=300, must-revalidate',
     'ETag': etag(stat),
     'X-Content-Type-Options': 'nosniff',
     'Referrer-Policy': 'no-referrer'

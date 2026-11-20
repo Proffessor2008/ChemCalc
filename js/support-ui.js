@@ -1,4 +1,5 @@
 import { t } from './i18n.js';
+import { element, button } from './dom.js';
 
 const MAX_PHOTOS = 3;
 
@@ -10,19 +11,6 @@ function formatDate(value) {
   const date = new Date(value || Date.now());
   if (Number.isNaN(date.getTime())) return '';
   return new Intl.DateTimeFormat(undefined, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).format(date);
-}
-
-function element(tag, className = '', text = '') {
-  const node = document.createElement(tag);
-  if (className) node.className = className;
-  if (text) node.textContent = text;
-  return node;
-}
-
-function button(label, className = 'button secondary', type = 'button') {
-  const node = element('button', className, label);
-  node.type = type;
-  return node;
 }
 
 function statusLabel(status) {

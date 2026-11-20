@@ -2,7 +2,6 @@ import { initAutoUI } from './auto-ui.js';
 import { initCommunityUI } from './community-ui.js';
 import { initSupportUI } from './support-ui.js';
 import { initReviewUI } from './review-ui.js';
-import { initOcrUI } from './ocr-ui.js';
 import { initDonationUI } from './donation-ui.js';
 import { ensureTelegramSdk, initTelegramApp } from './telegram.js';
 import { balanceEquation, inspectBalance } from './balancer.js';
@@ -802,8 +801,18 @@ afterFirstPaint(() => setTimeout(initializeDeferredTools, 0));
 const onboardingController = initOnboarding({ storage, navigate: setTab, setMode });
 initSupportUI({ showToast });
 initReviewUI({ showToast });
-initOcrUI({ showToast });
 initDonationUI();
+
+let ocrLoader = null;
+for (const trigger of document.querySelectorAll('.ocr-trigger')) {
+  trigger.addEventListener('click', (event) => {
+    event.preventDefault();
+    ocrLoader ||= import('./ocr-ui.js')
+      .then(({ initOcrUI }) => initOcrUI({ showToast }))
+      .catch((error) => { showToast(t('serverUnavailable')); throw error; });
+    ocrLoader.then(() => trigger.click()).catch(() => {});
+  }, { once: true });
+}
 $('#restart-onboarding')?.addEventListener('click', () => {
   $('#settings-dialog')?.close();
   onboardingController.restart();

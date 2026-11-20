@@ -1,23 +1,11 @@
 import { t } from './i18n.js';
+import { element, button } from './dom.js';
 
 const MAX_FILE_BYTES = 900_000;
 const MAX_OUTPUT = 1600;
 const MIN_FRAME_WIDTH = 60;
 const MIN_FRAME_HEIGHT = 40;
 const FRAME_HIT = 20;
-
-function element(tag, className = '', text = '') {
-  const node = document.createElement(tag);
-  if (className) node.className = className;
-  if (text) node.textContent = text;
-  return node;
-}
-
-function button(label, className = 'button secondary', type = 'button') {
-  const node = element('button', className, label);
-  node.type = type;
-  return node;
-}
 
 function cameraIcon() {
   const wrapper = element('span', 'ocr-camera-icon');

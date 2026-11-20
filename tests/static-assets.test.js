@@ -19,9 +19,14 @@ test('статика сжимается, получает ETag и поддерж
   assert.equal(brotli.status, 200);
   assert.equal(brotli.headers.get('content-encoding'), 'br');
   assert.match(brotli.headers.get('vary'), /Accept-Encoding/);
+  assert.match(brotli.headers.get('cache-control'), /max-age=300/);
   assert.ok(Number(brotli.headers.get('content-length')) < statSync('styles.css').size);
   const etag = brotli.headers.get('etag');
   assert.ok(etag);
+
+  const font = await fetch(url('/vendor/katex/fonts/KaTeX_Main-Regular.woff2'));
+  assert.equal(font.status, 200);
+  assert.equal(font.headers.get('content-type'), 'font/woff2');
 
   const cached = await fetch(url('/styles.css'), { headers: { 'Accept-Encoding': 'br', 'If-None-Match': etag } });
   assert.equal(cached.status, 304);

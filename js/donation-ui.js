@@ -1,4 +1,5 @@
 import { t } from './i18n.js';
+import { element, button } from './dom.js';
 
 const DONATION_OPTIONS = [
   { key: 'boosty', url: 'https://boosty.to/chemcalc/donate', label: 'donateBoosty', hint: 'donateBoostyHint', mark: 'B', className: 'donation-option-boosty' },
@@ -6,19 +7,6 @@ const DONATION_OPTIONS = [
 ];
 const STORAGE_KEY = 'chemcalc-donation-shown-at';
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
-
-function element(tag, className = '', text = '') {
-  const node = document.createElement(tag);
-  if (className) node.className = className;
-  if (text) node.textContent = text;
-  return node;
-}
-
-function button(label, className = 'button secondary', type = 'button') {
-  const node = element('button', className, label);
-  node.type = type;
-  return node;
-}
 
 export function initDonationUI() {
   let shownAt = 0;
