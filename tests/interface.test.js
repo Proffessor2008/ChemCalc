@@ -37,6 +37,8 @@ test('вместо документации открываются настро�
   assert.ok(!html.includes('data-theme-option="system"'));
   assert.ok(readFileSync('styles.css', 'utf8').includes(':root[data-theme="classic"]'));
   assert.ok(readFileSync('styles.css', 'utf8').includes(':root[data-theme="dark"]'));
+  assert.ok(readFileSync('styles.css', 'utf8').includes('.floating-support { right: 14px; bottom: calc(78px'));
+  assert.ok(readFileSync('styles.css', 'utf8').includes('.periodic-fab { bottom: calc(140px'));
   assert.ok(ui.includes("'classic', 'dark'"));
   assert.ok(html.indexOf('id="profile-danger-zone"') < html.indexOf('class="account-legal-footer"'));
   assert.ok(html.includes('class="ocr-trigger"'));
@@ -45,9 +47,11 @@ test('вместо документации открываются настро�
   assert.ok(ui.includes('initDonationUI'));
   assert.ok(html.includes('id="community-donate"'));
   assert.ok(html.includes('data-donation-link'));
-  assert.ok(html.includes('https://boosty.to/chemcalc/donate'));
+  assert.ok(html.includes('https://yoomoney.ru/to/4100119690266585'));
+  assert.ok(!html.includes('boosty.to'));
   assert.ok(donation.includes('https://yoomoney.ru/to/4100119690266585'));
-  assert.ok(html.includes('id="donation-dialog"'));
+  assert.ok(!donation.includes('boosty.to'));
+  assert.ok(!html.includes('id="donation-dialog"'));
   assert.ok(donation.includes('chemcalc-donation-shown-at'));
   assert.ok(donation.includes('7 * 24 * 60 * 60 * 1000'));
   assert.ok(ocr.includes('ocrAccuracyWarning'));
