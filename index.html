@@ -28,10 +28,11 @@
     <nav class="desktop-nav" data-i18n-aria="navigation" aria-label="Основная навигация">
       <button type="button" data-tab="calculator" data-i18n="calculator">Калькулятор</button>
       <button type="button" data-tab="stoichiometry" data-i18n="stoichiometry">Стехиометрия</button>
+      <button type="button" data-tab="lab" data-i18n="lab">Лаборатория</button>
       <button type="button" data-tab="references" data-i18n="references">Справочники</button>
       <button type="button" data-tab="history" data-i18n="history">История</button>
       <button type="button" data-tab="community" data-i18n="community">Сообщество</button>
-      <button type="button" data-tab="account" data-i18n="personalCabinet">Кабинет</button>
+    <button type="button" data-tab="account" data-i18n="personalCabinet">Кабинет</button>
     </nav>
     <div class="header-actions">
       <label class="language-label">
@@ -256,6 +257,10 @@
       </div>
       <div id="community-questions-view" hidden></div>
     </section>
+    <section id="panel-lab" class="tab-panel" data-panel="lab" hidden>
+      <div class="section-heading"><div><p class="eyebrow">ChemCalc / Lab</p><h1 data-i18n="labTitle">Лаборатория</h1><p class="help-text" data-i18n="labSubtitle">Растворы, единицы и буферные системы.</p></div></div>
+      <div id="lab-app"></div>
+    </section>
     <section id="panel-account" class="tab-panel" data-panel="account" hidden>
       <div class="section-heading"><div><p class="eyebrow">ChemCalc / 06</p><h1 data-i18n="personalCabinet">Личный кабинет</h1><p id="cabinet-status" class="help-text" role="status"></p></div><button id="cabinet-new-proposal" class="button primary" type="button" data-i18n="newProposal">Новая заявка</button></div>
       <section id="community-auth" class="card account-auth-card" hidden>
@@ -346,6 +351,7 @@
     <button type="button" data-tab="references"><span aria-hidden="true">▤</span><span class="nav-full" data-i18n="references">Справочники</span><span class="nav-short" data-i18n="referencesShort">Справ.</span></button>
     <button type="button" data-tab="history"><span aria-hidden="true">↺</span><span class="nav-full" data-i18n="history">История</span><span class="nav-short" data-i18n="historyShort">Истор.</span></button>
     <button type="button" data-tab="community"><span aria-hidden="true">+</span><span class="nav-full" data-i18n="community">Сообщество</span><span class="nav-short" data-i18n="communityShort">Сообщ.</span></button>
+    <button type="button" data-tab="lab"><span aria-hidden="true">⚗</span><span class="nav-full" data-i18n="lab">Лаборатория</span><span class="nav-short" data-i18n="labShort">Лаб.</span></button>
     <button type="button" data-tab="account"><span aria-hidden="true">◔</span><span class="nav-full" data-i18n="personalCabinet">Личный кабинет</span><span class="nav-short" data-i18n="accountShort">Кабинет</span></button>
   </nav>
 

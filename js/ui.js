@@ -45,7 +45,7 @@ try {
 }
 const state = {
   mode: saved.mode === 'auto' ? 'auto' : 'check',
-  tab: ['calculator', 'stoichiometry', 'references', 'history', 'community', 'account'].includes(saved.tab) ? saved.tab : 'calculator',
+  tab: ['calculator', 'stoichiometry', 'references', 'history', 'community', 'account', 'lab'].includes(saved.tab) ? saved.tab : 'calculator',
   draft: typeof saved.draft === 'string' ? saved.draft : '2H2 + O2 = 2H2O',
   autoDraft: typeof saved.autoDraft === 'string' ? saved.autoDraft : '',
   attempts: 0,
@@ -63,6 +63,8 @@ let historyController;
 let communityController;
 let telegramController;
 let periodicController;
+let labController;
+let labPromise;
 let referenceController;
 let referencePromise;
 let stoichiometryPromise;
@@ -110,8 +112,15 @@ function ensureStoichiometry() {
   return stoichiometryPromise;
 }
 
-function ensurePeriodicTable() {
-  periodicPromise ||= import('./periodic-table.js').then(({ initPeriodicTable }) => {
+function ensureLab() {
+  labPromise ||= import('./lab-ui.js').then(({ initLabUI }) => {
+    labController = initLabUI({ showToast });
+    return labController;
+  });
+  return labPromise;
+}
+
+function ensurePeriodicTable() {  periodicPromise ||= import('./periodic-table.js').then(({ initPeriodicTable }) => {
     periodicController = initPeriodicTable({
       onInsert: insertElement,
       showToast,
@@ -191,6 +200,7 @@ function confirmAction(message) {
 
 function setTab(tab) {
   state.tab = tab;
+  if (tab === 'lab') ensureLab().catch(() => showToast(t('serverUnavailable')));
   $$('[data-panel]').forEach((panel) => { panel.hidden = panel.dataset.panel !== tab; });
   $$('[data-tab]').forEach((button) => {
     if (button.dataset.tab === tab) button.setAttribute('aria-current', 'page');
@@ -641,6 +651,7 @@ $('#language-select').addEventListener('change', (event) => {
   if (state.result) renderResult(state.result);
   referenceController?.render();
   communityController?.refresh();
+  labController?.render?.();
   saveState();
 });
 

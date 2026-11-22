@@ -1,4 +1,4 @@
-const CACHE_NAME = 'chemcalc-v73';
+const CACHE_NAME = 'chemcalc-v74';
 const COMMUNITY_PACKAGE = './data/reaction-rules-community.json';
 const SHELL = [
   './', './index.html', './404.html', './styles.css', './manifest.webmanifest', './icons/icon-192.svg', './icons/icon-512.svg',
@@ -7,7 +7,7 @@ const SHELL = [
   './data/elements.json', './data/redox-sites.json', './data/functional-groups.json', './data/solubility.json', './data/activity-series.json', './data/acid-base-constants.json', './data/electrode-potentials.json', './data/substances.json', './data/reaction-rules.json', './data/reaction-rules-final.json', COMMUNITY_PACKAGE
 ];
 const FULL = [
-  './js/periodic-card.js', './js/periodic-table.js', './js/element-info.js', './js/print-solution.js', './js/reference-tables.js', './js/reference-ui.js', './js/stoichiometry.js', './js/stoichiometry-ui.js', './js/thermo.js', './js/ocr-ui.js', './js/report.js', './js/report-builders.js', './js/report-docx.js', './js/report-pdf.js', './js/report-ui.js', './js/qa-ui.js',
+  './js/periodic-card.js', './js/periodic-table.js', './js/element-info.js', './js/print-solution.js', './js/reference-tables.js', './js/reference-ui.js', './js/stoichiometry.js', './js/stoichiometry-ui.js', './js/thermo.js', './js/ocr-ui.js', './js/lab.js', './js/lab-ui.js', './js/report.js', './js/report-builders.js', './js/report-docx.js', './js/report-pdf.js', './js/report-ui.js', './js/qa-ui.js',
   './data/element-overrides.json', './data/element-descriptions.json', './data/substance-descriptions.json', './data/electronegativity.json', './data/thermo.json', './data/thermo-extra.json',
   './vendor/katex/fonts/KaTeX_AMS-Regular.woff2', './vendor/katex/fonts/KaTeX_Caligraphic-Bold.woff2', './vendor/katex/fonts/KaTeX_Caligraphic-Regular.woff2', './vendor/katex/fonts/KaTeX_Fraktur-Bold.woff2', './vendor/katex/fonts/KaTeX_Fraktur-Regular.woff2', './vendor/katex/fonts/KaTeX_Main-Bold.woff2', './vendor/katex/fonts/KaTeX_Main-BoldItalic.woff2', './vendor/katex/fonts/KaTeX_Main-Italic.woff2', './vendor/katex/fonts/KaTeX_Main-Regular.woff2', './vendor/katex/fonts/KaTeX_Math-BoldItalic.woff2', './vendor/katex/fonts/KaTeX_Math-Italic.woff2', './vendor/katex/fonts/KaTeX_SansSerif-Bold.woff2', './vendor/katex/fonts/KaTeX_SansSerif-Italic.woff2', './vendor/katex/fonts/KaTeX_SansSerif-Regular.woff2', './vendor/katex/fonts/KaTeX_Script-Regular.woff2', './vendor/katex/fonts/KaTeX_Size1-Regular.woff2', './vendor/katex/fonts/KaTeX_Size2-Regular.woff2', './vendor/katex/fonts/KaTeX_Size3-Regular.woff2', './vendor/katex/fonts/KaTeX_Size4-Regular.woff2', './vendor/katex/fonts/KaTeX_Typewriter-Regular.woff2'
 ];

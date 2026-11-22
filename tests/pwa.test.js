@@ -15,7 +15,7 @@ test('service worker кеширует все шесть источников с�
   for (const name of ['predictor', 'reaction-conditions', 'redox-predictor', 'redox-view', 'internal-redox', 'electrolytes', 'dissociation', 'clipboard', 'export', 'reference-ui', 'thermo', 'periodic-table', 'ui']) assert.ok(worker.includes(`./js/${name}.js`));
   assert.ok(worker.includes('./data/redox-sites.json'));
   assert.ok(worker.includes('./data/functional-groups.json'));
-  assert.ok(worker.includes('chemcalc-v73'));
+  assert.ok(worker.includes('chemcalc-v74'));
   assert.ok(worker.includes('./js/classes.js'));
   assert.ok(worker.includes('./js/element-info.js'));
   assert.ok(worker.includes('./js/qa-ui.js'));
@@ -27,6 +27,8 @@ test('service worker кеширует все шесть источников с�
   assert.ok(worker.includes('./js/review-ui.js'));
   assert.ok(worker.includes('./js/ocr-ui.js'));
   assert.ok(worker.includes('./js/donation-ui.js'));
+  assert.ok(worker.includes('./js/lab-ui.js'));
+  assert.ok(worker.includes('./js/lab.js'));
   assert.ok(worker.includes('./js/telegram.js'));
   assert.ok(worker.includes('./vendor/katex/katex.min.js'));
   assert.ok(worker.includes('./vendor/katex/katex.min.css'));
@@ -38,7 +40,7 @@ test('service worker кеширует все шесть источников с�
   assert.ok(worker.includes('./js/physical-constants.js'));
   assert.ok(!worker.includes('cache.addAll(ALL)'));
   const browserSuite = readFileSync('tests.html', 'utf8');
-  assert.ok(browserSuite.includes("caches.open('chemcalc-v73')"));
+  assert.ok(browserSuite.includes("caches.open('chemcalc-v74')"));
   assert.ok(browserSuite.includes('./js/community-ui.js'));
   assert.ok(browserSuite.includes('./data/reaction-rules-community.json'));
 });

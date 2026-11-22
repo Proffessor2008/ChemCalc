@@ -107,9 +107,12 @@ test('логотип возвращает в режим Проверка', () =>
   assert.ok(ui.includes("$('#brand-home').addEventListener('click'"));
   assert.ok(ui.includes("setMode('check')"));
 });
-test('мобильная навигация содержит шесть колонок, включая сообщество', () => {
+test('мобильная навигация содержит семь колонок, включая лабораторию', () => {
   const html = readFileSync('index.html', 'utf8');
   const styles = readFileSync('styles.css', 'utf8');
-  assert.equal(html.match(/class="mobile-nav"[\s\S]*?<\/nav>/)[0].match(/data-tab=/g).length, 6);
-  assert.ok(styles.includes('grid-template-columns: repeat(6, minmax(0, 1fr))'));
+  assert.equal(html.match(/class="mobile-nav"[\s\S]*?<\/nav>/)[0].match(/data-tab=/g).length, 7);
+  assert.ok(styles.includes('grid-template-columns: repeat(7, minmax(0, 1fr))'));
+  assert.ok(html.includes('id="panel-lab"'));
+  assert.ok(html.includes('data-tab="lab"'));
+  assert.ok(styles.includes('.lab-result-grid'));
 });
