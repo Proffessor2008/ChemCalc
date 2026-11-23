@@ -114,5 +114,6 @@ test('мобильная навигация содержит семь колон
   assert.ok(styles.includes('grid-template-columns: repeat(7, minmax(0, 1fr))'));
   assert.ok(html.includes('id="panel-lab"'));
   assert.ok(html.includes('data-tab="lab"'));
+  assert.ok(html.includes('id="lab-info-dialog"'));
   assert.ok(styles.includes('.lab-result-grid'));
 });

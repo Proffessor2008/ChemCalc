@@ -88,7 +88,7 @@ test('справочник «Вещества» и подробный гайд �
   assert.ok(reference.includes('substances: renderSubstances'));
   assert.ok(reference.includes('substance-descriptions.json'));
   const onboarding = readFileSync('js/onboarding.js', 'utf8');
-  for (const phrase of ['Стехиометрия', 'Экспорт в PDF и DOCX', 'Сообщество', 'Личный кабинет', 'Офлайн', 'Распознавание по камере', 'Отзыв о программе', 'Поддержка', 'restart']) {
+  for (const phrase of ['Стехиометрия', 'Экспорт в PDF и DOCX', 'Сообщество', 'Личный кабинет', 'Офлайн', 'Лаборатория', 'Методика и примеры', 'Распознавание по камере', 'Отзыв о программе', 'Поддержка', 'restart']) {
     assert.ok(onboarding.includes(phrase), `нет пункта гайда: ${phrase}`);
   }
   const html = readFileSync('index.html', 'utf8');

@@ -150,7 +150,7 @@ test('community API: регистрация, заявки, голосовани�
   assert.deepEqual(validation.errors, []);
   assert.deepEqual(validation.warnings, []);
   assert.equal(validation.stats.rules, 334);
-  assert.equal(validation.stats.substances, 375);
+  assert.equal(validation.stats.substances, 416);
   assert.equal(validation.stats.solubleRecords, 253);
 
   const { predictReaction, updateCommunityData } = await import('../js/predictor.js');

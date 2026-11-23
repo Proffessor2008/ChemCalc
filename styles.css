@@ -1151,3 +1151,25 @@ body { min-height: 100dvh; }
   .lab-tab { width: 100%; }
   .lab-actions .button { width: 100%; }
 }
+
+.lab-card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.lab-card-head h2 { margin: 0; font-size: 1.05rem; }
+.lab-info-button { display: grid; place-items: center; flex: 0 0 auto; width: 32px; height: 32px; padding: 0; border: 1px solid var(--line); border-radius: 50%; background: var(--surface-muted); color: var(--accent-strong); font: 800 .9rem Georgia, serif; cursor: pointer; }
+.lab-info-button:hover, .lab-info-button:focus-visible { border-color: var(--accent); background: var(--accent-soft); }
+.lab-info-dialog { width: min(560px, calc(100% - 24px)); max-height: 88dvh; padding: 0; overflow: hidden; }
+.lab-info-dialog[open] { display: flex; flex-direction: column; }
+.lab-info-dialog .dialog-heading { margin: 0; padding: 18px 20px 12px; border-bottom: 1px solid var(--line); }
+.lab-info-content { display: grid; gap: 12px; padding: 16px 20px 20px; overflow-y: auto; }
+.lab-info-content p { margin: 0; color: var(--muted); font-size: .84rem; line-height: 1.55; }
+.lab-info-formula { padding: 10px 12px; border-radius: 9px; background: var(--surface-muted); color: var(--text) !important; font-family: ui-monospace, "Cascadia Code", monospace; }
+.lab-info-formula strong { margin-right: 4px; color: var(--accent-strong); }
+.lab-info-content h3 { margin: 4px 0 0; font-size: .84rem; }
+.lab-info-steps { margin: 0; padding-left: 20px; color: var(--muted); font-size: .8rem; line-height: 1.55; }
+.lab-info-example { display: grid; gap: 3px; padding: 10px 12px; border-left: 3px solid var(--accent); border-radius: 0 9px 9px 0; background: var(--accent-soft); }
+.lab-info-example strong { color: var(--accent-strong); font-size: .76rem; }
+.lab-info-example p { color: var(--text); }
+@media (max-width: 520px) {
+  .lab-info-dialog { width: 100%; max-width: none; max-height: 92dvh; margin: auto auto 0; border-radius: 18px 18px 0 0; }
+  .lab-info-dialog .dialog-heading { padding: 16px 16px 10px; }
+  .lab-info-content { padding: 14px 16px calc(16px + env(safe-area-inset-bottom)); }
+}

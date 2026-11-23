@@ -1,4 +1,5 @@
 import acidBaseData from '../data/acid-base-constants.json' with { type: 'json' };
+import substancesData from '../data/substances.json' with { type: 'json' };
 import { getLocale } from './i18n.js';
 import { element, button } from './dom.js';
 import {
@@ -9,6 +10,7 @@ import {
 const ACIDS = acidBaseData.records
   .filter((record) => record.type === 'acid' && Number.isFinite(record.pKa))
   .sort((left, right) => left.pKa - right.pKa);
+const SUBSTANCES = substancesData.items.filter((item) => item.class !== 'invalid');
 
 const COPY = {
   ru: {
@@ -78,6 +80,11 @@ const COPY = {
     labInvalidPka: 'pKa должен быть в разумном диапазоне.',
     labInvalidPh: 'pH должен быть от 0 до 14.',
     labInvalidNumber: 'Введите число.',
+    methodInfo: 'Методика и примеры',
+    infoFormula: 'Формула',
+    infoSteps: 'Порядок работы',
+    infoExample: 'Пример',
+    close: 'Закрыть',
     educational: 'Учебные расчёты. Проверяйте единицы и условия эксперимента.'
   },
   en: {
@@ -147,7 +154,89 @@ const COPY = {
     labInvalidPka: 'pKa is outside a reasonable range.',
     labInvalidPh: 'pH must be between 0 and 14.',
     labInvalidNumber: 'Enter a number.',
+    methodInfo: 'Method and examples',
+    infoFormula: 'Formula',
+    infoSteps: 'Procedure',
+    infoExample: 'Example',
+    close: 'Close',
     educational: 'Educational calculations. Check units and experimental conditions.'
+  }
+};
+
+const INFO = {
+  ru: {
+    prepare: {
+      title: 'Приготовление раствора',
+      intro: 'Сначала рассчитайте массу вещества, затем растворите её в небольшом объёме растворителя и доведите объём до метки в мерной колбе.',
+      formula: 'm = C × V × M / чистота',
+      steps: ['Переведите объём в литры.', 'Найдите молярную массу по формуле.', 'Рассчитайте количество вещества и массу.', 'Учтите чистоту и доведите объём в мерной колбе.'],
+      example: 'Для 100 мл 0,9 г/л NaCl нужно 0,09 г NaCl. При чистоте 90% навеска составит 0,10 г.'
+    },
+    dilute: {
+      title: 'Разбавление раствора',
+      intro: 'Количество растворённого вещества при разбавлении не меняется. Поэтому произведение концентрации на объём сохраняется.',
+      formula: 'C₁ × V₁ = C₂ × V₂',
+      steps: ['Приведите концентрации к одной единице.', 'Вычислите объём исходного раствора.', 'Добавьте растворитель до конечного объёма.', 'Перемешайте раствор.'],
+      example: 'Из 1 М раствора нужно получить 100 мл 0,1 М: взять 10 мл исходного раствора и добавить 90 мл растворителя.'
+    },
+    percent: {
+      title: 'Массовая доля',
+      intro: 'Массовая доля показывает, сколько граммов вещества содержится в 100 г раствора. Для перехода к объёму нужна плотность раствора.',
+      formula: 'm(вещества) = V × ρ × w / 100',
+      steps: ['Переведите объём в миллилитры.', 'Найдите массу раствора по плотности.', 'Умножьте на массовую долю.', 'При необходимости пересчитайте в молярность.'],
+      example: '100 мл раствора с плотностью 1,0 г/мл и массовой долей 0,9% содержит 0,9 г NaCl.'
+    },
+    units: {
+      title: 'Перевод единиц',
+      intro: 'Переводить можно только величины одного типа: массу в массу, объём в объём, количество вещества в количество вещества. Молярность и массовая концентрация — разные величины.',
+      formula: 'значение × коэффициент(из) / коэффициент(в)',
+      steps: ['Выберите физическую величину.', 'Укажите исходную и конечную единицу.', 'Проверьте, что единицы одного типа.', 'Сравните порядок результата с ожидаемым.'],
+      example: '1 г = 1000 мг; 1 л = 1000 мл; 1 моль/л = 1000 ммоль/л.'
+    },
+    buffers: {
+      title: 'Буферные системы',
+      intro: 'Буфер состоит из слабой кислоты и её сопряжённого основания. Соотношение компонентов задаёт pH, а суммарная концентрация — буферную ёмкость.',
+      formula: 'pH = pKa + log₁₀([основание] / [кислота])',
+      steps: ['Выберите пару кислота/основание или задайте pKa.', 'Вычислите отношение основание/кислота.', 'Распределите общую концентрацию между компонентами.', 'Проверьте, что pH близок к pKa.'],
+      example: 'При pKa 7,2 и pH 7,4 отношение основание/кислота равно 1,58; при общей концентрации 0,1 М основание составляет 0,061 М, кислота — 0,039 М.'
+    }
+  },
+  en: {
+    prepare: {
+      title: 'Preparing a solution',
+      intro: 'Calculate the mass first, dissolve it in a small amount of solvent, then bring the volume to the mark in a volumetric flask.',
+      formula: 'm = C × V × M / purity',
+      steps: ['Convert volume to litres.', 'Find the molar mass from the formula.', 'Calculate amount of substance and mass.', 'Account for purity and bring to volume.'],
+      example: 'For 100 mL of 0.9 g/L NaCl you need 0.09 g. At 90% purity the weighed mass is 0.10 g.'
+    },
+    dilute: {
+      title: 'Diluting a solution',
+      intro: 'The amount of solute does not change during dilution, so concentration times volume is constant.',
+      formula: 'C₁ × V₁ = C₂ × V₂',
+      steps: ['Convert concentrations to the same unit.', 'Calculate the stock volume.', 'Add solvent to the final volume.', 'Mix the solution.'],
+      example: 'To make 100 mL of 0.1 M from 1 M stock, take 10 mL of stock and add 90 mL of solvent.'
+    },
+    percent: {
+      title: 'Mass fraction',
+      intro: 'Mass fraction is the mass of solute in 100 g of solution. Density is needed to relate it to volume.',
+      formula: 'm(solute) = V × ρ × w / 100',
+      steps: ['Convert volume to millilitres.', 'Find solution mass from density.', 'Multiply by mass fraction.', 'Convert to molarity if needed.'],
+      example: '100 mL of solution with density 1.0 g/mL and mass fraction 0.9% contains 0.9 g NaCl.'
+    },
+    units: {
+      title: 'Unit conversion',
+      intro: 'Only quantities of the same kind can be converted: mass to mass, volume to volume, amount to amount. Molarity and mass concentration are different quantities.',
+      formula: 'value × factor(from) / factor(to)',
+      steps: ['Choose the quantity.', 'Select source and target units.', 'Check that the units are compatible.', 'Check the order of magnitude.'],
+      example: '1 g = 1000 mg; 1 L = 1000 mL; 1 mol/L = 1000 mmol/L.'
+    },
+    buffers: {
+      title: 'Buffer systems',
+      intro: 'A buffer contains a weak acid and its conjugate base. Their ratio sets pH; total concentration affects buffer capacity.',
+      formula: 'pH = pKa + log₁₀([base] / [acid])',
+      steps: ['Choose an acid/base pair or set pKa.', 'Calculate the base/acid ratio.', 'Split total concentration between components.', 'Check that pH is close to pKa.'],
+      example: 'At pKa 7.2 and pH 7.4 the base/acid ratio is 1.58; at 0.1 M total, base is 0.061 M and acid is 0.039 M.'
+    }
   }
 };
 
@@ -180,6 +269,14 @@ function numberInput(value, step = 'any', min = '') {
   if (min !== '') input.min = min;
   input.value = String(value);
   input.autocomplete = 'off';
+  return input;
+}
+
+function formulaInput(value, placeholder = '') {
+  const input = numberInput(value);
+  input.type = 'text';
+  input.placeholder = placeholder;
+  input.setAttribute('list', 'lab-substances');
   return input;
 }
 
@@ -225,6 +322,64 @@ export function initLabUI({ showToast = () => {} } = {}) {
   if (!root) return;
   let tool = 'solutions';
   let solutionMode = 'prepare';
+  const infoDialog = document.getElementById('lab-info-dialog');
+  const infoContent = document.getElementById('lab-info-content');
+
+  if (!document.getElementById('lab-substances')) {
+    const list = element('datalist');
+    list.id = 'lab-substances';
+    for (const substance of SUBSTANCES) {
+      const option = document.createElement('option');
+      option.value = substance.formula;
+      option.label = substance.name_ru;
+      list.append(option);
+    }
+    document.body.append(list);
+  }
+
+  function openInfo(topic) {
+    if (!infoDialog || !infoContent) return;
+    const language = getLocale() === 'en' ? 'en' : 'ru';
+    const data = INFO[language]?.[topic] || INFO.ru[topic];
+    if (!data) return;
+    infoContent.replaceChildren();
+    const head = element('div', 'dialog-heading');
+    const title = element('h2', '', data.title);
+    title.id = 'lab-info-title';
+    const close = button('×', 'icon-button');
+    close.setAttribute('aria-label', text('close'));
+    close.addEventListener('click', () => infoDialog.close());
+    head.append(title, close);
+    const body = element('div', 'lab-info-content');
+    body.append(element('p', '', data.intro));
+    const formula = element('p', 'lab-info-formula');
+    formula.append(element('strong', '', text('infoFormula')), document.createTextNode(`: ${data.formula}`));
+    body.append(formula);
+    const steps = element('ol', 'lab-info-steps');
+    for (const step of data.steps) steps.append(element('li', '', step));
+    body.append(element('h3', '', text('infoSteps')), steps);
+    const example = element('div', 'lab-info-example');
+    example.append(element('strong', '', text('infoExample')), element('p', '', data.example));
+    body.append(example);
+    infoContent.append(head, body);
+    if (!infoDialog.open) infoDialog.showModal();
+  }
+
+  function infoButton(topic) {
+    const node = button('i', 'lab-info-button');
+    node.setAttribute('aria-label', text('methodInfo'));
+    node.title = text('methodInfo');
+    node.addEventListener('click', () => openInfo(topic));
+    return node;
+  }
+
+  function cardHead(title, topic) {
+    const head = element('div', 'lab-card-head');
+    head.append(element('h2', '', title), infoButton(topic));
+    return head;
+  }
+
+  infoDialog?.addEventListener('click', (event) => { if (event.target === infoDialog) infoDialog.close(); });
 
   function toolbar() {
     const bar = element('div', 'lab-toolbar');
@@ -248,6 +403,7 @@ export function initLabUI({ showToast = () => {} } = {}) {
 
   function renderSolutions() {
     const card = element('section', 'card lab-card');
+    card.append(cardHead(text('solutions'), solutionMode));
     card.append(solutionSubbar());
     const form = element('form', 'lab-form');
     const result = element('div', 'lab-result');
@@ -257,9 +413,7 @@ export function initLabUI({ showToast = () => {} } = {}) {
     actions.append(calculate);
 
     if (solutionMode === 'prepare') {
-      const formula = numberInput('NaCl');
-      formula.type = 'text';
-      formula.placeholder = text('formulaPlaceholder');
+      const formula = formulaInput('NaCl', text('formulaPlaceholder'));
       const target = numberInput(0.9);
       const targetUnit = select([{ value: 'g/L', label: 'g/L' }, { value: 'mol/L', label: 'mol/L' }, { value: 'mmol/L', label: 'mmol/L' }], 'g/L');
       const volume = numberInput(100);
@@ -307,9 +461,7 @@ export function initLabUI({ showToast = () => {} } = {}) {
         } catch (error) { showToast(errorMessage(error)); }
       });
     } else {
-      const formula = numberInput('NaCl');
-      formula.type = 'text';
-      formula.placeholder = text('formulaPlaceholder');
+      const formula = formulaInput('NaCl', text('formulaPlaceholder'));
       const percent = numberInput(0.9);
       const density = numberInput(1.0);
       const volume = numberInput(100);
@@ -344,6 +496,7 @@ export function initLabUI({ showToast = () => {} } = {}) {
 
   function renderUnits() {
     const card = element('section', 'card lab-card');
+    card.append(cardHead(text('units'), 'units'));
     const form = element('form', 'lab-form');
     const result = element('div', 'lab-result');
     result.hidden = true;
@@ -390,6 +543,7 @@ export function initLabUI({ showToast = () => {} } = {}) {
 
   function renderBuffers() {
     const card = element('section', 'card lab-card');
+    card.append(cardHead(text('buffers'), 'buffers'));
     const form = element('form', 'lab-form');
     const result = element('div', 'lab-result');
     result.hidden = true;

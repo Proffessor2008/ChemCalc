@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import {
   LabError, bufferFromTarget, bufferPh, convertUnits, dilution, formulaMolarMass,
   prepareFromMassFraction, prepareFromSolid
@@ -56,4 +57,13 @@ test('лаборатория: единицы и буферы', () => {
   assert.equal(buffer.weakCapacity, false);
   assert.equal(bufferFromTarget({ pKa: 7.2, targetPh: 9.2, totalConcentration: 0.1, volume: 100 }).weakCapacity, true);
   close(bufferPh({ pKa: 7.2, acidConcentration: 1, baseConcentration: 1 }), 7.2);
+});
+
+test('база веществ расширена лабораторными и биохимическими соединениями', () => {
+  const data = JSON.parse(readFileSync('data/substances.json', 'utf8'));
+  const formulas = new Set(data.items.map((item) => item.formula));
+  assert.ok(data.items.length >= 400);
+  for (const formula of ['C4H11NO3', 'C8H18N2O4S', 'C10H16N2O8', 'C6H8O7', 'CH4N2O', 'C2H5NO2', 'C6H14N2O2', 'C8H10N4O2']) {
+    assert.ok(formulas.has(formula), `нет вещества ${formula}`);
+  }
 });
