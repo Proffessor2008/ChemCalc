@@ -20,6 +20,7 @@ test('вместо документации открываются настро�
   assert.ok(!html.includes('data-panel="documentation"'));
   assert.ok(!html.includes('panel-documentation'));
   assert.ok(html.includes('id="settings-dialog"'));
+  assert.ok(html.includes('<html lang="ru" data-theme="classic">'));
   assert.ok(html.includes('id="settings-toggle"'));
   assert.ok(!html.includes('id="theme-toggle"'));
   for (const option of ['light', 'classic', 'dark']) assert.ok(html.includes(`data-theme-option="${option}"`));
